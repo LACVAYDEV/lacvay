@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LACVAY — Batangas City Transport & Tourism Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ===== Skip Link ===== -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- ===== Background mesh blobs ===== -->
+  <div class="mesh-bg" aria-hidden="true">
+    <div class="blob blob-green"></div>
+    <div class="blob blob-lime"></div>
+    <div class="blob blob-gold"></div>
+  </div>
+
+  <!-- ===== Sidebar Navigation ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-brand-icon">🌿</span>
+      <span class="sidebar-brand-name">LACVAY</span>
+      <button class="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#home" class="sidebar-link active">
+        <span class="sidebar-icon">🏠</span>
+        <span class="sidebar-label">Home</span>
+      </a>
+      <a href="#routes" class="sidebar-link">
+        <span class="sidebar-icon">🗺️</span>
+        <span class="sidebar-label">Map & Routes</span>
+      </a>
+      <a href="#commute" class="sidebar-link">
+        <span class="sidebar-icon">🚌</span>
+        <span class="sidebar-label">Commute Guide</span>
+      </a>
+      <a href="#fares" class="sidebar-link">
+        <span class="sidebar-icon">💰</span>
+        <span class="sidebar-label">Fare Checker</span>
+      </a>
+      <a href="#book" class="sidebar-link">
+        <span class="sidebar-icon">🚕</span>
+        <span class="sidebar-label">Book a Ride</span>
+      </a>
+      <a href="#tourism" class="sidebar-link">
+        <span class="sidebar-icon">🏝️</span>
+        <span class="sidebar-label">Tourist Spots</span>
+      </a>
+      <a href="#assistant" class="sidebar-link">
+        <span class="sidebar-icon">🤖</span>
+        <span class="sidebar-label">AI Travel Assistant</span>
+      </a>
+      <a href="#restaurants" class="sidebar-link">
+        <span class="sidebar-icon">🍜</span>
+        <span class="sidebar-label">Nearby Restaurants</span>
+      </a>
+      <a href="#promotions" class="sidebar-link">
+        <span class="sidebar-icon">📣</span>
+        <span class="sidebar-label">Promotions</span>
+      </a>
+
+      <div class="sidebar-divider"></div>
+
+      <a href="#saved" class="sidebar-link">
+        <span class="sidebar-icon">💾</span>
+        <span class="sidebar-label">Saved</span>
+      </a>
+      <a href="#history" class="sidebar-link">
+        <span class="sidebar-icon">⏱️</span>
+        <span class="sidebar-label">History</span>
+      </a>
+      <a href="#settings" class="sidebar-link">
+        <span class="sidebar-icon">⚙️</span>
+        <span class="sidebar-label">Settings</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- ===== Main Content ===== -->
+  <main class="main-content" id="main-content">
+
+    <!-- ===== Header ===== -->
+    <header>
+      <div class="header-left">
+        <a href="#" class="header-logo">🌿 LACVAY</a>
+        <div class="search-container">
+          <input type="text" class="search-input" placeholder="Search places, routes, or attractions...">
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="weather-info">
+          <span class="weather-icon">☀️</span>
+          <span>28°C<br>Batangas City</span>
+        </div>
+        <div class="header-icons">
+          <button class="icon-btn" title="Notifications">🔔</button>
+        </div>
+        <div class="user-profile">
+          <div class="user-avatar">J</div>
+          <div>
+            <div class="user-name">Hello, Juan!</div>
+          </div>
+        </div>
+        <div class="auth-buttons">
+          <button class="btn btn-sm btn-outline">Sign In</button>
+          <button class="btn btn-sm btn-primary">Sign Up</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== Hero Section ===== -->
+    <section class="hero">
+      <div class="hero-text">
+        <h1>Your <span class="accent">Batangas City</span><br><span class="yellow">Travel Companion</span></h1>
+        <p class="subtitle">Find routes, check fares, book rides, explore attractions, and get AI-powered travel assistance — all in one place.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary">Plan Your Trip</button>
+          <button class="btn btn-secondary">Ask AI Assistant</button>
+        </div>
+      </div>
+
+      <div class="hero-card">
+        <div class="card-header">
+          <span class="dot dot-green"></span>
+          <span class="dot dot-yellow"></span>
+          <span class="dot dot-teal"></span>
+          <h3>Plan Your Trip</h3>
+        </div>
+
+        <div class="route-finder">
+          <div class="input-group">
+            <label>From</label>
+            <input type="text" placeholder="Current Location" value="Current Location">
+          </div>
+          <div class="input-group">
+            <label>To</label>
+            <input type="text" placeholder="Where to?" value="Where to?">
+          </div>
+
+          <div class="travel-options">
+            <button class="travel-option">
+              <div class="travel-option-icon">🚌</div>
+              <div>Jeepney</div>
+            </button>
+            <button class="travel-option">
+              <div class="travel-option-icon">🛺</div>
+              <div>Tricycle</div>
+            </button>
+            <button class="travel-option">
+              <div class="travel-option-icon">🚗</div>
+              <div>Taxi</div>
+            </button>
+            <button class="travel-option">
+              <div class="travel-option-icon">🏍️</div>
+              <div>Private</div>
+            </button>
+          </div>
+
+          <button class="search-btn">Find Routes</button>
+
+          <div class="route-results">
+            <div class="route-item">
+              <div>
+                <div class="route-name">🚌 Jeepney — Alangilan Route</div>
+                <div class="route-type">Commute</div>
+              </div>
+              <div class="route-price">₱13.00 <span style="font-size: 0.8rem; color: var(--text-tertiary);">estimated</span></div>
+            </div>
+            <div class="route-item">
+              <div>
+                <div class="route-name">🛺 Tricycle — Direct</div>
+                <div class="route-type">Direct</div>
+              </div>
+              <div class="route-price">₱40.00 <span style="font-size: 0.8rem; color: var(--text-tertiary);">exact</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Features Section ===== -->
+    <section class="features" id="routes">
+      <div class="section-header">
+        <h2>Everything you need to get around</h2>
+        <p>A simple, local-first toolkit for commuting, riding, and exploring Batangas City.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🗺️</div>
+          <h3>Map & Routes</h3>
+          <p>View routes, jeepney and tricycle guides around Batangas City.</p>
+          <a href="#" class="feature-link">Open Map →</a>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">💰</div>
+          <h3>Fare Checker</h3>
+          <p>Check exact or estimated fares for your trip.</p>
+          <a href="#" class="feature-link">Check Fare →</a>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🚕</div>
+          <h3>Book a Ride</h3>
+          <p>Book bicycles, taxis, or available riders near you.</p>
+          <a href="#" class="feature-link">Book Now →</a>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🧭</div>
+          <h3>Commute Guide</h3>
+          <p>Learn how to commute using jeepneys and tricycles.</p>
+          <a href="#" class="feature-link">View Guide →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Popular Tourist Spots ===== -->
+    <section class="tourist-spots" id="tourism">
+      <div class="spot-row">
+        <div class="spot-col">
+          <h3>Popular Tourist Spots</h3>
+          <div class="spot-card">
+            <div class="spot-image">🏔️</div>
+            <div class="spot-info">
+              <div class="spot-name">Tail Volcano</div>
+              <div class="spot-category">Nature Adventure</div>
+            </div>
+          </div>
+          <div class="spot-card" style="margin-top: 16px;">
+            <div class="spot-image">⛪</div>
+            <div class="spot-info">
+              <div class="spot-name">Basilica of Immaculate Conception</div>
+              <div class="spot-category">Historical</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="spot-col">
+          <div style="height: 24px;"></div>
+          <div class="spot-card">
+            <div class="spot-image">🌊</div>
+            <div class="spot-info">
+              <div class="spot-name">Anilao, Mabini</div>
+              <div class="spot-category">Beach & Diving</div>
+            </div>
+          </div>
+          <div class="spot-card" style="margin-top: 16px;">
+            <div class="spot-image">🏖️</div>
+            <div class="spot-info">
+              <div class="spot-name">Laiya Beach Resort</div>
+              <div class="spot-category">Beach Getaway</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="spot-col">
+          <div style="background: var(--yellow-light); border-radius: var(--radius-lg); padding: 24px; text-align: center;">
+            <h3 style="margin-bottom: 16px;">Local Promotions</h3>
+            <div style="background: var(--white); border-radius: var(--radius-md); padding: 16px; margin-bottom: 12px;">
+              <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Summer Promo!</div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">10% OFF on tricycle rides this week!</div>
+              <div style="font-weight: 600; color: var(--green-primary);">Use code: LACVAY10</div>
+            </div>
+            <div style="background: var(--white); border-radius: var(--radius-md); padding: 16px;">
+              <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Promote Your Business</div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary);">Boost your visibility and reach nearby customers.</div>
+              <a href="#" style="color: var(--green-primary); font-weight: 600; text-decoration: none; display: inline-block; margin-top: 8px;">Learn More →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== AI Travel Assistant ===== -->
+    <section class="assistant-chat" id="assistant">
+      <div class="chat-container">
+        <h3 style="margin-bottom: 24px; color: var(--white);">🤖 AI Travel Assistant</h3>
+        <div class="chat-bubble">
+          Hi! I'm LACVAY AI 👋
+        </div>
+        <div class="chat-bubble">
+          I can help you find routes, check fares, recommend places, and more!
+        </div>
+
+        <div class="chat-input-wrapper">
+          <input type="text" class="chat-input" placeholder="Ask me anything...">
+          <button class="chat-send">➤</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Promotions ===== -->
+    <section class="promotions" id="promotions">
+      <div class="promo-card">
+        <span class="pill pill-yellow" style="background: rgba(255, 255, 255, 0.2); color: var(--white); border-color: rgba(255, 255, 255, 0.5);">For Local Businesses</span>
+        <h2>Get discovered by commuters & tourists</h2>
+        <p>Boost your sales with in-app recommendations — restaurants, shops, and local services get featured to nearby users looking for the perfect spot.</p>
+        <button class="btn btn-secondary" style="margin-top: 24px;">Promote My Business</button>
+      </div>
+    </section>
+
+    <!-- ===== Footer ===== -->
+    <footer>
+      <p>🌿 LACVAY — Made for Batangas City, Batangas, Philippines</p>
+    </footer>
+
+    <!-- ===== Mobile Navigation ===== -->
+    <nav class="mobile-nav">
+      <a href="#" class="mobile-nav-item">
+        <span class="mobile-nav-icon">🏠</span>
+        <span>Home</span>
+      </a>
+      <a href="#" class="mobile-nav-item">
+        <span class="mobile-nav-icon">🗺️</span>
+        <span>Map</span>
+      </a>
+      <a href="#" class="mobile-nav-item">
+        <span class="mobile-nav-icon">📱</span>
+        <span>Scan QR</span>
+      </a>
+      <a href="#" class="mobile-nav-item">
+        <span class="mobile-nav-icon">📑</span>
+        <span>Bookings</span>
+      </a>
+      <a href="#" class="mobile-nav-item">
+        <span class="mobile-nav-icon">❤️</span>
+        <span>Saved</span>
+      </a>
+    </nav>
+
+  </main>
+
+</body>
+</html>
