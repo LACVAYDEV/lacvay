@@ -793,7 +793,8 @@ header {
 .spot-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 40px;
+  gap: 24px;
+  margin-bottom: 50px;
 }
 
 .spot-col {
