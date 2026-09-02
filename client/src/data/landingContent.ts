@@ -18,17 +18,17 @@ export interface LandingBenefit {
 export const landingFeatures: LandingFeature[] = [
   {
     title: 'Map & Routes',
-    description: 'See jeepney routes, tricycle coverage, stops, and landmarks across Batangas City.',
+    description: 'See jeepney routes, tricycle and motorcycle coverage, stops, and landmarks across Batangas City.',
     image: '/images/icon-map.png',
   },
   {
     title: 'Fare Checker',
-    description: 'Know what a trip should cost before you ride, for jeepneys, tricycles, and taxis.',
+    description: 'Know what a trip should cost before you ride — jeepney, tricycle, motorcycle taxi, or taxi.',
     image: '/images/icon-fare.png',
   },
   {
     title: 'Book a Ride',
-    description: 'Find tricycles, taxis, and private rides available near your location.',
+    description: 'Find tricycles, motorcycle riders, taxis, and private rides available near your location.',
     image: '/images/icon-ride.png',
   },
   {
@@ -47,7 +47,7 @@ export const landingSteps: LandingStep[] = [
   {
     order: 2,
     title: 'Compare routes and fares',
-    description: 'See jeepney, tricycle, and taxi options side by side with travel time and estimated fare.',
+    description: 'See jeepney, tricycle, motorcycle, and taxi options side by side with travel time and estimated fare.',
   },
   {
     order: 3,

@@ -1,11 +1,22 @@
 import type { TransportType, FareEstimate, RouteStep } from '@/types';
+import { getTransportLabel } from '@/lib/transport';
 
 const FARE_RATES: Record<TransportType, { base: number; perKm: number }> = {
   jeepney: { base: 13, perKm: 2.5 },
   tricycle: { base: 20, perKm: 8 },
+  motorcycle: { base: 25, perKm: 9 },
   taxi: { base: 40, perKm: 15 },
   private: { base: 0, perKm: 12 },
   walking: { base: 0, perKm: 0 },
+};
+
+const AVERAGE_SPEED_KMH: Record<TransportType, number> = {
+  jeepney: 18,
+  tricycle: 22,
+  motorcycle: 30,
+  taxi: 25,
+  private: 25,
+  walking: 5,
 };
 
 export function estimateDistanceKm(origin: string, destination: string): number {
@@ -24,7 +35,7 @@ export function calculateFare(
   const raw = rate.base + rate.perKm * distance;
   const min = Math.max(rate.base, Math.round(raw * 0.85));
   const max = Math.round(raw * 1.15);
-  const speedKmh = transportType === 'walking' ? 5 : transportType === 'jeepney' ? 18 : 25;
+  const speedKmh = AVERAGE_SPEED_KMH[transportType];
   const estimatedTravelTimeMin = Math.max(5, Math.round((distance / speedKmh) * 60));
 
   return {
@@ -74,10 +85,15 @@ export function buildMockRoute(
       { type: 'jeepney', instruction: 'Ride jeepney via Batangas City Grand Terminal route', durationMin: Math.max(10, fare.estimatedTravelTimeMin - 8), fare: fare.estimatedFareMin },
       { type: 'walk', instruction: 'Alight near destination', durationMin: 5, distanceKm: 0.4 },
     );
-  } else if (transportType === 'tricycle') {
-    steps.push({ type: 'tricycle', instruction: 'Direct tricycle ride to destination', durationMin: fare.estimatedTravelTimeMin - 3, fare: fare.estimatedFareMin });
+  } else if (transportType === 'motorcycle') {
+    steps.push({ type: 'motorcycle', instruction: `Motorcycle taxi (habal-habal) straight to ${destination}`, durationMin: Math.max(4, fare.estimatedTravelTimeMin - 3), fare: fare.estimatedFareMin });
   } else {
-    steps.push({ type: transportType, instruction: `${transportType.charAt(0).toUpperCase() + transportType.slice(1)} ride to ${destination}`, durationMin: fare.estimatedTravelTimeMin - 3, fare: fare.estimatedFareMin });
+    steps.push({
+      type: transportType,
+      instruction: `Direct ${getTransportLabel(transportType).toLowerCase()} ride to ${destination}`,
+      durationMin: Math.max(4, fare.estimatedTravelTimeMin - 3),
+      fare: fare.estimatedFareMin,
+    });
   }
 
   steps.push({ type: 'walk', instruction: `Arrive at ${destination}`, durationMin: 2, distanceKm: 0.1 });

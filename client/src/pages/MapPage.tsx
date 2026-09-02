@@ -5,9 +5,11 @@ import { useSearchParams } from 'react-router-dom';
 import type { TransportType } from '@/types';
 import { BATANGAS_CENTER, mapLandmarks } from '@/data/mockData';
 import { buildMockRoute } from '@/lib/fareCalculator';
+import { getTransportLabel, getTransportOption } from '@/lib/transport';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { getStepIcon } from '@/components/ui/TransportIcons';
 import { formatFareRange } from '@/lib/utils';
 import 'leaflet/dist/leaflet.css';
 
@@ -31,7 +33,9 @@ export default function MapPage() {
   const [params] = useSearchParams();
   const from = params.get('from') || 'Current Location';
   const to = params.get('to') || 'SM City Batangas';
-  const transport = (params.get('transport') as TransportType) || 'jeepney';
+  const transportParam = params.get('transport') as TransportType | null;
+  const transport: TransportType =
+    transportParam && getTransportOption(transportParam) ? transportParam : 'jeepney';
   const { addHistory } = useApp();
 
   const route = useMemo(() => buildMockRoute(from, to, transport), [from, to, transport]);
@@ -81,7 +85,7 @@ export default function MapPage() {
             <h3 className="font-bold text-gray-900">Route Details</h3>
             <p className="mt-1 text-sm text-gray-500">{from} → {to}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Badge>{transport}</Badge>
+              <Badge>{getTransportLabel(transport)}</Badge>
               <Badge variant="gray">{route.totalDurationMin} min</Badge>
               <Badge variant="gray">{route.totalDistanceKm} km</Badge>
             </div>
@@ -94,18 +98,21 @@ export default function MapPage() {
           <Card>
             <h3 className="font-bold text-gray-900">Directions</h3>
             <ol className="mt-4 space-y-4">
-              {route.steps.map((step, i) => (
-                <li key={i} className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lacvay-green/10 text-xs font-bold text-lacvay-green">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium capitalize text-gray-800">{step.type}</p>
-                    <p className="text-sm text-gray-500">{step.instruction}</p>
-                    <p className="text-xs text-gray-400">{step.durationMin} min</p>
-                  </div>
-                </li>
-              ))}
+              {route.steps.map((step, i) => {
+                const StepIcon = getStepIcon(step.type);
+                return (
+                  <li key={i} className="flex gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lacvay-green/10 text-lacvay-green">
+                      <StepIcon className="h-3.5 w-3.5" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{getTransportLabel(step.type)}</p>
+                      <p className="text-sm text-gray-500">{step.instruction}</p>
+                      <p className="text-xs text-gray-400">{step.durationMin} min</p>
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
           </Card>
         </div>

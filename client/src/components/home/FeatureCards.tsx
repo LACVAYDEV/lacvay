@@ -17,14 +17,14 @@ const features = [
   },
   {
     title: 'Book a Ride',
-    description: 'Book tricycles, taxis, or available riders near you.',
+    description: 'Book tricycles, taxis, or motorcycle riders near you.',
     image: '/images/icon-ride.png',
     cta: 'Book Now',
     path: '/rides',
   },
   {
     title: 'Commute Guide',
-    description: 'Learn how to commute using jeepneys and tricycles.',
+    description: 'Learn how to commute by jeepney, tricycle, taxi, or motorcycle rider.',
     image: '/images/icon-commute.png',
     cta: 'View Guide',
     path: '/commute',

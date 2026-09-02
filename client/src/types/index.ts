@@ -1,4 +1,13 @@
-export type TransportType = 'jeepney' | 'tricycle' | 'taxi' | 'private' | 'walking';
+export type TransportType =
+  | 'jeepney'
+  | 'tricycle'
+  | 'motorcycle'
+  | 'taxi'
+  | 'private'
+  | 'walking';
+
+/** Transport modes a driver can be booked for. */
+export type BookableVehicle = Exclude<TransportType, 'jeepney' | 'walking'>;
 
 export type TouristCategory =
   | 'Nature'
@@ -97,7 +106,7 @@ export interface FareEstimate {
 export interface Ride {
   id: string;
   driverName: string;
-  vehicleType: 'tricycle' | 'taxi' | 'private';
+  vehicleType: BookableVehicle;
   rating: number;
   distanceKm: number;
   estimatedFare: number;

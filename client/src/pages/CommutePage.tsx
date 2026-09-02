@@ -6,6 +6,8 @@ import type { CommuteGuide } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { LoadingState, EmptyState } from '@/components/ui/States';
+import { transportIcons } from '@/components/ui/TransportIcons';
+import { getTransportLabel } from '@/lib/transport';
 import { formatFareRange } from '@/lib/utils';
 
 export default function CommutePage() {
@@ -43,6 +45,21 @@ export default function CommutePage() {
               <div className="mt-2 flex flex-wrap gap-2">
                 <Badge variant="gray">{g.difficulty}</Badge>
                 <Badge>{g.estimatedTravelTimeMin} min</Badge>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                {g.transportTypes.map((type) => {
+                  const Icon = transportIcons[type];
+                  return (
+                    <span
+                      key={type}
+                      title={getTransportLabel(type)}
+                      className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[10.5px] font-semibold text-gray-600"
+                    >
+                      <Icon className="h-3 w-3" />
+                      {getTransportLabel(type)}
+                    </span>
+                  );
+                })}
               </div>
             </Card>
           ))}

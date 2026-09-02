@@ -1,16 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpDown, Bus, Bike, Car, User, MapPin } from 'lucide-react';
+import { ArrowUpDown, MapPin } from 'lucide-react';
 import type { TransportType } from '@/types';
 import { Card } from '@/components/ui/Card';
+import { transportIcons } from '@/components/ui/TransportIcons';
+import { tripPlannerOptions } from '@/lib/transport';
 import { cn } from '@/lib/utils';
-
-const transportOptions: { type: TransportType; label: string; icon: typeof Bus }[] = [
-  { type: 'jeepney', label: 'Jeepney', icon: Bus },
-  { type: 'tricycle', label: 'Tricycle', icon: Bike },
-  { type: 'taxi', label: 'Taxi', icon: Car },
-  { type: 'private', label: 'Private', icon: User },
-];
 
 interface PlanTripCardProps {
   initialFrom?: string;
@@ -88,24 +83,28 @@ export function PlanTripCard({
       </div>
 
       <p className="mt-4 text-[10.5px] font-medium text-gray-500">Travel Option</p>
-      <div className="mt-2 grid grid-cols-4 gap-2">
-        {transportOptions.map(({ type, label, icon: Icon }) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => setTransport(type)}
-            aria-pressed={transport === type}
-            className={cn(
-              'flex flex-col items-center gap-1 rounded-xl border-2 px-1 py-2.5 text-[9.5px] font-semibold transition',
-              transport === type
-                ? 'border-lacvay-green bg-lacvay-green/5 text-lacvay-green-dark'
-                : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200',
-            )}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
-        ))}
+      <div className="mt-2 grid grid-cols-5 gap-1.5">
+        {tripPlannerOptions.map(({ type, label }) => {
+          const Icon = transportIcons[type];
+          return (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setTransport(type)}
+              aria-pressed={transport === type}
+              title={label}
+              className={cn(
+                'flex flex-col items-center gap-1 rounded-xl border-2 px-0.5 py-2.5 text-[9px] font-semibold transition',
+                transport === type
+                  ? 'border-lacvay-green bg-lacvay-green/5 text-lacvay-green-dark'
+                  : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200',
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       <button

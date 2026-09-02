@@ -12,7 +12,7 @@ const heroBackground = {
 };
 
 const highlights = [
-  { icon: Bus, label: 'Jeepney & tricycle routes' },
+  { icon: Bus, label: 'Jeepney, tricycle, taxi & motorcycle' },
   { icon: Coins, label: 'Transparent fare estimates' },
   { icon: Sparkles, label: 'AI travel assistant' },
 ];
@@ -45,9 +45,9 @@ export function LandingHero() {
           </h1>
 
           <p className="mt-4 max-w-lg text-[14px] leading-relaxed text-gray-600 sm:text-[15px]">
-            LACVAY is your local travel and transportation assistant. Find jeepney and tricycle
-            routes, check fares before you ride, book a trip, discover tourist spots, and ask an AI
-            assistant anything about the city.
+            LACVAY is your local travel and transportation assistant. Find jeepney, tricycle, taxi,
+            and motorcycle rider routes, check fares before you ride, book a trip, discover tourist
+            spots, and ask an AI assistant anything about the city.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">

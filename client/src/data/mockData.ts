@@ -188,6 +188,10 @@ export const rides: Ride[] = [
   { id: 'r2', driverName: 'Maria Taxi', vehicleType: 'taxi', rating: 4.7, distanceKm: 1.2, estimatedFare: 150, etaMin: 8, plateNumber: 'ABC 1234' },
   { id: 'r3', driverName: 'Pedro Trike', vehicleType: 'tricycle', rating: 4.8, distanceKm: 0.5, estimatedFare: 60, etaMin: 3 },
   { id: 'r4', driverName: 'Batangas Express', vehicleType: 'private', rating: 4.9, distanceKm: 2.1, estimatedFare: 250, etaMin: 10 },
+  { id: 'r5', driverName: 'Ramon Rider', vehicleType: 'motorcycle', rating: 4.8, distanceKm: 0.4, estimatedFare: 45, etaMin: 3, plateNumber: 'MC 8821' },
+  { id: 'r6', driverName: 'Habal Batangas', vehicleType: 'motorcycle', rating: 4.6, distanceKm: 1.1, estimatedFare: 65, etaMin: 5, plateNumber: 'MC 4417' },
+  { id: 'r7', driverName: 'Kuya Ben Moto', vehicleType: 'motorcycle', rating: 4.9, distanceKm: 1.6, estimatedFare: 85, etaMin: 6, plateNumber: 'MC 2093' },
+  { id: 'r8', driverName: 'Lito Taxi', vehicleType: 'taxi', rating: 4.5, distanceKm: 2.4, estimatedFare: 180, etaMin: 12, plateNumber: 'XYZ 7788' },
 ];
 
 export const commuteGuides: CommuteGuide[] = [
@@ -195,7 +199,7 @@ export const commuteGuides: CommuteGuide[] = [
     id: 'sm-batangas',
     title: 'How to commute to SM City Batangas',
     destination: 'SM City Batangas',
-    transportTypes: ['jeepney', 'tricycle'],
+    transportTypes: ['jeepney', 'tricycle', 'motorcycle', 'taxi'],
     estimatedFareMin: 13,
     estimatedFareMax: 25,
     estimatedTravelTimeMin: 18,
@@ -205,6 +209,8 @@ export const commuteGuides: CommuteGuide[] = [
       { order: 2, title: 'Ride jeepney to SM route', description: 'Look for jeepneys with signboards going to SM City / Diversion Road.' },
       { order: 3, title: 'Alight at SM City Batangas', description: 'Get off at the main entrance along Diversion Road.' },
       { order: 4, title: 'Alternative: Tricycle', description: 'From nearby barangays, tricycles can take you directly for ₱20–₱40 depending on distance.' },
+      { order: 5, title: 'Alternative: Motorcycle rider', description: 'Motorcycle taxis (habal-habal) skip traffic and cost around ₱40–₱70 for a solo passenger. Bring your own helmet when you can.' },
+      { order: 6, title: 'Alternative: Taxi', description: 'Metered taxis from the city center run about ₱90–₱140 depending on traffic — best if you have luggage or are travelling as a group.' },
     ],
   },
   {
@@ -226,15 +232,16 @@ export const commuteGuides: CommuteGuide[] = [
     id: 'port',
     title: 'How to commute to Batangas Port',
     destination: 'Batangas International Port',
-    transportTypes: ['jeepney', 'taxi'],
+    transportTypes: ['jeepney', 'motorcycle', 'taxi'],
     estimatedFareMin: 15,
-    estimatedFareMax: 80,
+    estimatedFareMax: 120,
     estimatedTravelTimeMin: 25,
     difficulty: 'Moderate',
     steps: [
       { order: 1, title: 'From city center', description: 'Ride jeepney routes heading to Batangas Port / Sta. Clara.' },
       { order: 2, title: 'Follow port signs', description: 'Jeepneys will pass through the port access road.' },
       { order: 3, title: 'Taxi option', description: 'Taxi from city center costs around ₱80–₱120 depending on traffic.' },
+      { order: 4, title: 'Motorcycle rider option', description: 'Motorcycle taxis charge roughly ₱60–₱90 and are the fastest option, but only practical with light hand-carry baggage.' },
     ],
   },
 ];
