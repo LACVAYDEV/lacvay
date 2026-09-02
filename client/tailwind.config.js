@@ -25,6 +25,60 @@ export default {
         '3xl': '1.25rem',
         '4xl': '1.5rem',
       },
+      keyframes: {
+        'fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(22px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'scale-in': {
+          '0%': { opacity: '0', transform: 'scale(0.93)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-14px)' },
+        },
+        'float-sm': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-9px)' },
+        },
+        drift: {
+          '0%, 100%': { transform: 'translate3d(0, 0, 0) scale(1)' },
+          '33%': { transform: 'translate3d(26px, -20px, 0) scale(1.08)' },
+          '66%': { transform: 'translate3d(-20px, 16px, 0) scale(0.94)' },
+        },
+        'route-dash': {
+          '100%': { strokeDashoffset: '-12' },
+        },
+        'pulse-ring': {
+          '0%': { transform: 'scale(0.65)', opacity: '0.65' },
+          '80%, 100%': { transform: 'scale(2.4)', opacity: '0' },
+        },
+        marquee: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+      },
+      animation: {
+        // `both` fill mode keeps entrance animations hidden through their delay.
+        'fade-up': 'fade-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'fade-in': 'fade-in 0.9s ease-out both',
+        'scale-in': 'scale-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both',
+        float: 'float 7s ease-in-out infinite',
+        'float-sm': 'float-sm 5.5s ease-in-out infinite',
+        // Applied directly to blended images: a transform on an ancestor would
+        // isolate them from their backdrop and break mix-blend-mode.
+        'float-in':
+          'fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both, float 7s ease-in-out 1s infinite',
+        drift: 'drift 20s ease-in-out infinite',
+        'route-dash': 'route-dash 0.9s linear infinite',
+        'pulse-ring': 'pulse-ring 2.8s cubic-bezier(0.24, 0, 0.38, 1) infinite',
+        marquee: 'marquee 38s linear infinite',
+      },
     },
   },
   plugins: [],
