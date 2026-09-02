@@ -229,20 +229,6 @@ body {
     opacity: 0.9;
 }
 
-.btn-account {
-    background: linear-gradient(135deg, var(--primary-green), var(--primary-lime));
-    color: var(--white);
-    font-weight: 600;
-    padding: 8px 16px;
-    border: none;
-}
-
-.btn-account:hover {
-    opacity: 0.9;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
 /* ===== Hero Section ===== */
 .hero-section {
     margin-top: var(--header-height);
@@ -753,21 +739,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
 }
 
-.ai-text-desktop {
-    display: block;
+.ai-text {
     font-size: 14px;
     font-weight: 700;
 }
 
-.ai-greeting-mobile {
-    display: none;
-}
-
-.ai-greeting-desktop {
-    display: block;
+.ai-greeting {
     font-size: 13px;
     line-height: 1.5;
     margin-bottom: 16px;
@@ -889,18 +868,6 @@ body {
         padding: 24px 16px;
     }
 
-    .stat-card {
-        padding: 16px;
-    }
-
-    .stat-number {
-        font-size: 22px;
-    }
-
-    .stat-label {
-        font-size: 12px;
-    }
-
     .mobile-nav {
         display: flex;
         position: fixed;
@@ -945,31 +912,6 @@ body {
         bottom: 20px;
         right: 12px;
         width: 280px;
-        padding: 16px;
-    }
-
-    .ai-text-desktop {
-        display: block;
-        font-size: 13px;
-    }
-
-    .ai-greeting-mobile {
-        display: none;
-    }
-
-    .ai-greeting-desktop {
-        display: block;
-        font-size: 12px;
-    }
-
-    .ai-prompts {
-        display: flex;
-        gap: 8px;
-    }
-
-    .prompt-btn {
-        font-size: 11px;
-        padding: 8px 10px;
     }
 
     .hero-section {
@@ -997,19 +939,6 @@ body {
 
     .stats {
         grid-template-columns: 1fr;
-        padding: 20px 12px;
-    }
-
-    .stat-card {
-        padding: 12px;
-    }
-
-    .stat-number {
-        font-size: 18px;
-    }
-
-    .stat-label {
-        font-size: 11px;
     }
 
     .tourist-spots, .promotions {
@@ -1021,47 +950,16 @@ body {
     }
 
     .floating-ai {
-        width: 160px;
-        padding: 10px;
-        bottom: 90px;
-        right: 10px;
-    }
-
-    .ai-top {
-        gap: 6px;
-        margin-bottom: 0;
-        flex-wrap: wrap;
-    }
-
-    .ai-icon {
-        font-size: 24px;
-    }
-
-    .ai-text-desktop {
-        display: none;
-    }
-
-    .ai-greeting-mobile {
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--white);
-        line-height: 1.2;
-        flex: 1;
-    }
-
-    .ai-greeting-desktop {
-        display: none;
+        width: 260px;
+        padding: 16px;
     }
 
     .ai-prompts {
-        gap: 6px;
-        display: none;
+        gap: 8px;
     }
 
     .prompt-btn {
-        font-size: 9px;
-        padding: 5px 8px;
-        border-radius: 6px;
-        line-height: 1.2;
+        font-size: 11px;
+        padding: 8px 10px;
     }
 }

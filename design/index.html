@@ -1,344 +1,450 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LACVAY — Batangas City Transport & Tourism Assistant</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LACVAY — Batangas City Transport & Tourism Assistant</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
 
-  <!-- ===== Skip Link ===== -->
-  <a href="#main-content" class="skip-link">Skip to main content</a>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">🌿</div>
+            <div class="brand-text">
+                <div class="brand-name">LACVAY</div>
+                <div class="brand-description">Batangas City Travel Assistant</div>
+            </div>
+        </div>
 
-  <!-- ===== Background mesh blobs ===== -->
-  <div class="mesh-bg" aria-hidden="true">
-    <div class="blob blob-green"></div>
-    <div class="blob blob-lime"></div>
-    <div class="blob blob-gold"></div>
-  </div>
+        <nav class="sidebar-nav">
+            <a href="#home" class="nav-item active">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Home</span>
+            </a>
+            <a href="#map" class="nav-item">
+                <span class="nav-icon">🗺️</span>
+                <span class="nav-label">Map & Routes</span>
+            </a>
+            <a href="#commute" class="nav-item">
+                <span class="nav-icon">🚐</span>
+                <span class="nav-label">Commute Guide</span>
+            </a>
+            <a href="#fare" class="nav-item">
+                <span class="nav-icon">💰</span>
+                <span class="nav-label">Fare Checker</span>
+            </a>
+            <a href="#booking" class="nav-item">
+                <span class="nav-icon">🚗</span>
+                <span class="nav-label">Ride Booking</span>
+            </a>
+            <a href="#explore" class="nav-item">
+                <span class="nav-icon">🎯</span>
+                <span class="nav-label">Explore Batangas</span>
+            </a>
+            <a href="#restaurants" class="nav-item">
+                <span class="nav-icon">🍽️</span>
+                <span class="nav-label">Restaurants</span>
+            </a>
+            <a href="#ai" class="nav-item">
+                <span class="nav-icon">✨</span>
+                <span class="nav-label">AI Assistant</span>
+            </a>
+        </nav>
 
-  <!-- ===== Sidebar Navigation ===== -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <span class="sidebar-brand-icon">🌿</span>
-      <span class="sidebar-brand-name">LACVAY</span>
-      <button class="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+        <div class="sidebar-footer">
+            <a href="#settings" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <input type="text" class="search-bar" placeholder="Search places, routes, or attractions...">
+            </div>
+            <div class="header-right">
+                <div class="weather">⛅ 28°C</div>
+                <div class="location">📍 Batangas City</div>
+                <div class="notifications">🔔</div>
+                <button class="btn btn-account">👤 Account</button>
+            </div>
+        </header>
+
+        <!-- Hero Section with Layout -->
+        <section class="hero-section">
+            <div class="hero-bg">
+                <div class="hero-gradient"></div>
+                <div class="float-icon" style="left: 5%; top: 15%;">🌴</div>
+                <div class="float-icon" style="left: 80%; top: 20%;">🏖️</div>
+                <div class="float-icon" style="left: 10%; bottom: 15%;">🚐</div>
+                <div class="float-icon" style="right: 5%; bottom: 20%;">⛩️</div>
+            </div>
+
+            <div class="hero-grid">
+                <!-- Left: Content + Trip Planner -->
+                <div class="hero-left">
+                    <div class="hero-content">
+                        <h1>Your Batangas City Travel Companion</h1>
+                        <p>Find routes, check fares, book rides, explore attractions, and get AI-powered travel assistance — all in one place.</p>
+                        <div class="hero-buttons">
+                            <button class="btn btn-primary">Plan Your Trip</button>
+                            <button class="btn btn-secondary">Ask AI Assistant</button>
+                        </div>
+                    </div>
+
+                    <!-- Trip Planner Card -->
+                    <div class="trip-planner-card">
+                        <h3>Plan Your Trip</h3>
+                        <div class="trip-planner">
+                            <div class="trip-input">
+                                <label>From</label>
+                                <div class="input-field">
+                                    <span class="icon">📍</span>
+                                    <input type="text" placeholder="Current Location">
+                                </div>
+                            </div>
+                            <div class="trip-input">
+                                <label>To</label>
+                                <div class="input-field">
+                                    <span class="icon">🎯</span>
+                                    <input type="text" placeholder="Where to?">
+                                </div>
+                            </div>
+                            <div class="trip-input full-width">
+                                <label>Transportation</label>
+                                <div class="transport-options">
+                                    <button class="transport-btn active">🚐 Jeepney</button>
+                                    <button class="transport-btn">🛵 Tricycle</button>
+                                    <button class="transport-btn">🚕 Taxi</button>
+                                    <button class="transport-btn">🚗 Private</button>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary find-routes">Find My Route →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Live Map -->
+                <div class="hero-right">
+                    <div class="live-map-card">
+                        <div class="map-placeholder">
+                            <div class="map-icon">🗺️</div>
+                            <p>Live Map</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Links -->
+        <section class="quick-links">
+            <div class="quick-link-card">
+                <div class="card-icon">📍</div>
+                <h3>Find Your Route</h3>
+                <p>Discover jeepney, tricycle, and bus routes around Batangas City.</p>
+                <a href="#" class="card-link">Find a Route →</a>
+            </div>
+            <div class="quick-link-card">
+                <div class="card-icon">💰</div>
+                <h3>Know Your Fare</h3>
+                <p>Check exact or estimated transportation fares before you travel.</p>
+                <a href="#" class="card-link">Check Fare →</a>
+            </div>
+            <div class="quick-link-card">
+                <div class="card-icon">🚗</div>
+                <h3>Book a Ride</h3>
+                <p>Book tricycles, taxis, and available local drivers instantly.</p>
+                <a href="#" class="card-link">Book Now →</a>
+            </div>
+            <div class="quick-link-card">
+                <div class="card-icon">🚐</div>
+                <h3>Commute Guide</h3>
+                <p>Step-by-step beginner-friendly transportation instructions.</p>
+                <a href="#" class="card-link">View Guide →</a>
+            </div>
+            <div class="quick-link-card">
+                <div class="card-icon">🎯</div>
+                <h3>Explore Batangas</h3>
+                <p>Discover beaches, nature, historical sites, and cultural attractions.</p>
+                <a href="#" class="card-link">Explore →</a>
+            </div>
+            <div class="quick-link-card">
+                <div class="card-icon">🍽️</div>
+                <h3>Find Restaurants</h3>
+                <p>Discover local Filipino restaurants and dining experiences.</p>
+                <a href="#" class="card-link">Find Food →</a>
+            </div>
+        </section>
+
+        <!-- Tourist Spots -->
+        <section class="tourist-spots">
+            <h2>Discover Batangas City</h2>
+            <div class="spot-row">
+                <div class="spot-card">
+                    <img src="https://via.placeholder.com/280x180" alt="Talisay Beach">
+                    <h3>Talisay Beach</h3>
+                    <p>Beautiful coastal destination with white sand</p>
+                    <div class="spot-meta">
+                        <span>🚌 30 min</span>
+                        <span>₱50-80</span>
+                    </div>
+                </div>
+                <div class="spot-card">
+                    <img src="https://via.placeholder.com/280x180" alt="Mount Banahaw">
+                    <h3>Mount Banahaw</h3>
+                    <p>Sacred mountain with scenic hiking trails</p>
+                    <div class="spot-meta">
+                        <span>🚐 45 min</span>
+                        <span>₱100-150</span>
+                    </div>
+                </div>
+                <div class="spot-card">
+                    <img src="https://via.placeholder.com/280x180" alt="Batangas City Plaza">
+                    <h3>City Plaza</h3>
+                    <p>Historic and cultural landmark</p>
+                    <div class="spot-meta">
+                        <span>🚐 10 min</span>
+                        <span>₱20-30</span>
+                    </div>
+                </div>
+                <div class="spot-card">
+                    <img src="https://via.placeholder.com/280x180" alt="Calatagan Beach">
+                    <h3>Calatagan Beach</h3>
+                    <p>Pristine beach with water activities</p>
+                    <div class="spot-meta">
+                        <span>🚌 50 min</span>
+                        <span>₱80-120</span>
+                    </div>
+                </div>
+                <div class="spot-card">
+                    <img src="https://via.placeholder.com/280x180" alt="Fortune Island">
+                    <h3>Fortune Island</h3>
+                    <p>Island adventure with pristine waters</p>
+                    <div class="spot-meta">
+                        <span>🚌 60 min</span>
+                        <span>₱150-200</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Promotions -->
+        <section class="promotions">
+            <h2>Local Promotions</h2>
+            <div class="promo-content">
+                <div class="promo-badge">Special Offer</div>
+                <div class="business-card">
+                    <div class="business-icon">🏪</div>
+                    <div class="business-info">
+                        <h3>SMC Batangas</h3>
+                        <p>Shopping & Entertainment</p>
+                    </div>
+                    <span class="promo-tag">50% Off</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Statistics -->
+        <section class="stats">
+            <div class="stat-card">
+                <div class="stat-number">150+</div>
+                <div class="stat-label">Routes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">500+</div>
+                <div class="stat-label">Drivers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">1000+</div>
+                <div class="stat-label">Attractions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">50+</div>
+                <div class="stat-label">Restaurants</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">10K+</div>
+                <div class="stat-label">Users</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Floating AI Assistant -->
+    <div class="floating-ai">
+        <div class="ai-top">
+            <div class="ai-icon">🤖</div>
+            <div class="ai-greeting-mobile">This is LACVAY AI, How can I help you?</div>
+            <div class="ai-text-desktop">Hi! I'm LACVAY AI ✨</div>
+        </div>
+        <p class="ai-greeting-desktop">I can help you find routes, check fares, discover tourist spots, recommend restaurants, and plan your trip around Batangas City.</p>
+        <div class="ai-prompts">
+            <button class="prompt-btn">How do I get to SM Batangas?</button>
+            <button class="prompt-btn">What are the best tourist spots?</button>
+            <button class="prompt-btn">Check my commute fare</button>
+            <button class="prompt-btn">Recommend nearby restaurants</button>
+        </div>
     </div>
 
-    <nav class="sidebar-nav">
-      <a href="#home" class="sidebar-link active">
-        <span class="sidebar-icon">🏠</span>
-        <span class="sidebar-label">Home</span>
-      </a>
-      <a href="#routes" class="sidebar-link">
-        <span class="sidebar-icon">🗺️</span>
-        <span class="sidebar-label">Map & Routes</span>
-      </a>
-      <a href="#commute" class="sidebar-link">
-        <span class="sidebar-icon">🚌</span>
-        <span class="sidebar-label">Commute Guide</span>
-      </a>
-      <a href="#fares" class="sidebar-link">
-        <span class="sidebar-icon">💰</span>
-        <span class="sidebar-label">Fare Checker</span>
-      </a>
-      <a href="#book" class="sidebar-link">
-        <span class="sidebar-icon">🚕</span>
-        <span class="sidebar-label">Book a Ride</span>
-      </a>
-      <a href="#tourism" class="sidebar-link">
-        <span class="sidebar-icon">🏝️</span>
-        <span class="sidebar-label">Tourist Spots</span>
-      </a>
-      <a href="#assistant" class="sidebar-link">
-        <span class="sidebar-icon">🤖</span>
-        <span class="sidebar-label">AI Travel Assistant</span>
-      </a>
-      <a href="#restaurants" class="sidebar-link">
-        <span class="sidebar-icon">🍜</span>
-        <span class="sidebar-label">Nearby Restaurants</span>
-      </a>
-      <a href="#promotions" class="sidebar-link">
-        <span class="sidebar-icon">📣</span>
-        <span class="sidebar-label">Promotions</span>
-      </a>
-
-      <div class="sidebar-divider"></div>
-
-      <a href="#saved" class="sidebar-link">
-        <span class="sidebar-icon">💾</span>
-        <span class="sidebar-label">Saved</span>
-      </a>
-      <a href="#history" class="sidebar-link">
-        <span class="sidebar-icon">⏱️</span>
-        <span class="sidebar-label">History</span>
-      </a>
-      <a href="#settings" class="sidebar-link">
-        <span class="sidebar-icon">⚙️</span>
-        <span class="sidebar-label">Settings</span>
-      </a>
-    </nav>
-  </aside>
-
-  <!-- ===== Main Content ===== -->
-  <main class="main-content" id="main-content">
-
-    <!-- ===== Header ===== -->
-    <header>
-      <div class="header-left">
-        <a href="#" class="header-logo">🌿 LACVAY</a>
-        <div class="search-container">
-          <input type="text" class="search-input" placeholder="Search places, routes, or attractions...">
-        </div>
-      </div>
-
-      <div class="header-right">
-        <div class="weather-info">
-          <span class="weather-icon">☀️</span>
-          <span>28°C<br>Batangas City</span>
-        </div>
-        <div class="header-icons">
-          <button class="icon-btn" title="Notifications">🔔</button>
-        </div>
-        <div class="user-profile">
-          <div class="user-avatar">J</div>
-          <div>
-            <div class="user-name">Hello, Juan!</div>
-          </div>
-        </div>
-        <div class="auth-buttons">
-          <button class="btn btn-sm btn-outline">Sign In</button>
-          <button class="btn btn-sm btn-primary">Sign Up</button>
-        </div>
-      </div>
-    </header>
-
-    <!-- ===== Hero Section ===== -->
-    <section class="hero">
-      <div class="hero-text">
-        <h1>Your <span class="accent">Batangas City</span><br><span class="yellow">Travel Companion</span></h1>
-        <p class="subtitle">Find routes, check fares, book rides, explore attractions, and get AI-powered travel assistance — all in one place.</p>
-        <div class="hero-actions">
-          <button class="btn btn-primary">Plan Your Trip</button>
-          <button class="btn btn-secondary">Ask AI Assistant</button>
-        </div>
-      </div>
-
-      <div class="hero-card">
-        <div class="card-header">
-          <span class="dot dot-green"></span>
-          <span class="dot dot-yellow"></span>
-          <span class="dot dot-teal"></span>
-          <h3>Plan Your Trip</h3>
-        </div>
-
-        <div class="route-finder">
-          <div class="input-group">
-            <label>From</label>
-            <input type="text" placeholder="Current Location" value="Current Location">
-          </div>
-          <div class="input-group">
-            <label>To</label>
-            <input type="text" placeholder="Where to?" value="Where to?">
-          </div>
-
-          <div class="travel-options">
-            <button class="travel-option">
-              <div class="travel-option-icon">🚌</div>
-              <div>Jeepney</div>
-            </button>
-            <button class="travel-option">
-              <div class="travel-option-icon">🛺</div>
-              <div>Tricycle</div>
-            </button>
-            <button class="travel-option">
-              <div class="travel-option-icon">🚗</div>
-              <div>Taxi</div>
-            </button>
-            <button class="travel-option">
-              <div class="travel-option-icon">🏍️</div>
-              <div>Private</div>
-            </button>
-          </div>
-
-          <button class="search-btn">Find Routes</button>
-
-          <div class="route-results">
-            <div class="route-item">
-              <div>
-                <div class="route-name">🚌 Jeepney — Alangilan Route</div>
-                <div class="route-type">Commute</div>
-              </div>
-              <div class="route-price">₱13.00 <span style="font-size: 0.8rem; color: var(--text-tertiary);">estimated</span></div>
-            </div>
-            <div class="route-item">
-              <div>
-                <div class="route-name">🛺 Tricycle — Direct</div>
-                <div class="route-type">Direct</div>
-              </div>
-              <div class="route-price">₱40.00 <span style="font-size: 0.8rem; color: var(--text-tertiary);">exact</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Features Section ===== -->
-    <section class="features" id="routes">
-      <div class="section-header">
-        <h2>Everything you need to get around</h2>
-        <p>A simple, local-first toolkit for commuting, riding, and exploring Batangas City.</p>
-      </div>
-
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">🗺️</div>
-          <h3>Map & Routes</h3>
-          <p>View routes, jeepney and tricycle guides around Batangas City.</p>
-          <a href="#" class="feature-link">Open Map →</a>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">💰</div>
-          <h3>Fare Checker</h3>
-          <p>Check exact or estimated fares for your trip.</p>
-          <a href="#" class="feature-link">Check Fare →</a>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🚕</div>
-          <h3>Book a Ride</h3>
-          <p>Book bicycles, taxis, or available riders near you.</p>
-          <a href="#" class="feature-link">Book Now →</a>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🧭</div>
-          <h3>Commute Guide</h3>
-          <p>Learn how to commute using jeepneys and tricycles.</p>
-          <a href="#" class="feature-link">View Guide →</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Popular Tourist Spots ===== -->
-    <section class="tourist-spots" id="tourism">
-      <div class="spot-row">
-        <div class="spot-col">
-          <h3>Popular Tourist Spots</h3>
-          <div class="spot-card">
-            <div class="spot-image">🏔️</div>
-            <div class="spot-info">
-              <div class="spot-name">Tail Volcano</div>
-              <div class="spot-category">Nature Adventure</div>
-            </div>
-          </div>
-          <div class="spot-card" style="margin-top: 16px;">
-            <div class="spot-image">⛪</div>
-            <div class="spot-info">
-              <div class="spot-name">Basilica of Immaculate Conception</div>
-              <div class="spot-category">Historical</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="spot-col">
-          <div style="height: 24px;"></div>
-          <div class="spot-card">
-            <div class="spot-image">🌊</div>
-            <div class="spot-info">
-              <div class="spot-name">Anilao, Mabini</div>
-              <div class="spot-category">Beach & Diving</div>
-            </div>
-          </div>
-          <div class="spot-card" style="margin-top: 16px;">
-            <div class="spot-image">🏖️</div>
-            <div class="spot-info">
-              <div class="spot-name">Laiya Beach Resort</div>
-              <div class="spot-category">Beach Getaway</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="spot-col">
-          <div style="background: var(--yellow-light); border-radius: var(--radius-lg); padding: 24px; text-align: center;">
-            <h3 style="margin-bottom: 16px;">Local Promotions</h3>
-            <div style="background: var(--white); border-radius: var(--radius-md); padding: 16px; margin-bottom: 12px;">
-              <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Summer Promo!</div>
-              <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">10% OFF on tricycle rides this week!</div>
-              <div style="font-weight: 600; color: var(--green-primary);">Use code: LACVAY10</div>
-            </div>
-            <div style="background: var(--white); border-radius: var(--radius-md); padding: 16px;">
-              <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Promote Your Business</div>
-              <div style="font-size: 0.85rem; color: var(--text-secondary);">Boost your visibility and reach nearby customers.</div>
-              <a href="#" style="color: var(--green-primary); font-weight: 600; text-decoration: none; display: inline-block; margin-top: 8px;">Learn More →</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== AI Travel Assistant ===== -->
-    <section class="assistant-chat" id="assistant">
-      <div class="chat-container">
-        <h3 style="margin-bottom: 24px; color: var(--white);">🤖 AI Travel Assistant</h3>
-        <div class="chat-bubble">
-          Hi! I'm LACVAY AI 👋
-        </div>
-        <div class="chat-bubble">
-          I can help you find routes, check fares, recommend places, and more!
-        </div>
-
-        <div class="chat-input-wrapper">
-          <input type="text" class="chat-input" placeholder="Ask me anything...">
-          <button class="chat-send">➤</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Promotions ===== -->
-    <section class="promotions" id="promotions">
-      <div class="promo-card">
-        <span class="pill pill-yellow" style="background: rgba(255, 255, 255, 0.2); color: var(--white); border-color: rgba(255, 255, 255, 0.5);">For Local Businesses</span>
-        <h2>Get discovered by commuters & tourists</h2>
-        <p>Boost your sales with in-app recommendations — restaurants, shops, and local services get featured to nearby users looking for the perfect spot.</p>
-        <button class="btn btn-secondary" style="margin-top: 24px;">Promote My Business</button>
-      </div>
-    </section>
-
-    <!-- ===== Footer ===== -->
-    <footer>
-      <p>🌿 LACVAY — Made for Batangas City, Batangas, Philippines</p>
-    </footer>
-
-    <!-- ===== Mobile Navigation ===== -->
+    <!-- Mobile Navigation -->
     <nav class="mobile-nav">
-      <a href="#" class="mobile-nav-item">
-        <span class="mobile-nav-icon">🏠</span>
-        <span>Home</span>
-      </a>
-      <a href="#" class="mobile-nav-item">
-        <span class="mobile-nav-icon">🗺️</span>
-        <span>Map</span>
-      </a>
-      <a href="#" class="mobile-nav-item">
-        <span class="mobile-nav-icon">📱</span>
-        <span>Scan QR</span>
-      </a>
-      <a href="#" class="mobile-nav-item">
-        <span class="mobile-nav-icon">📑</span>
-        <span>Bookings</span>
-      </a>
-      <a href="#" class="mobile-nav-item">
-        <span class="mobile-nav-icon">❤️</span>
-        <span>Saved</span>
-      </a>
+        <a href="#" class="mobile-nav-item">🏠 Home</a>
+        <a href="#" class="mobile-nav-item">🗺️ Map</a>
+        <a href="#" class="mobile-nav-item mobile-center">📱 QR</a>
+        <a href="#" class="mobile-nav-item">📋 Bookings</a>
+        <a href="#" class="mobile-nav-item">❤️ Saved</a>
     </nav>
 
-  </main>
+    <script>
+        // ===== Transportation Button Toggling =====
+        const transportBtns = document.querySelectorAll('.transport-btn');
+        transportBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                transportBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
 
+        // ===== Navigation Active State =====
+        const navItems = document.querySelectorAll('a.nav-item');
+        navItems.forEach(item => {
+            item.addEventListener('click', function() {
+                navItems.forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // ===== AI Prompt Button Interactions =====
+        const promptBtns = document.querySelectorAll('.prompt-btn');
+        promptBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const message = this.textContent;
+                console.log('AI Prompt Selected:', message);
+                alert(`You asked: "${message}"\n\nLACVAY AI is processing your request...`);
+            });
+        });
+
+        // ===== Card Links and Actions =====
+        const cardLinks = document.querySelectorAll('.card-link');
+        cardLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const cardTitle = this.closest('.quick-link-card').querySelector('h3').textContent;
+                console.log('Card Selected:', cardTitle);
+                alert(`Opening: ${cardTitle}`);
+            });
+        });
+
+        // ===== Find My Route Button =====
+        const findRoutesBtn = document.querySelector('.find-routes');
+        if (findRoutesBtn) {
+            findRoutesBtn.addEventListener('click', function() {
+                const from = document.querySelector('.trip-planner .trip-input:nth-child(1) input').value;
+                const to = document.querySelector('.trip-planner .trip-input:nth-child(2) input').value;
+                const transport = document.querySelector('.transport-btn.active').textContent;
+                
+                if (from && to) {
+                    console.log('Trip Details:', {from, to, transport});
+                    alert(`Finding routes from ${from} to ${to} via ${transport}`);
+                } else {
+                    alert('Please fill in both "From" and "To" fields!');
+                }
+            });
+        }
+
+        // ===== Account Button =====
+        const accountBtn = document.querySelector('.btn-account');
+        if (accountBtn) {
+            accountBtn.addEventListener('click', function() {
+                console.log('Account Clicked');
+                alert('Account functionality would open user profile or login/registration');
+            });
+        }
+
+        // ===== Plan Your Trip CTA Button =====
+        const planTripCta = document.querySelector('.hero-buttons .btn-primary');
+        if (planTripCta) {
+            planTripCta.addEventListener('click', function() {
+                console.log('Plan Your Trip CTA Clicked');
+                document.querySelector('.trip-planner-card').scrollIntoView({behavior: 'smooth'});
+            });
+        }
+
+        // ===== Ask AI Assistant CTA Button =====
+        const askAiCta = document.querySelector('.hero-buttons .btn-secondary');
+        if (askAiCta) {
+            askAiCta.addEventListener('click', function() {
+                console.log('Ask AI Assistant CTA Clicked');
+                document.querySelector('.floating-ai').scrollIntoView({behavior: 'smooth'});
+            });
+        }
+
+        // ===== Search Bar Functionality =====
+        const searchBar = document.querySelector('.search-bar');
+        if (searchBar) {
+            searchBar.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const query = this.value;
+                    console.log('Search Query:', query);
+                    alert(`Searching for: "${query}"`);
+                }
+            });
+        }
+
+        // ===== Spot Cards Interaction =====
+        const spotCards = document.querySelectorAll('.spot-card');
+        spotCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const spotName = this.querySelector('h3').textContent;
+                console.log('Tourist Spot Selected:', spotName);
+                alert(`Viewing details for: ${spotName}`);
+            });
+        });
+
+        // ===== Mobile Nav Items =====
+        const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
+        mobileNavItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const text = this.textContent.trim();
+                console.log('Mobile Nav Clicked:', text);
+            });
+        });
+
+        // ===== Weather Widget =====
+        const weatherWidget = document.querySelector('.weather');
+        if (weatherWidget) {
+            weatherWidget.addEventListener('click', function() {
+                console.log('Weather Widget Clicked');
+                alert('Weather details for Batangas City would be displayed here');
+            });
+        }
+
+        // ===== Notifications Icon =====
+        const notificationsIcon = document.querySelector('.notifications');
+        if (notificationsIcon) {
+            notificationsIcon.addEventListener('click', function() {
+                console.log('Notifications Clicked');
+                alert('You have 3 new notifications');
+            });
+        }
+
+        // ===== Profile Icon =====
+        const profileIcon = document.querySelector('.profile');
+        if (profileIcon) {
+            profileIcon.addEventListener('click', function() {
+                console.log('Profile Clicked');
+                alert('Opening user profile');
+            });
+        }
+
+        console.log('LACVAY Interactive Features Loaded Successfully! ✨');
+    </script>
 </body>
 </html>
