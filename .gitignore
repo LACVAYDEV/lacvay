@@ -9,3 +9,4 @@ build/
 client/dist/
 server/dist/
 .vite/
+*.tsbuildinfo
