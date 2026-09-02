@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Compass, Eye, EyeOff, Loader2, Lock, Mail, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { validateEmail, validateName, validatePassword } from '@/services/authService';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,22 @@ interface FieldErrors {
 
 interface AuthFormProps {
   mode: AuthMode;
+}
+
+const strengthLevels = [
+  { label: 'Too short', bar: 'bg-red-400', text: 'text-red-600' },
+  { label: 'Weak', bar: 'bg-red-400', text: 'text-red-600' },
+  { label: 'Fair', bar: 'bg-amber-400', text: 'text-amber-600' },
+  { label: 'Strong', bar: 'bg-lacvay-green', text: 'text-lacvay-green' },
+];
+
+function passwordScore(value: string): number {
+  if (value.length === 0) return 0;
+  if (value.length < 6) return 1;
+  let score = 2;
+  if (value.length >= 10) score += 1;
+  if (/[A-Z]/.test(value) && /[^A-Za-z]/.test(value)) score += 1;
+  return Math.min(score, 3);
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
@@ -76,13 +92,18 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   };
 
-  const inputClass = (hasError?: string) =>
+  const inputClass = (hasError?: string, hasTrailing?: boolean) =>
     cn(
-      'w-full rounded-2xl border bg-gray-50 px-4 py-3 text-[13px] outline-none transition placeholder:text-gray-400 focus:bg-white',
+      'w-full rounded-2xl border bg-gray-50/80 py-3 pl-11 text-[13px] outline-none transition placeholder:text-gray-400 focus:bg-white',
+      hasTrailing ? 'pr-11' : 'pr-4',
       hasError
         ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100'
         : 'border-gray-200 focus:border-lacvay-green focus:ring-2 focus:ring-lacvay-green/15',
     );
+
+  const iconClass = 'pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400';
+  const score = passwordScore(password);
+  const strength = strengthLevels[score];
 
   return (
     <div>
@@ -110,9 +131,9 @@ export function AuthForm({ mode }: AuthFormProps) {
       <h1 className="mt-7 text-[24px] font-extrabold tracking-tight text-gray-900">
         {isSignUp ? 'Create your account' : 'Welcome back'}
       </h1>
-      <p className="mt-1.5 text-[13px] text-gray-500">
+      <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
         {isSignUp
-          ? 'Save places, keep your history, and get personalised recommendations.'
+          ? 'Save places, keep your history, and get recommendations that fit how you travel.'
           : 'Sign in to continue exploring Batangas City.'}
       </p>
 
@@ -122,16 +143,19 @@ export function AuthForm({ mode }: AuthFormProps) {
             <label htmlFor="name" className="mb-1.5 block text-[12px] font-medium text-gray-700">
               Full name
             </label>
-            <input
-              id="name"
-              type="text"
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Juan dela Cruz"
-              aria-invalid={Boolean(errors.name)}
-              className={inputClass(errors.name)}
-            />
+            <div className="relative">
+              <User className={iconClass} />
+              <input
+                id="name"
+                type="text"
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Juan dela Cruz"
+                aria-invalid={Boolean(errors.name)}
+                className={inputClass(errors.name)}
+              />
+            </div>
             {errors.name && (
               <p role="alert" className="mt-1.5 text-[11.5px] text-red-600">{errors.name}</p>
             )}
@@ -142,16 +166,19 @@ export function AuthForm({ mode }: AuthFormProps) {
           <label htmlFor="email" className="mb-1.5 block text-[12px] font-medium text-gray-700">
             Email address
           </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            aria-invalid={Boolean(errors.email)}
-            className={inputClass(errors.email)}
-          />
+          <div className="relative">
+            <Mail className={iconClass} />
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              aria-invalid={Boolean(errors.email)}
+              className={inputClass(errors.email)}
+            />
+          </div>
           {errors.email && (
             <p role="alert" className="mt-1.5 text-[11.5px] text-red-600">{errors.email}</p>
           )}
@@ -173,6 +200,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             )}
           </div>
           <div className="relative">
+            <Lock className={iconClass} />
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
@@ -181,17 +209,35 @@ export function AuthForm({ mode }: AuthFormProps) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="At least 6 characters"
               aria-invalid={Boolean(errors.password)}
-              className={cn(inputClass(errors.password), 'pr-11')}
+              className={inputClass(errors.password, true)}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-gray-400 transition hover:text-gray-600"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+
+          {isSignUp && password.length > 0 && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex flex-1 gap-1" aria-hidden="true">
+                {[1, 2, 3].map((level) => (
+                  <span
+                    key={level}
+                    className={cn(
+                      'h-1 flex-1 rounded-full transition',
+                      score >= level ? strength.bar : 'bg-gray-200',
+                    )}
+                  />
+                ))}
+              </div>
+              <span className={cn('text-[11px] font-semibold', strength.text)}>{strength.label}</span>
+            </div>
+          )}
+
           {errors.password && (
             <p role="alert" className="mt-1.5 text-[11.5px] text-red-600">{errors.password}</p>
           )}
@@ -202,16 +248,19 @@ export function AuthForm({ mode }: AuthFormProps) {
             <label htmlFor="confirmPassword" className="mb-1.5 block text-[12px] font-medium text-gray-700">
               Confirm password
             </label>
-            <input
-              id="confirmPassword"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter your password"
-              aria-invalid={Boolean(errors.confirmPassword)}
-              className={inputClass(errors.confirmPassword)}
-            />
+            <div className="relative">
+              <Lock className={iconClass} />
+              <input
+                id="confirmPassword"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your password"
+                aria-invalid={Boolean(errors.confirmPassword)}
+                className={inputClass(errors.confirmPassword)}
+              />
+            </div>
             {errors.confirmPassword && (
               <p role="alert" className="mt-1.5 text-[11.5px] text-red-600">{errors.confirmPassword}</p>
             )}
@@ -250,9 +299,13 @@ export function AuthForm({ mode }: AuthFormProps) {
         type="button"
         onClick={handleGuest}
         disabled={guestLoading}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white py-3 text-[13.5px] font-semibold text-gray-800 transition hover:bg-gray-50 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white py-3 text-[13.5px] font-semibold text-gray-800 transition hover:border-lacvay-green/30 hover:bg-lacvay-green/[0.04] disabled:opacity-60"
       >
-        {guestLoading && <Loader2 className="h-4 w-4 animate-spin text-lacvay-green" />}
+        {guestLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin text-lacvay-green" />
+        ) : (
+          <Compass className="h-4 w-4 text-lacvay-green" />
+        )}
         Continue as guest
       </button>
 
