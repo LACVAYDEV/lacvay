@@ -75,6 +75,18 @@ export const landingBenefits: LandingBenefit[] = [
   },
 ];
 
+/** Scrolled through the hero ticker to hint at coverage. */
+export const landingTicker = [
+  'Taal Volcano',
+  'Basilica of the Immaculate Conception',
+  'Anilao, Mabini',
+  'Laiya Beach',
+  'SM City Batangas',
+  'Batangas Grand Terminal',
+  'Batangas International Port',
+  'Caleruega Church',
+];
+
 export const aiSampleChat = [
   { role: 'user' as const, text: 'How do I get to SM Batangas from the port?' },
   {
