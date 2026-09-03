@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, Check, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock3, MapPin, Sparkles, Check, Star, X } from 'lucide-react';
 import { landingFeatures, landingSteps, landingBenefits, aiSampleChat } from '@/data/landingContent';
 import { touristSpots } from '@/data/mockData';
 
@@ -94,6 +95,31 @@ export function LandingHowItWorks() {
 
 export function LandingDestinations() {
   const spots = touristSpots.slice(0, 4);
+  const [selectedSpotIndex, setSelectedSpotIndex] = useState<number | null>(null);
+  const selectedSpot = selectedSpotIndex === null ? null : spots[selectedSpotIndex];
+
+  useEffect(() => {
+    if (selectedSpotIndex === null) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedSpotIndex(null);
+      }
+      if (event.key === 'ArrowLeft') {
+        setSelectedSpotIndex((index) => (index === null || index === 0 ? index : index - 1));
+      }
+      if (event.key === 'ArrowRight') {
+        setSelectedSpotIndex((index) =>
+          index === null || index === spots.length - 1 ? index : index + 1,
+        );
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedSpotIndex, spots.length]);
 
   return (
     <section id="destinations" className="scroll-mt-20 bg-white py-16 sm:py-20">
@@ -105,8 +131,14 @@ export function LandingDestinations() {
         />
 
         <div className="mt-10 grid grid-cols-2 gap-5 lg:grid-cols-4">
-          {spots.map((spot) => (
-            <article key={spot.id} className="group overflow-hidden rounded-[22px] bg-lacvay-cream">
+          {spots.map((spot, index) => (
+            <button
+              key={spot.id}
+              type="button"
+              onClick={() => setSelectedSpotIndex(index)}
+              className="group overflow-hidden rounded-[22px] bg-lacvay-cream text-left transition duration-300 hover:-translate-y-1 hover:shadow-card focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/60"
+              aria-label={`View overview of ${spot.name}`}
+            >
               <div className="relative aspect-[4/5] overflow-hidden">
                 <img
                   src={spot.imageUrl}
@@ -123,10 +155,104 @@ export function LandingDestinations() {
                 <h3 className="text-[13px] font-bold leading-snug text-gray-900">{spot.name}</h3>
                 <p className="mt-1 text-[11px] text-gray-500">{spot.location}</p>
               </div>
-            </article>
+            </button>
           ))}
         </div>
       </div>
+
+      {selectedSpot && selectedSpotIndex !== null && (
+        <div
+          className="destination-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-gray-950/65 p-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedSpotIndex(null);
+            }
+          }}
+        >
+          <section
+            className="destination-dialog relative w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="destination-dialog-title"
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedSpotIndex(null)}
+              className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-lg transition hover:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/60"
+              aria-label="Close destination overview"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="grid md:grid-cols-[1.05fr_0.95fr]">
+              <div className="relative min-h-72 overflow-hidden md:min-h-[430px]">
+                <img
+                  key={selectedSpot.id}
+                  src={selectedSpot.imageUrl}
+                  alt={selectedSpot.name}
+                  className="destination-dialog-image absolute inset-0 h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-950/70 via-transparent to-gray-950/5" />
+                <div className="absolute bottom-5 left-5 right-5 text-white">
+                  <span className="inline-flex rounded-full bg-lacvay-lime px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-lacvay-green-dark">
+                    {selectedSpot.categoryLabel ?? selectedSpot.category}
+                  </span>
+                  <div className="mt-3 flex items-center gap-1.5 text-[13px] font-semibold">
+                    <Star className="h-4 w-4 fill-lacvay-yellow text-lacvay-yellow" />
+                    {selectedSpot.rating} rating
+                  </div>
+                </div>
+              </div>
+
+              <div key={selectedSpot.id} className="destination-dialog-content flex min-h-72 flex-col p-6 sm:p-8">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-lacvay-green">
+                  Destination overview
+                </p>
+                <h3 id="destination-dialog-title" className="mt-2 pr-10 text-[27px] font-extrabold leading-tight tracking-tight text-gray-900">
+                  {selectedSpot.name}
+                </h3>
+                <p className="mt-4 text-[14px] leading-relaxed text-gray-600">{selectedSpot.description}</p>
+
+                <dl className="mt-6 space-y-3 border-t border-gray-100 pt-5 text-[12.5px] text-gray-600">
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-4 w-4 shrink-0 text-lacvay-green" />
+                    <div><dt className="sr-only">Location</dt><dd>{selectedSpot.location}</dd></div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Clock3 className="h-4 w-4 shrink-0 text-lacvay-green" />
+                    <div><dt className="sr-only">Hours and travel time</dt><dd>{selectedSpot.openingHours} · {selectedSpot.estimatedTravelTime}</dd></div>
+                  </div>
+                </dl>
+
+                <div className="mt-auto flex items-center justify-between gap-4 pt-7">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSpotIndex((index) => (index === null ? index : index - 1))}
+                    disabled={selectedSpotIndex === 0}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-4 py-2.5 text-[12px] font-bold text-gray-700 transition hover:border-lacvay-green hover:text-lacvay-green disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </button>
+                  <span className="text-[11px] font-bold text-gray-400">
+                    {selectedSpotIndex + 1} / {spots.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSpotIndex((index) => (index === null ? index : index + 1))}
+                    disabled={selectedSpotIndex === spots.length - 1}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-lacvay-green px-4 py-2.5 text-[12px] font-bold text-white transition hover:bg-lacvay-green-dark disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   );
 }
