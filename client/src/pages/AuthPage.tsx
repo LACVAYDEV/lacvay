@@ -56,8 +56,8 @@ export default function AuthPage() {
   const mode = pathname === '/signup' ? 'signup' : 'signin';
 
   return (
-    <div className="flex min-h-screen bg-lacvay-cream">
-      <aside className="relative hidden w-[46%] max-w-[660px] shrink-0 overflow-hidden lg:block">
+    <div className="auth-page flex min-h-screen bg-lacvay-cream lg:h-screen lg:overflow-hidden">
+      <aside className="auth-showcase relative hidden w-[46%] max-w-[660px] shrink-0 overflow-hidden lg:block">
         <div className="absolute inset-0" style={panelBackground} />
         <div className="absolute inset-0 opacity-70" style={dotGrid} />
 
@@ -127,7 +127,7 @@ export default function AuthPage() {
         </div>
       </aside>
 
-      <main className="relative flex flex-1 flex-col items-center px-4 py-6 sm:px-8" style={formBackground}>
+      <main className={`auth-main auth-main-${mode} relative flex flex-1 flex-col items-center px-4 py-6 sm:px-8 lg:min-h-0 lg:overflow-y-auto`} style={formBackground}>
         <div className="flex w-full max-w-[420px] items-center justify-between gap-4">
           <Link
             to="/welcome"
@@ -143,9 +143,9 @@ export default function AuthPage() {
           </span>
         </div>
 
-        <div className="flex w-full flex-1 items-center justify-center py-8">
+        <div className="auth-form-area flex w-full flex-1 items-center justify-center py-8">
           <div className="w-full max-w-[420px]">
-            <div className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-card sm:p-8">
+            <div className="auth-form-card rounded-[28px] border border-gray-100 bg-white p-6 shadow-card sm:p-8">
               <AuthForm mode={mode} />
             </div>
 

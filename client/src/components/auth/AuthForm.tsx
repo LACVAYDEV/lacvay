@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Compass, Eye, EyeOff, Loader2, Lock, Mail, User } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, Mail, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { validateEmail, validateName, validatePassword } from '@/services/authService';
 import { cn } from '@/lib/utils';
@@ -36,7 +36,7 @@ function passwordScore(value: string): number {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const isSignUp = mode === 'signup';
-  const { signIn, signUp, signInAsGuest } = useAuth();
+  const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
@@ -48,7 +48,6 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [guestLoading, setGuestLoading] = useState(false);
 
   const validate = (): boolean => {
     const next: FieldErrors = {};
@@ -82,14 +81,9 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   };
 
-  const handleGuest = async () => {
-    setGuestLoading(true);
-    try {
-      await signInAsGuest();
-      navigate('/', { replace: true });
-    } finally {
-      setGuestLoading(false);
-    }
+  const showSocialSignInNotice = (provider: 'Google' | 'Facebook') => {
+    setFormError(null);
+    setNotice(`${provider} sign-in will be available once ${provider} OAuth is connected.`);
   };
 
   const inputClass = (hasError?: string, hasTrailing?: boolean) =>
@@ -106,7 +100,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const strength = strengthLevels[score];
 
   return (
-    <div>
+    <div className="auth-form">
       <div className="flex rounded-full bg-gray-100 p-1">
         <Link
           to="/login"
@@ -295,19 +289,24 @@ export function AuthForm({ mode }: AuthFormProps) {
         <span className="h-px flex-1 bg-gray-200" />
       </div>
 
-      <button
-        type="button"
-        onClick={handleGuest}
-        disabled={guestLoading}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white py-3 text-[13.5px] font-semibold text-gray-800 transition hover:border-lacvay-green/30 hover:bg-lacvay-green/[0.04] disabled:opacity-60"
-      >
-        {guestLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin text-lacvay-green" />
-        ) : (
-          <Compass className="h-4 w-4 text-lacvay-green" />
-        )}
-        Continue as guest
-      </button>
+      <div className="space-y-2.5">
+        <button
+          type="button"
+          onClick={() => showSocialSignInNotice('Google')}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-[12.5px] font-semibold text-gray-800 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/50"
+        >
+          <img src="/images/google-logo.svg" alt="" aria-hidden="true" className="h-[19px] w-[19px]" />
+          Continue with Google
+        </button>
+        <button
+          type="button"
+          onClick={() => showSocialSignInNotice('Facebook')}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-[12.5px] font-semibold text-gray-800 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/50"
+        >
+          <img src="/images/facebook-logo.svg.webp" alt="" aria-hidden="true" className="h-[19px] w-[19px] object-contain" />
+          Continue with Facebook
+        </button>
+      </div>
 
       <p className="mt-6 text-center text-[12px] text-gray-500">
         {isSignUp ? 'Already have an account? ' : "Don't have an account yet? "}

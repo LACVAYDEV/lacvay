@@ -113,6 +113,102 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@media (min-width: 1024px) and (max-height: 760px) {
+  .auth-showcase > div:last-child {
+    padding: 2rem;
+  }
+
+  .auth-showcase > div:last-child > div {
+    margin-top: 1.5rem;
+  }
+
+  .auth-showcase ul {
+    margin-top: 1.25rem;
+  }
+
+  .auth-showcase ul > li {
+    gap: 0.75rem;
+  }
+
+  .auth-showcase ul > li + li {
+    margin-top: 0.75rem;
+  }
+
+  .auth-showcase ul + div {
+    display: none;
+  }
+
+  .auth-form-area {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .auth-form-card {
+    padding: 1rem;
+  }
+
+  .auth-form > h1 {
+    margin-top: 1rem;
+  }
+
+  .auth-form form {
+    margin-top: 1rem;
+    row-gap: 0.75rem;
+  }
+
+  .auth-form input {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+
+  .auth-form .my-5 {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .auth-form .space-y-2\.5 > button {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+
+  .auth-form > p:last-child {
+    margin-top: 1rem;
+  }
+
+  .auth-main-signin {
+    overflow-y: hidden;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .auth-main-signin .auth-form-area {
+    flex: 0 1 auto;
+  }
+
+  .auth-main-signin .auth-form-card {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .auth-main-signin .auth-form > h1 {
+    margin-top: 0.625rem;
+  }
+
+  .auth-main-signin .auth-form form,
+  .auth-main-signin .auth-form .my-5 {
+    margin-top: 0.625rem;
+    margin-bottom: 0.625rem;
+  }
+
+  .auth-main-signin .auth-form > p:last-child {
+    margin-top: 0.75rem;
+  }
+
+  .auth-main-signin .auth-form-area + p {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
