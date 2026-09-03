@@ -127,33 +127,30 @@ export default function AuthPage() {
         </div>
       </aside>
 
-      <main className="relative flex flex-1 flex-col items-center px-4 py-6 sm:px-8" style={formBackground}>
-        <div className="flex w-full max-w-[420px] items-center justify-between gap-4">
-          <Link
-            to="/welcome"
-            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white/80 px-3.5 py-2 text-[12.5px] font-semibold text-gray-600 shadow-sm transition hover:border-lacvay-green/30 hover:text-lacvay-green"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to home
-          </Link>
-
-          <span className="flex items-center gap-2 lg:hidden">
-            <LogoMark className="h-8 w-6" />
-            <span className="text-[17px] font-extrabold tracking-tight text-lacvay-green">LACVAY</span>
-          </span>
-        </div>
-
-        <div className="flex w-full flex-1 items-center justify-center py-8">
-          <div className="w-full max-w-[420px]">
-            <div className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-card sm:p-8">
-              <AuthForm mode={mode} />
+      <main className="relative flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-8" style={formBackground}>
+        <div className="w-full max-w-[420px]">
+          <div className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-card sm:p-8">
+            <div className="mb-5 flex items-center justify-between lg:hidden">
+              <Link
+                to="/welcome"
+                className="inline-flex items-center gap-1 text-[12px] font-medium text-gray-400 transition hover:text-lacvay-green"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back
+              </Link>
+              <Link to="/welcome" className="flex items-center gap-1.5">
+                <LogoMark className="h-7 w-5" />
+                <span className="text-[15px] font-extrabold tracking-tight text-lacvay-green">LACVAY</span>
+              </Link>
+              <span className="w-12" aria-hidden="true" />
             </div>
-
-            <p className="mt-5 px-2 text-center text-[11.5px] leading-relaxed text-gray-400">
-              LACVAY is a travel assistant for Batangas City. Your saved places and search history
-              stay tied to your account.
-            </p>
+            <AuthForm mode={mode} />
           </div>
+
+          <p className="mt-5 px-2 text-center text-[11.5px] leading-relaxed text-gray-400">
+            LACVAY is a travel assistant for Batangas City. Your saved places and search history
+            stay tied to your account.
+          </p>
         </div>
       </main>
     </div>
