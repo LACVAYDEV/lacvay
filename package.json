@@ -15,5 +15,11 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "overrides": {
+    "qs": "$qs"
+  },
+  "dependencies": {
+    "qs": "6.16.0"
   }
 }
