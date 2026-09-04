@@ -16,11 +16,11 @@ export function AppSplash() {
 
 /** Renders app routes only for signed-in users, otherwise sends them to the landing page. */
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, initializing } = useAuth();
+  const { session, isLoading } = useAuth();
   const location = useLocation();
 
-  if (initializing) return <AppSplash />;
-  if (!isAuthenticated) {
+  if (isLoading) return <AppSplash />;
+  if (!session) {
     return <Navigate to="/welcome" replace state={{ from: location.pathname }} />;
   }
   return <>{children}</>;
@@ -28,9 +28,24 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
 /** Keeps signed-in users out of the landing and auth pages. */
 export function PublicOnlyRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, initializing } = useAuth();
+  const { session, isLoading } = useAuth();
 
-  if (initializing) return <AppSplash />;
-  if (isAuthenticated) return <Navigate to="/" replace />;
+  if (isLoading) return <AppSplash />;
+  if (session) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+/** Renders routes only for registered drivers. Redirects commuters to map or become-driver. */
+export function DriverRoute({ children }: { children: ReactNode }) {
+  const { session, isDriver, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) return <AppSplash />;
+  if (!session) {
+    return <Navigate to="/welcome" replace state={{ from: location.pathname }} />;
+  }
+  if (!isDriver) {
+    return <Navigate to="/become-driver" replace />;
+  }
   return <>{children}</>;
 }

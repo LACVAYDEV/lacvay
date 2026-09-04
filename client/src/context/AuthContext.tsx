@@ -1,55 +1,131 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { User } from '@/types';
-import { authService, type Credentials, type SignUpData } from '@/services/authService';
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import type { User, Session } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types';
+import { supabase } from '@/lib/supabase';
+
+type DriverProfile = Database['public']['Tables']['driver_profiles']['Row'];
 
 interface AuthContextValue {
   user: User | null;
-  initializing: boolean;
-  isAuthenticated: boolean;
-  signIn: (credentials: Credentials) => Promise<void>;
-  signUp: (data: SignUpData) => Promise<void>;
-  signInAsGuest: () => Promise<void>;
+  session: Session | null;
+  profile: DriverProfile | null;
+  isLoading: boolean;
+  isDriver: boolean;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, fullName: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [initializing, setInitializing] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<DriverProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('driver_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        if (error.code !== 'PGRST116') { // PGRST116 is "No rows found"
+          console.error('Error fetching driver profile:', error);
+        }
+        setProfile(null);
+      } else {
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching profile:', err);
+      setProfile(null);
+    }
+  }, []);
 
   useEffect(() => {
-    setUser(authService.getSession());
-    setInitializing(false);
-  }, []);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id).finally(() => setIsLoading(false));
+      } else {
+        setIsLoading(false);
+      }
+    });
 
-  const signIn = useCallback(async (credentials: Credentials) => {
-    setUser(await authService.signIn(credentials));
-  }, []);
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
 
-  const signUp = useCallback(async (data: SignUpData) => {
-    setUser(await authService.signUp(data));
-  }, []);
+    return () => subscription.unsubscribe();
+  }, [fetchProfile]);
 
-  const signInAsGuest = useCallback(async () => {
-    setUser(await authService.signInAsGuest());
-  }, []);
+  const signInWithEmail = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  };
 
-  const signOut = useCallback(async () => {
-    await authService.signOut();
-    setUser(null);
-  }, []);
+  const signUpWithEmail = async (email: string, password: string, fullName: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        }
+      }
+    });
+    if (error) throw error;
+  };
+
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) throw error;
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        initializing,
-        isAuthenticated: user !== null,
-        signIn,
-        signUp,
-        signInAsGuest,
+        session,
+        profile,
+        isLoading,
+        isDriver: profile !== null,
+        signInWithEmail,
+        signUpWithEmail,
+        signInWithGoogle,
         signOut,
+        refreshProfile,
       }}
     >
       {children}

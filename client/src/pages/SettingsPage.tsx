@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
-  const [name, setName] = useState(user?.name ?? '');
+  const [name, setName] = useState(user?.user_metadata?.full_name || user?.email?.split('@')[0] || '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [language, setLanguage] = useState('en');
   const [theme, setTheme] = useState('light');
@@ -28,7 +28,7 @@ export default function SettingsPage() {
       <Card className="space-y-4">
         <h3 className="font-bold text-gray-900">Profile</h3>
         <div className="flex items-center gap-4">
-          <img src={user?.avatarUrl} alt="" className="h-16 w-16 rounded-full bg-gray-100" />
+          <img src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="" className="h-16 w-16 rounded-full bg-gray-100" />
           <div className="flex-1 space-y-3">
             <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
             <Input label="Email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" />

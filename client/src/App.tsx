@@ -2,7 +2,7 @@ import { Suspense, lazy, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
-import { ProtectedRoute, PublicOnlyRoute, AppSplash } from '@/components/auth/RouteGuards';
+import { ProtectedRoute, PublicOnlyRoute, DriverRoute, AppSplash } from '@/components/auth/RouteGuards';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoadingState } from '@/components/ui/States';
 
@@ -21,6 +21,7 @@ const PromotionsPage = lazy(() => import('@/pages/PromotionsPage'));
 const SavedPage = lazy(() => import('@/pages/SavedPage'));
 const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+const BecomeDriverPage = lazy(() => import('@/pages/BecomeDriverPage'));
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -42,6 +43,17 @@ function AppShell() {
           <Route path="/saved" element={<SavedPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/become-driver" element={<BecomeDriverPage />} />
+          <Route
+            path="/driver-dashboard"
+            element={
+              <DriverRoute>
+                <div className="flex min-h-screen items-center justify-center">
+                  <h1 className="text-xl font-bold">Driver Dashboard (Coming Soon)</h1>
+                </div>
+              </DriverRoute>
+            }
+          />
         </Routes>
       </Suspense>
     </AppLayout>

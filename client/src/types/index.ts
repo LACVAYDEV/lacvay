@@ -29,6 +29,7 @@ export type RestaurantCuisine =
 
 export type SavedItemType = 'tourist-spot' | 'restaurant' | 'route' | 'commute-guide';
 
+/** @deprecated Use Supabase auth user directly */
 export interface User {
   id: string;
   name: string;

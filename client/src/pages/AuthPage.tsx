@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Coins, MapPinned, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, Coins, MapPinned, Sparkles } from 'lucide-react';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { LogoMark } from '@/components/ui/Logo';
 import { transportIcons } from '@/components/ui/TransportIcons';
@@ -115,14 +115,6 @@ export default function AuthPage() {
                 </li>
               ))}
             </ul>
-
-            <div className="mt-8 flex items-start gap-3 rounded-2xl bg-white/[0.12] p-4 ring-1 ring-inset ring-white/20 backdrop-blur-sm">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-lacvay-lime" />
-              <p className="text-[12px] leading-relaxed text-white/85">
-                No account needed to look around. Continue as a guest and sign up later to keep your
-                saved places and history.
-              </p>
-            </div>
           </div>
         </div>
       </aside>

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, Lock, Mail, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { validateEmail, validateName, validatePassword } from '@/services/authService';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 type AuthMode = 'signin' | 'signup';
@@ -34,9 +34,27 @@ function passwordScore(value: string): number {
   return Math.min(score, 3);
 }
 
+function validateEmail(email: string): string | null {
+  if (!email.trim()) return 'Email is required';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Enter a valid email address';
+  return null;
+}
+
+function validatePassword(password: string): string | null {
+  if (!password) return 'Password is required';
+  if (password.length < 6) return 'Password must be at least 6 characters';
+  return null;
+}
+
+function validateName(name: string): string | null {
+  if (!name.trim()) return 'Name is required';
+  if (name.trim().length < 2) return 'Enter your full name';
+  return null;
+}
+
 export function AuthForm({ mode }: AuthFormProps) {
   const isSignUp = mode === 'signup';
-  const { signIn, signUp } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
@@ -48,6 +66,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   const validate = (): boolean => {
     const next: FieldErrors = {};
@@ -71,19 +90,50 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     setSubmitting(true);
     try {
-      if (isSignUp) await signUp({ name, email, password });
-      else await signIn({ email, password });
-      navigate('/', { replace: true });
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      if (isSignUp) {
+        await signUpWithEmail(email, password, name);
+        setNotice('Check your email to confirm your account (if email confirmation is enabled), or simply log in.');
+      } else {
+        await signInWithEmail(email, password);
+        navigate('/', { replace: true });
+      }
+    } catch (err: any) {
+      setFormError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const showSocialSignInNotice = (provider: 'Google' | 'Facebook') => {
+  const handleGoogleSignIn = async () => {
     setFormError(null);
-    setNotice(`${provider} sign-in will be available once ${provider} OAuth is connected.`);
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      setFormError(err.message || 'Google sign in failed');
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setFormError(null);
+    setNotice(null);
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setErrors({ email: emailErr });
+      return;
+    }
+    
+    setResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setNotice('Password reset email sent! Check your inbox.');
+    } catch (err: any) {
+      setFormError(err.message || 'Failed to send reset email');
+    } finally {
+      setResettingPassword(false);
+    }
   };
 
   const inputClass = (hasError?: string, hasTrailing?: boolean) =>
@@ -186,10 +236,11 @@ export function AuthForm({ mode }: AuthFormProps) {
             {!isSignUp && (
               <button
                 type="button"
-                onClick={() => setNotice('Password reset will be available once Firebase Auth is connected.')}
-                className="text-[11.5px] font-semibold text-lacvay-green hover:underline"
+                onClick={handleForgotPassword}
+                disabled={resettingPassword}
+                className="text-[11.5px] font-semibold text-lacvay-green hover:underline disabled:opacity-50"
               >
-                Forgot password?
+                {resettingPassword ? 'Sending...' : 'Forgot password?'}
               </button>
             )}
           </div>
@@ -292,19 +343,11 @@ export function AuthForm({ mode }: AuthFormProps) {
       <div className="space-y-2.5">
         <button
           type="button"
-          onClick={() => showSocialSignInNotice('Google')}
+          onClick={handleGoogleSignIn}
           className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-[12.5px] font-semibold text-gray-800 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/50"
         >
           <img src="/images/google-logo.svg" alt="" aria-hidden="true" className="h-[19px] w-[19px]" />
           Continue with Google
-        </button>
-        <button
-          type="button"
-          onClick={() => showSocialSignInNotice('Facebook')}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-[12.5px] font-semibold text-gray-800 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/50"
-        >
-          <img src="/images/facebook-logo.svg.webp" alt="" aria-hidden="true" className="h-[19px] w-[19px] object-contain" />
-          Continue with Facebook
         </button>
       </div>
 

@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, MapPin, Loader2, Bus, Coins, Sparkles } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { MapPinSolid } from '@/components/ui/Logo';
 import { landingTicker } from '@/data/landingContent';
 
@@ -26,16 +26,14 @@ const highlights = [
 ];
 
 export function LandingHero() {
-  const { signInAsGuest } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const exploreDemo = async () => {
+  const exploreDemo = () => {
     setLoading(true);
-    try {
-      await signInAsGuest();
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => {
+      navigate('/map');
+    }, 300);
   };
 
   return (
