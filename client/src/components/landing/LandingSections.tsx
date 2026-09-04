@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Clock3, MapPin, Sparkles, Check, Star, X } from 'lucide-react';
 import { landingFeatures, landingSteps, landingBenefits, aiSampleChat } from '@/data/landingContent';
 import { touristSpots } from '@/data/mockData';
+import { Reveal } from '@/components/ui/Reveal';
 
 function SectionHeading({ eyebrow, title, subtitle }: { eyebrow: string; title: string; subtitle?: string }) {
   return (
@@ -18,25 +19,27 @@ export function LandingFeatures() {
   return (
     <section id="features" className="scroll-mt-20 bg-white py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <SectionHeading
-          eyebrow="Features"
-          title="Everything you need to move around the city"
-          subtitle="Four core tools that answer the questions every commuter and visitor asks in Batangas City."
-        />
+        <Reveal>
+          <SectionHeading
+            eyebrow="Features"
+            title="Everything you need to move around the city"
+            subtitle="Four core tools that answer the questions every commuter and visitor asks in Batangas City."
+          />
+        </Reveal>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {landingFeatures.map((f) => (
-            <article key={f.title} className="rounded-[22px] bg-lacvay-cream p-5 transition hover:shadow-card">
+          {landingFeatures.map((f, index) => (
+            <Reveal key={f.title} delayMs={index * 80} as="article" className="rounded-[22px] bg-lacvay-cream p-5 transition hover:shadow-card">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-lacvay-lime/30 to-lacvay-green/5">
                 <img src={f.image} alt="" className="h-10 w-10 object-contain mix-blend-multiply" />
               </div>
               <h3 className="mt-4 text-[15px] font-bold text-gray-900">{f.title}</h3>
               <p className="mt-2 text-[12.5px] leading-relaxed text-gray-600">{f.description}</p>
-            </article>
+            </Reveal>
           ))}
         </div>
 
-        <div className="mt-6 grid items-center gap-8 rounded-[26px] bg-gradient-to-br from-lacvay-green to-lacvay-green-dark p-6 sm:p-9 lg:grid-cols-2">
+        <Reveal className="mt-6 grid items-center gap-8 rounded-[26px] bg-gradient-to-br from-lacvay-green to-lacvay-green-dark p-6 sm:p-9 lg:grid-cols-2">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[11.5px] font-semibold text-white">
               <Sparkles className="h-3.5 w-3.5 text-lacvay-lime" />
@@ -65,7 +68,7 @@ export function LandingFeatures() {
               </div>
             ))}
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -75,17 +78,19 @@ export function LandingHowItWorks() {
   return (
     <section id="how-it-works" className="scroll-mt-20 bg-lacvay-cream py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <SectionHeading eyebrow="How it works" title="Three steps to a confident trip" />
+        <Reveal>
+          <SectionHeading eyebrow="How it works" title="Three steps to a confident trip" />
+        </Reveal>
 
         <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {landingSteps.map((step) => (
-            <article key={step.order} className="relative rounded-[22px] bg-white p-6 shadow-soft">
+          {landingSteps.map((step, index) => (
+            <Reveal key={step.order} delayMs={index * 100} as="article" className="relative rounded-[22px] bg-white p-6 shadow-soft">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-lacvay-green to-lacvay-lime text-[15px] font-extrabold text-white">
                 {step.order}
               </span>
               <h3 className="mt-4 text-[15px] font-bold text-gray-900">{step.title}</h3>
               <p className="mt-2 text-[12.5px] leading-relaxed text-gray-600">{step.description}</p>
-            </article>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -124,19 +129,21 @@ export function LandingDestinations() {
   return (
     <section id="destinations" className="scroll-mt-20 bg-white py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <SectionHeading
-          eyebrow="Destinations"
-          title="Places worth the trip"
-          subtitle="From the crater lake of Taal to the reefs of Anilao and the white sand of Laiya."
-        />
+        <Reveal>
+          <SectionHeading
+            eyebrow="Destinations"
+            title="Places worth the trip"
+            subtitle="From the crater lake of Taal to the reefs of Anilao and the white sand of Laiya."
+          />
+        </Reveal>
 
         <div className="mt-10 grid grid-cols-2 gap-5 lg:grid-cols-4">
           {spots.map((spot, index) => (
+            <Reveal key={spot.id} delayMs={index * 80} as="div">
             <button
-              key={spot.id}
               type="button"
               onClick={() => setSelectedSpotIndex(index)}
-              className="group overflow-hidden rounded-[22px] bg-lacvay-cream text-left transition duration-300 hover:-translate-y-1 hover:shadow-card focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/60"
+              className="group w-full overflow-hidden rounded-[22px] bg-lacvay-cream text-left transition duration-300 hover:-translate-y-1 hover:shadow-card focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/60"
               aria-label={`View overview of ${spot.name}`}
             >
               <div className="relative aspect-[4/5] overflow-hidden">
@@ -156,6 +163,7 @@ export function LandingDestinations() {
                 <p className="mt-1 text-[11px] text-gray-500">{spot.location}</p>
               </div>
             </button>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -191,7 +199,7 @@ export function LandingDestinations() {
                   key={selectedSpot.id}
                   src={selectedSpot.imageUrl}
                   alt={selectedSpot.name}
-                  className="destination-dialog-image absolute inset-0 h-full w-full object-cover"
+                  className="destination-dialog-image crossfade-image absolute inset-0 h-full w-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-950/70 via-transparent to-gray-950/5" />
                 <div className="absolute bottom-5 left-5 right-5 text-white">
@@ -261,11 +269,13 @@ export function LandingBenefits() {
   return (
     <section id="why-lacvay" className="scroll-mt-20 bg-lacvay-cream py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <SectionHeading eyebrow="Why LACVAY" title="Made for this city, not copied from another" />
+        <Reveal>
+          <SectionHeading eyebrow="Why LACVAY" title="Made for this city, not copied from another" />
+        </Reveal>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
-          {landingBenefits.map((b) => (
-            <article key={b.title} className="flex gap-4 rounded-[22px] bg-white p-5 shadow-soft">
+          {landingBenefits.map((b, index) => (
+            <Reveal key={b.title} delayMs={index * 80} as="article" className="flex gap-4 rounded-[22px] bg-white p-5 shadow-soft">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lacvay-green/10">
                 <Check className="h-4 w-4 text-lacvay-green" strokeWidth={2.5} />
               </span>
@@ -273,7 +283,7 @@ export function LandingBenefits() {
                 <h3 className="text-[14px] font-bold text-gray-900">{b.title}</h3>
                 <p className="mt-1.5 text-[12.5px] leading-relaxed text-gray-600">{b.description}</p>
               </div>
-            </article>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -285,7 +295,7 @@ export function LandingCTA() {
   return (
     <section className="bg-white py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-lacvay-green via-lacvay-green to-lacvay-lime px-6 py-12 text-center sm:px-10">
+        <Reveal className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-lacvay-green via-lacvay-green to-lacvay-lime px-6 py-12 text-center sm:px-10">
           <h2 className="text-[26px] font-extrabold tracking-tight text-white sm:text-[32px]">
             Ready to explore Batangas City?
           </h2>
@@ -307,7 +317,7 @@ export function LandingCTA() {
               Sign In
             </Link>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
