@@ -9,6 +9,18 @@ export type TransportType =
 /** Transport modes a driver can be booked for. */
 export type BookableVehicle = Exclude<TransportType, 'jeepney' | 'walking'>;
 
+/** Taxi and habal-habal — bookable through the dedicated booking page. */
+export type OnDemandVehicle = Extract<BookableVehicle, 'motorcycle' | 'taxi'>;
+
+export interface TodaTerritory {
+  id: string;
+  name: string;
+  barangays: string[];
+  terminalLocation: string;
+  operatingHours: string;
+  fareNote: string;
+}
+
 export type TouristCategory =
   | 'Nature'
   | 'Historical'
@@ -29,11 +41,28 @@ export type RestaurantCuisine =
 
 export type SavedItemType = 'tourist-spot' | 'restaurant' | 'route' | 'commute-guide';
 
+export type UserRole = 'traveler' | 'transpo_partner';
+
+export interface PartnerProfile {
+  vehicleType: OnDemandVehicle;
+  vehicleLabel: string;
+  plateNumber?: string;
+  baseFare: number;
+  perKmFee: number;
+  coordinates: Coordinates;
+  isOnline: boolean;
+  rating: number;
+  tripsCompleted: number;
+  acceptanceRate: number;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
   avatarUrl: string;
+  role?: UserRole;
+  partnerProfile?: PartnerProfile;
 }
 
 export interface Coordinates {
@@ -109,9 +138,47 @@ export interface Ride {
   vehicleType: BookableVehicle;
   rating: number;
   distanceKm: number;
+  baseFare: number;
+  perKmFee: number;
+  coordinates: Coordinates;
+  isOnline: boolean;
   estimatedFare: number;
   etaMin: number;
   plateNumber?: string;
+  tripsCompleted?: number;
+  vehicleLabel?: string;
+}
+
+export interface RideBooking {
+  id: string;
+  rideId: string;
+  driverName: string;
+  vehicleType: OnDemandVehicle;
+  pickup: string;
+  destination: string;
+  estimatedFare: number;
+  etaMin: number;
+  plateNumber?: string;
+  status: 'searching' | 'confirmed' | 'arriving' | 'completed';
+  bookedAt: string;
+}
+
+export interface PartnerRideRequest {
+  id: string;
+  passengerName: string;
+  pickup: string;
+  destination: string;
+  distanceKm: number;
+  estimatedFare: number;
+  requestedAt: string;
+  status: 'pending' | 'accepted' | 'declined' | 'completed';
+}
+
+export interface PartnerDayStats {
+  tripsToday: number;
+  earningsToday: number;
+  hoursOnline: number;
+  pendingRequests: number;
 }
 
 export interface Promotion {

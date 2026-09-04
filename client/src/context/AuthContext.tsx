@@ -1,15 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User } from '@/types';
 import { authService, type Credentials, type SignUpData } from '@/services/authService';
+import { isTranspoPartner } from '@/lib/auth';
 
 interface AuthContextValue {
   user: User | null;
   initializing: boolean;
   isAuthenticated: boolean;
-  signIn: (credentials: Credentials) => Promise<void>;
-  signUp: (data: SignUpData) => Promise<void>;
-  signInAsGuest: () => Promise<void>;
+  isTranspoPartner: boolean;
+  signIn: (credentials: Credentials) => Promise<User>;
+  signUp: (data: SignUpData) => Promise<User>;
+  signInAsGuest: () => Promise<User>;
+  signInAsPartner: () => Promise<User>;
   signOut: () => Promise<void>;
+  updateUser: (patch: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -24,20 +28,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (credentials: Credentials) => {
-    setUser(await authService.signIn(credentials));
+    const next = await authService.signIn(credentials);
+    setUser(next);
+    return next;
   }, []);
 
   const signUp = useCallback(async (data: SignUpData) => {
-    setUser(await authService.signUp(data));
+    const next = await authService.signUp(data);
+    setUser(next);
+    return next;
   }, []);
 
   const signInAsGuest = useCallback(async () => {
-    setUser(await authService.signInAsGuest());
+    const next = await authService.signInAsGuest();
+    setUser(next);
+    return next;
+  }, []);
+
+  const signInAsPartner = useCallback(async () => {
+    const next = await authService.signInAsPartner();
+    setUser(next);
+    return next;
   }, []);
 
   const signOut = useCallback(async () => {
     await authService.signOut();
     setUser(null);
+  }, []);
+
+  const updateUser = useCallback((patch: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      authService.persistUser(next);
+      return next;
+    });
   }, []);
 
   return (
@@ -46,10 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         initializing,
         isAuthenticated: user !== null,
+        isTranspoPartner: isTranspoPartner(user),
         signIn,
         signUp,
         signInAsGuest,
+        signInAsPartner,
         signOut,
+        updateUser,
       }}
     >
       {children}

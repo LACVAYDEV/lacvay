@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { getHomePath } from '@/lib/auth';
 import { LogoMark } from '@/components/ui/Logo';
 
 export function AppSplash() {
@@ -28,9 +29,9 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
 /** Keeps signed-in users out of the landing and auth pages. */
 export function PublicOnlyRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, initializing } = useAuth();
+  const { isAuthenticated, initializing, user } = useAuth();
 
   if (initializing) return <AppSplash />;
-  if (isAuthenticated) return <Navigate to="/" replace />;
+  if (isAuthenticated) return <Navigate to={getHomePath(user)} replace />;
   return <>{children}</>;
 }

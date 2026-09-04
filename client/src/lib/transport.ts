@@ -22,14 +22,14 @@ export const transportOptions: TransportOption[] = [
   {
     type: 'tricycle',
     label: 'Tricycle',
-    description: 'Short trips within barangays and to nearby destinations.',
+    description: 'Operates within registered TODA territories — view coverage areas on the map.',
     hasFareEstimate: true,
-    isBookable: true,
+    isBookable: false,
   },
   {
     type: 'motorcycle',
-    label: 'Motorcycle',
-    description: 'Motorcycle taxi (habal-habal) riders for quick solo trips.',
+    label: 'Habal-habal',
+    description: 'Motorcycle taxi riders for quick solo trips — bookable in the app.',
     hasFareEstimate: true,
     isBookable: true,
   },
@@ -75,3 +75,17 @@ export const fareCheckerOptions = transportOptions.filter((o) => o.hasFareEstima
 
 /** Options offered in Book a Ride. */
 export const bookableOptions = transportOptions.filter((o) => o.isBookable);
+
+/** Taxi and habal-habal — bookable through the dedicated booking page. */
+export const onDemandRideOptions = transportOptions.filter(
+  (o): o is TransportOption & { type: 'motorcycle' | 'taxi' } =>
+    o.type === 'motorcycle' || o.type === 'taxi',
+);
+
+export function isOnDemandVehicle(type: string): type is 'motorcycle' | 'taxi' {
+  return type === 'motorcycle' || type === 'taxi';
+}
+
+export function isTricycleMode(type: string): type is 'tricycle' {
+  return type === 'tricycle';
+}

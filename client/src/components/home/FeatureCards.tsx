@@ -17,10 +17,17 @@ const features = [
   },
   {
     title: 'Book a Ride',
-    description: 'Book tricycles, taxis, or motorcycle riders near you.',
+    description: 'See transport partners on the map with base fare and per-km rates.',
     image: '/images/icon-ride.png',
     cta: 'Book Now',
     path: '/rides',
+  },
+  {
+    title: 'Tricycle TODA',
+    description: 'See which TODA covers your barangay — tricycles are not bookable in-app.',
+    image: '/images/promo-tricycle.png',
+    cta: 'View Areas',
+    path: '/toda',
   },
   {
     title: 'Commute Guide',

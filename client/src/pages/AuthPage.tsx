@@ -10,7 +10,7 @@ const perks = [
   {
     icon: MapPinned,
     title: 'Routes that make sense',
-    text: 'Step-by-step directions by jeepney, tricycle, taxi, or motorcycle rider.',
+    text: 'Step-by-step directions by jeepney, tricycle TODA, taxi, or habal-habal.',
   },
   {
     icon: Coins,

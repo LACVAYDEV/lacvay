@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, MapPin, Loader2, Bus, Coins, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { getHomePath } from '@/lib/auth';
 import { landingTicker } from '@/data/landingContent';
 
 const heroBackground: CSSProperties = {
@@ -31,19 +32,21 @@ const tickerFade: CSSProperties = {
 };
 
 const highlights = [
-  { icon: Bus, label: 'Jeepney, tricycle, taxi & motorcycle' },
+  { icon: Bus, label: 'Jeepney, TODA tricycle, taxi & habal-habal' },
   { icon: Coins, label: 'Transparent fare estimates' },
   { icon: Sparkles, label: 'AI travel assistant' },
 ];
 
 export function LandingHero() {
   const { signInAsGuest } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   const exploreDemo = async () => {
     setLoading(true);
     try {
-      await signInAsGuest();
+      const user = await signInAsGuest();
+      navigate(getHomePath(user), { replace: true });
     } finally {
       setLoading(false);
     }
@@ -79,7 +82,7 @@ export function LandingHero() {
             className="mt-4 max-w-lg animate-fade-up text-[14px] leading-relaxed text-gray-600 sm:text-[15px]"
             style={{ animationDelay: '180ms' }}
           >
-            Find routes by jeepney, tricycle, taxi, or motorcycle rider, check fares before you
+            Find routes by jeepney or tricycle TODA, book a taxi or habal-habal, check fares before you
             ride, and ask an AI assistant anything about the city.
           </p>
 

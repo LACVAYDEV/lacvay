@@ -1,13 +1,29 @@
-import type { User } from '@/types';
+import type { User, UserRole, OnDemandVehicle } from '@/types';
 import { mockUser } from '@/data/mockData';
+import { mockPartnerUser } from '@/data/partnerMockData';
+import { BATANGAS_CENTER } from '@/data/mockData';
+import {
+  validatePartnerBaseFare,
+  validatePartnerPerKmFee,
+} from '@/lib/partnerRates';
 
 export interface Credentials {
   email: string;
   password: string;
 }
 
+export interface PartnerSetupData {
+  vehicleType: OnDemandVehicle;
+  baseFare: number;
+  perKmFee: number;
+  vehicleLabel?: string;
+  plateNumber?: string;
+}
+
 export interface SignUpData extends Credentials {
   name: string;
+  role?: UserRole;
+  partnerSetup?: PartnerSetupData;
 }
 
 export class AuthError extends Error {}
@@ -78,6 +94,7 @@ export const authService = {
         name: email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
         email,
         avatarUrl: avatarFor(key),
+        role: 'traveler',
       };
 
     writeProfile(user);
@@ -85,9 +102,18 @@ export const authService = {
     return user;
   },
 
-  async signUp({ name, email, password }: SignUpData): Promise<User> {
+  async signUp({ name, email, password, role = 'traveler', partnerSetup }: SignUpData): Promise<User> {
     const error = validateName(name) ?? validateEmail(email) ?? validatePassword(password);
     if (error) throw new AuthError(error);
+
+    if (role === 'transpo_partner') {
+      if (!partnerSetup) {
+        throw new AuthError('Transport partners must set their rates during registration');
+      }
+      const baseErr = validatePartnerBaseFare(partnerSetup.baseFare);
+      const kmErr = validatePartnerPerKmFee(partnerSetup.perKmFee);
+      if (baseErr || kmErr) throw new AuthError(baseErr ?? kmErr!);
+    }
 
     await delay();
 
@@ -96,7 +122,34 @@ export const authService = {
       throw new AuthError('An account with this email already exists');
     }
 
-    const user: User = { id: key, name: name.trim(), email, avatarUrl: avatarFor(key) };
+    const partnerOffset = (key.charCodeAt(0) % 10) * 0.0004;
+
+    const user: User = {
+      id: key,
+      name: name.trim(),
+      email,
+      avatarUrl: avatarFor(key),
+      role,
+      ...(role === 'transpo_partner' && partnerSetup
+        ? {
+            partnerProfile: {
+              vehicleType: partnerSetup.vehicleType,
+              vehicleLabel: partnerSetup.vehicleLabel?.trim() || 'Partner vehicle',
+              plateNumber: partnerSetup.plateNumber?.trim() || undefined,
+              baseFare: partnerSetup.baseFare,
+              perKmFee: partnerSetup.perKmFee,
+              coordinates: {
+                lat: BATANGAS_CENTER.lat + partnerOffset,
+                lng: BATANGAS_CENTER.lng + partnerOffset,
+              },
+              isOnline: false,
+              rating: 5,
+              tripsCompleted: 0,
+              acceptanceRate: 100,
+            },
+          }
+        : {}),
+    };
     writeProfile(user);
     localStorage.setItem(SESSION_KEY, JSON.stringify(user));
     return user;
@@ -104,8 +157,15 @@ export const authService = {
 
   async signInAsGuest(): Promise<User> {
     await delay(250);
-    localStorage.setItem(SESSION_KEY, JSON.stringify(mockUser));
-    return mockUser;
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...mockUser, role: 'traveler' }));
+    return { ...mockUser, role: 'traveler' };
+  },
+
+  async signInAsPartner(): Promise<User> {
+    await delay(250);
+    writeProfile(mockPartnerUser);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(mockPartnerUser));
+    return mockPartnerUser;
   },
 
   async signOut(): Promise<void> {
@@ -119,5 +179,10 @@ export const authService = {
     } catch {
       return null;
     }
+  },
+
+  persistUser(user: User): void {
+    writeProfile(user);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
   },
 };
