@@ -15,7 +15,9 @@ export default function TouristSpotDetailPage() {
   const [spot, setSpot] = useState<TouristSpot | null>(null);
   const [loading, setLoading] = useState(true);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const navigationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveAnimTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { isSaved, saveItem, removeSaved, savedPlaces } = useApp();
@@ -34,6 +36,9 @@ export default function TouristSpotDetailPage() {
     if (navigationTimer.current) {
       clearTimeout(navigationTimer.current);
     }
+    if (saveAnimTimer.current) {
+      clearTimeout(saveAnimTimer.current);
+    }
   }, []);
 
   if (loading) return <LoadingState />;
@@ -43,6 +48,10 @@ export default function TouristSpotDetailPage() {
     const saved = savedPlaces.find((p) => p.itemId === spot.id);
     if (saved) removeSaved(saved.id);
     else saveItem({ itemId: spot.id, type: 'tourist-spot', title: spot.name, subtitle: spot.location, imageUrl: spot.imageUrl });
+
+    setJustSaved(true);
+    if (saveAnimTimer.current) clearTimeout(saveAnimTimer.current);
+    saveAnimTimer.current = setTimeout(() => setJustSaved(false), 400);
   };
 
   const currentSpotIndex = touristSpots.findIndex((touristSpot) => touristSpot.id === spot.id);
@@ -67,7 +76,7 @@ export default function TouristSpotDetailPage() {
       </button>
 
       <div className={`relative overflow-hidden rounded-3xl ${isNavigating ? 'tourist-spot-image-out' : incomingTransition ? 'tourist-spot-image-in' : ''}`}>
-          <img src={spot.imageUrl} alt={spot.name} className="aspect-[21/9] w-full object-cover" />
+          <img key={spot.id} src={spot.imageUrl} alt={spot.name} className="crossfade-image aspect-[21/9] w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-black/25" />
           <button
             type="button"
@@ -101,7 +110,13 @@ export default function TouristSpotDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={toggleSave}>{isSaved(spot.id) ? 'Saved' : 'Save'}</Button>
+          <Button
+            variant="secondary"
+            onClick={toggleSave}
+            className={`${isSaved(spot.id) ? 'border-lacvay-green bg-lacvay-green text-white hover:bg-lacvay-green-dark' : ''} ${justSaved ? 'save-btn-pop' : ''}`}
+          >
+            {isSaved(spot.id) ? 'Saved' : 'Save'}
+          </Button>
           <Button onClick={() => navigate(`/map?to=${encodeURIComponent(spot.name)}`)}>
             <Navigation className="h-4 w-4" /> Directions
           </Button>

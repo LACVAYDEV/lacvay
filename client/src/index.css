@@ -113,6 +113,47 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.reveal-fade-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 620ms cubic-bezier(0.22, 1, 0.36, 1), transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-fade-up-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.save-btn-pop {
+  animation: save-btn-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes save-btn-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.22); }
+  60% { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+
+.toast-in {
+  animation: toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.crossfade-image {
+  animation: crossfade-image 460ms ease-out both;
+}
+
+@keyframes crossfade-image {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media (min-width: 1024px) and (max-height: 760px) {
   .auth-showcase > div:last-child {
     padding: 2rem;
@@ -220,5 +261,10 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .reveal-fade-up {
+    opacity: 1;
+    transform: none;
   }
 }

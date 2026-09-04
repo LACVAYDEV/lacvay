@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useSearchParams } from 'react-router-dom';
+import { Copy } from 'lucide-react';
 import type { TransportType } from '@/types';
 import { BATANGAS_CENTER, mapLandmarks } from '@/data/mockData';
 import { buildMockRoute } from '@/lib/fareCalculator';
@@ -36,13 +37,23 @@ export default function MapPage() {
   const transportParam = params.get('transport') as TransportType | null;
   const transport: TransportType =
     transportParam && getTransportOption(transportParam) ? transportParam : 'jeepney';
-  const { addHistory } = useApp();
+  const { addHistory, showToast } = useApp();
 
   const route = useMemo(() => buildMockRoute(from, to, transport), [from, to, transport]);
 
   useEffect(() => {
     addHistory({ query: `${from} → ${to}`, type: 'route', meta: transport });
   }, [from, to, transport, addHistory]);
+
+  const copyRoute = async () => {
+    const summary = `${from} → ${to} (${getTransportLabel(transport)}, ${route.totalDurationMin} min, ${formatFareRange(route.estimatedFareMin, route.estimatedFareMax)})`;
+    try {
+      await navigator.clipboard.writeText(summary);
+      showToast('Route copied to clipboard');
+    } catch {
+      showToast('Could not copy route');
+    }
+  };
 
   const center: [number, number] = [BATANGAS_CENTER.lat, BATANGAS_CENTER.lng];
   const routeLine: [number, number][] = [
@@ -82,7 +93,17 @@ export default function MapPage() {
 
         <div className="space-y-4">
           <Card>
-            <h3 className="font-bold text-gray-900">Route Details</h3>
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-bold text-gray-900">Route Details</h3>
+              <button
+                type="button"
+                onClick={copyRoute}
+                className="flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-600 transition hover:border-lacvay-green hover:text-lacvay-green"
+                aria-label="Copy route summary"
+              >
+                <Copy className="h-3 w-3" /> Copy
+              </button>
+            </div>
             <p className="mt-1 text-sm text-gray-500">{from} → {to}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Badge>{getTransportLabel(transport)}</Badge>

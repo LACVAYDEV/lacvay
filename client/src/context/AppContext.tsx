@@ -123,7 +123,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     >
       {children}
       {toast && (
-        <div className="fixed bottom-24 left-1/2 z-[100] -translate-x-1/2 rounded-full bg-lacvay-green-dark px-5 py-2.5 text-sm font-medium text-white shadow-lg md:bottom-8">
+        <div className="toast-in fixed bottom-24 left-1/2 z-[100] -translate-x-1/2 rounded-full bg-lacvay-green-dark px-5 py-2.5 text-sm font-medium text-white shadow-lg md:bottom-8">
           {toast}
         </div>
       )}

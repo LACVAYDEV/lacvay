@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+<<<<<<< HEAD
 import { Compass, Eye, EyeOff, Loader2, Lock, Mail, User, Car } from 'lucide-react';
+=======
+import { Eye, EyeOff, Loader2, Lock, Mail, User, CheckCircle2 } from 'lucide-react';
+>>>>>>> 7b4e925bb6cea8ed26f7c926906b0981432d7458
 import { useAuth } from '@/context/AuthContext';
 import { validateEmail, validateName, validatePassword } from '@/services/authService';
 import { getHomePath } from '@/lib/auth';
@@ -54,9 +58,11 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [noticeVariant, setNoticeVariant] = useState<'info' | 'success'>('info');
   const [submitting, setSubmitting] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
   const [partnerLoading, setPartnerLoading] = useState(false);
@@ -101,6 +107,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     setSubmitting(true);
     try {
+<<<<<<< HEAD
       const user = isSignUp
         ? await signUp({
             name,
@@ -123,6 +130,21 @@ export function AuthForm({ mode }: AuthFormProps) {
       navigate(getHomePath(user), { replace: true });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+=======
+      if (isSignUp) {
+        await signUpWithEmail(email, password, name);
+        setNoticeVariant('success');
+        setNotice('Account created! Check your email to confirm your account, or simply log in.');
+        setName('');
+        setPassword('');
+        setConfirmPassword('');
+      } else {
+        await signInWithEmail(email, password);
+        navigate('/', { replace: true });
+      }
+    } catch (err: any) {
+      setFormError(err.message || 'Something went wrong. Please try again.');
+>>>>>>> 7b4e925bb6cea8ed26f7c926906b0981432d7458
     } finally {
       setSubmitting(false);
     }
@@ -131,8 +153,36 @@ export function AuthForm({ mode }: AuthFormProps) {
   const handleGuest = async () => {
     setGuestLoading(true);
     try {
+<<<<<<< HEAD
       const user = await signInAsGuest();
       navigate(getHomePath(user), { replace: true });
+=======
+      await signInWithGoogle();
+    } catch (err: any) {
+      setFormError(err.message || 'Google sign in failed');
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setFormError(null);
+    setNotice(null);
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setErrors({ email: emailErr });
+      return;
+    }
+    
+    setResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setNoticeVariant('success');
+      setNotice('Password reset email sent! Check your inbox.');
+    } catch (err: any) {
+      setFormError(err.message || 'Failed to send reset email');
+>>>>>>> 7b4e925bb6cea8ed26f7c926906b0981432d7458
     } finally {
       setGuestLoading(false);
     }
@@ -434,14 +484,22 @@ export function AuthForm({ mode }: AuthFormProps) {
               <Lock className={iconClass} />
               <input
                 id="confirmPassword"
-                type={showPassword ? 'text' : 'password'}
+                type={showConfirmPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter your password"
                 aria-invalid={Boolean(errors.confirmPassword)}
-                className={inputClass(errors.confirmPassword)}
+                className={inputClass(errors.confirmPassword, true)}
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-gray-400 transition hover:text-gray-600"
+                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
             {errors.confirmPassword && (
               <p role="alert" className="mt-1.5 text-[11.5px] text-red-600">{errors.confirmPassword}</p>
@@ -456,8 +514,16 @@ export function AuthForm({ mode }: AuthFormProps) {
         )}
 
         {notice && (
-          <p className="rounded-2xl bg-lacvay-lime/20 px-4 py-3 text-[12px] font-medium text-lacvay-green-dark">
-            {notice}
+          <p
+            className={cn(
+              'flex items-start gap-2 rounded-2xl px-4 py-3 text-[12px] font-medium',
+              noticeVariant === 'success'
+                ? 'bg-lacvay-green/10 text-lacvay-green-dark'
+                : 'bg-lacvay-lime/20 text-lacvay-green-dark',
+            )}
+          >
+            {noticeVariant === 'success' && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-lacvay-green" />}
+            <span>{notice}</span>
           </p>
         )}
 

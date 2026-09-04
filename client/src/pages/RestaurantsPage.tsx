@@ -14,6 +14,7 @@ export default function RestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<RestaurantCuisine | 'All'>('All');
+  const [justSavedId, setJustSavedId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { isSaved, saveItem, removeSaved, savedPlaces } = useApp();
 
@@ -28,6 +29,8 @@ export default function RestaurantsPage() {
     const saved = savedPlaces.find((p) => p.itemId === r.id);
     if (saved) removeSaved(saved.id);
     else saveItem({ itemId: r.id, type: 'restaurant', title: r.name, subtitle: r.location, imageUrl: r.imageUrl });
+    setJustSavedId(r.id);
+    setTimeout(() => setJustSavedId((current) => (current === r.id ? null : current)), 400);
   };
 
   if (loading) return <LoadingState />;
@@ -88,7 +91,11 @@ export default function RestaurantsPage() {
                   <button
                     type="button"
                     onClick={() => toggleSave(r)}
-                    className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold"
+                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
+                      isSaved(r.id)
+                        ? 'border-lacvay-green bg-lacvay-green text-white'
+                        : 'border-gray-200 text-gray-600'
+                    } ${justSavedId === r.id ? 'save-btn-pop' : ''}`}
                   >
                     {isSaved(r.id) ? 'Saved' : 'Save'}
                   </button>

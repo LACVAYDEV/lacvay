@@ -14,6 +14,7 @@ export default function TouristSpotsPage() {
   const [spots, setSpots] = useState<TouristSpot[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<TouristCategory | 'All'>('All');
+  const [justSavedId, setJustSavedId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { isSaved, saveItem, removeSaved, savedPlaces, addHistory } = useApp();
 
@@ -31,6 +32,8 @@ export default function TouristSpotsPage() {
       saveItem({ itemId: spot.id, type: 'tourist-spot', title: spot.name, subtitle: spot.location, imageUrl: spot.imageUrl });
       addHistory({ query: spot.name, type: 'attraction' });
     }
+    setJustSavedId(spot.id);
+    setTimeout(() => setJustSavedId((current) => (current === spot.id ? null : current)), 400);
   };
 
   if (loading) return <LoadingState />;
@@ -90,7 +93,11 @@ export default function TouristSpotsPage() {
                   <button
                     type="button"
                     onClick={() => toggleSave(spot)}
-                    className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600"
+                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
+                      isSaved(spot.id)
+                        ? 'border-lacvay-green bg-lacvay-green text-white'
+                        : 'border-gray-200 text-gray-600'
+                    } ${justSavedId === spot.id ? 'save-btn-pop' : ''}`}
                   >
                     {isSaved(spot.id) ? 'Saved' : 'Save'}
                   </button>
