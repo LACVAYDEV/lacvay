@@ -27,6 +27,7 @@ const PromotionsPage = lazy(() => import('@/pages/PromotionsPage'));
 const SavedPage = lazy(() => import('@/pages/SavedPage'));
 const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+const BecomeDriverPage = lazy(() => import('@/pages/BecomeDriverPage'));
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -172,6 +173,7 @@ function AppShell() {
             }
           />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/become-driver" element={<BecomeDriverPage />} />
         </Routes>
       </Suspense>
     </AppLayout>

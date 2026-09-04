@@ -99,16 +99,16 @@ export function Header() {
             aria-expanded={profileOpen}
             className="flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-2.5 shadow-soft hover:bg-gray-50"
           >
-            <img src={user?.avatarUrl} alt="" className="h-8 w-8 rounded-full bg-gray-100" />
+            <img src={user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="" className="h-8 w-8 rounded-full bg-gray-100" />
             <span className="hidden text-[12.5px] font-medium text-gray-800 md:inline">
-              Hello, {user?.name.split(' ')[0]}!
+              Hello, {(user?.name || user?.email?.split('@')[0])?.split(' ')[0]}!
             </span>
             <ChevronDown className={cn('h-3.5 w-3.5 text-gray-500 transition', profileOpen && 'rotate-180')} />
           </button>
           {profileOpen && (
             <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-gray-100 bg-white py-1.5 shadow-card">
               <div className="border-b border-gray-100 px-4 pb-2 pt-1">
-                <p className="truncate text-[12.5px] font-semibold text-gray-900">{user?.name}</p>
+                <p className="truncate text-[12.5px] font-semibold text-gray-900">{user?.name || user?.email?.split('@')[0]}</p>
                 <p className="truncate text-[11px] text-gray-500">{user?.email}</p>
               </div>
               <button

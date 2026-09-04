@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Star, MapPin, Clock, Navigation } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Star, MapPin, Clock, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
 import { dataService } from '@/services/dataService';
+import { touristSpots } from '@/data/mockData';
 import type { TouristSpot } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
@@ -13,16 +14,27 @@ export default function TouristSpotDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [spot, setSpot] = useState<TouristSpot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { isSaved, saveItem, removeSaved, savedPlaces } = useApp();
+  const incomingTransition = location.state?.destinationTransition as 'previous' | 'next' | undefined;
 
   useEffect(() => {
     if (!id) return;
     dataService.getTouristSpot(id).then((s) => {
       setSpot(s ?? null);
       setLoading(false);
+      setIsNavigating(false);
     });
   }, [id]);
+
+  useEffect(() => () => {
+    if (navigationTimer.current) {
+      clearTimeout(navigationTimer.current);
+    }
+  }, []);
 
   if (loading) return <LoadingState />;
   if (!spot) return <EmptyState title="Spot not found" />;
@@ -33,16 +45,51 @@ export default function TouristSpotDetailPage() {
     else saveItem({ itemId: spot.id, type: 'tourist-spot', title: spot.name, subtitle: spot.location, imageUrl: spot.imageUrl });
   };
 
+  const currentSpotIndex = touristSpots.findIndex((touristSpot) => touristSpot.id === spot.id);
+  const previousSpot = currentSpotIndex > 0 ? touristSpots[currentSpotIndex - 1] : undefined;
+  const nextSpot = currentSpotIndex >= 0 && currentSpotIndex < touristSpots.length - 1
+    ? touristSpots[currentSpotIndex + 1]
+    : undefined;
+
+  const navigateToSpot = (destination: TouristSpot, direction: 'previous' | 'next') => {
+    if (isNavigating) return;
+
+    setIsNavigating(true);
+    navigationTimer.current = setTimeout(() => {
+      navigate(`/tourist-spots/${destination.id}`, { state: { destinationTransition: direction } });
+    }, 180);
+  };
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <button type="button" onClick={() => navigate('/tourist-spots')} className="text-sm font-semibold text-lacvay-green hover:underline">
         ← Back to Tourist Spots
       </button>
 
-      <div className="overflow-hidden rounded-3xl">
-        <img src={spot.imageUrl} alt={spot.name} className="aspect-[21/9] w-full object-cover" />
+      <div className={`relative overflow-hidden rounded-3xl ${isNavigating ? 'tourist-spot-image-out' : incomingTransition ? 'tourist-spot-image-in' : ''}`}>
+          <img src={spot.imageUrl} alt={spot.name} className="aspect-[21/9] w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-black/25" />
+          <button
+            type="button"
+            onClick={() => previousSpot && navigateToSpot(previousSpot, 'previous')}
+            disabled={!previousSpot || isNavigating}
+            className="absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-lg transition hover:scale-105 hover:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/70 disabled:cursor-not-allowed disabled:opacity-40 sm:left-6 sm:h-12 sm:w-12"
+            aria-label={previousSpot ? `View previous destination: ${previousSpot.name}` : 'No previous destination'}
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            type="button"
+            onClick={() => nextSpot && navigateToSpot(nextSpot, 'next')}
+            disabled={!nextSpot || isNavigating}
+            className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-lg transition hover:scale-105 hover:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/70 disabled:cursor-not-allowed disabled:opacity-40 sm:right-6 sm:h-12 sm:w-12"
+            aria-label={nextSpot ? `View next destination: ${nextSpot.name}` : 'No next destination'}
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
       </div>
 
+      <div className={`tourist-spot-details ${isNavigating ? 'tourist-spot-details-out' : incomingTransition ? 'tourist-spot-details-in' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{spot.name}</h1>
@@ -84,6 +131,7 @@ export default function TouristSpotDetailPage() {
       </Card>
 
       <Button variant="outline" onClick={() => navigate('/restaurants')}>Nearby Restaurants →</Button>
+      </div>
     </div>
   );
 }
