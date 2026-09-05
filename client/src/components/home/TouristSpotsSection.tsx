@@ -20,15 +20,15 @@ export function TouristSpotsSection() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 items-start gap-4 lg:grid-cols-4">
         {featured.map((spot) => (
           <button
             key={spot.id}
             type="button"
             onClick={() => navigate(`/tourist-spots/${spot.id}`)}
-            className="group text-left"
+            className="group flex h-full min-w-0 flex-col text-left"
           >
-            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-gray-100">
+            <div className="relative aspect-[4/5] w-full shrink-0 overflow-hidden rounded-2xl bg-gray-100">
               <img
                 src={spot.imageUrl}
                 alt={spot.name}
