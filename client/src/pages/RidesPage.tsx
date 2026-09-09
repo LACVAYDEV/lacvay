@@ -1,248 +1,314 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import {
+  Car,
+  ShieldCheck,
+  CheckCircle2,
+  MapPin,
+  Sparkles,
+  X,
+  Info,
+  Clock,
+  Navigation,
+  Compass,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { dataService } from '@/services/dataService';
-import type { OnDemandVehicle, Ride, RideBooking } from '@/types';
-import { useApp } from '@/context/AppContext';
+import type { ExternalProvider } from '@/types';
 import { Card } from '@/components/ui/Card';
-import { EmptyState, LoadingState } from '@/components/ui/States';
-import { VehicleTypePicker } from '@/components/rides/VehicleTypePicker';
-import { RideTripForm } from '@/components/rides/RideTripForm';
-import { PartnerListItem } from '@/components/rides/PartnerListItem';
-import { BookingStatusCard } from '@/components/rides/BookingStatusCard';
-import { PartnersMap } from '@/components/rides/PartnersMap';
-import { filterOnDemandRides, getOnDemandOption, typicalFareRanges, withTripFare } from '@/lib/rideBooking';
-import { estimateTripDistanceKm } from '@/lib/partnerRates';
-import { isOnDemandVehicle } from '@/lib/transport';
-import { formatCurrency, generateId } from '@/lib/utils';
+import { Button } from '@/components/ui/Button';
+import { LoadingState } from '@/components/ui/States';
+
+type ProviderFilter = 'all' | 'car' | 'motorcycle' | 'taxi';
+
+const filterTabs: { value: ProviderFilter; label: string }[] = [
+  { value: 'all', label: 'All Services' },
+  { value: 'car', label: 'Car & 4-Wheel' },
+  { value: 'motorcycle', label: 'Motorcycle Taxi' },
+  { value: 'taxi', label: 'Local City Taxi' },
+];
 
 export default function RidesPage() {
-  const navigate = useNavigate();
-  const [params, setParams] = useSearchParams();
-  const { addHistory, showToast } = useApp();
-
-  const initialType = params.get('type');
-  const [vehicleType, setVehicleType] = useState<OnDemandVehicle>(() =>
-    isOnDemandVehicle(initialType ?? '') ? (initialType as OnDemandVehicle) : 'motorcycle',
-  );
-  const [pickup, setPickup] = useState(params.get('from') || 'Current Location');
-  const [destination, setDestination] = useState(params.get('to') || '');
-  const [allRides, setAllRides] = useState<Ride[]>([]);
+  const [providers, setProviders] = useState<ExternalProvider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
-  const [selectedRideId, setSelectedRideId] = useState<string | null>(null);
-  const [bookingRideId, setBookingRideId] = useState<string | null>(null);
-  const [activeBooking, setActiveBooking] = useState<RideBooking | null>(null);
+  const [filter, setFilter] = useState<ProviderFilter>('all');
+  const [selectedProvider, setSelectedProvider] = useState<ExternalProvider | null>(null);
 
   useEffect(() => {
-    if (initialType === 'tricycle') {
-      const next = new URLSearchParams(params);
-      next.delete('type');
-      navigate(`/toda?${next.toString()}`, { replace: true });
-    }
-  }, [initialType, navigate, params]);
-
-  useEffect(() => {
-    dataService.getRides().then((rides) => {
-      setAllRides(rides);
+    dataService.getExternalProviders().then((res) => {
+      setProviders(res);
       setLoading(false);
     });
   }, []);
 
-  useEffect(() => {
-    const next = new URLSearchParams();
-    next.set('type', vehicleType);
-    if (pickup) next.set('from', pickup);
-    if (destination) next.set('to', destination);
-    setParams(next, { replace: true });
-  }, [vehicleType, pickup, destination, setParams]);
+  const filteredProviders = providers.filter((p) => {
+    if (filter === 'all') return true;
+    if (filter === 'car') return p.service_type.toLowerCase().includes('car');
+    if (filter === 'motorcycle') return p.service_type.toLowerCase().includes('motorcycle');
+    if (filter === 'taxi') return p.service_type.toLowerCase().includes('taxi');
+    return true;
+  });
 
-  const tripDistanceKm = useMemo(
-    () => (destination.trim() ? estimateTripDistanceKm(pickup, destination) : undefined),
-    [pickup, destination],
-  );
-
-  const partners = useMemo(() => {
-    const online = filterOnDemandRides(allRides, vehicleType);
-    return tripDistanceKm ? withTripFare(online, tripDistanceKm) : online;
-  }, [allRides, vehicleType, tripDistanceKm]);
-
-  const fareHint = typicalFareRanges[vehicleType];
-  const vehicleInfo = getOnDemandOption(vehicleType);
-
-  const handleVehicleChange = (type: OnDemandVehicle) => {
-    setVehicleType(type);
-    setSelectedRideId(null);
-  };
-
-  const swapLocations = () => {
-    setPickup(destination || 'Current Location');
-    setDestination(pickup === 'Current Location' ? '' : pickup);
-  };
-
-  const findDrivers = () => {
-    if (!destination.trim()) return;
-    setSearching(true);
-    setSelectedRideId(null);
-    window.setTimeout(() => setSearching(false), 600);
-  };
-
-  const bookRide = async (ride: Ride) => {
-    if (!destination.trim()) {
-      showToast('Enter a destination first');
-      return;
+  const getTagBadgeColor = (tag?: string) => {
+    switch (tag) {
+      case 'Most Popular':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Fastest Solo Commute':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'Batangas Local Fleet':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
     }
-
-    setBookingRideId(ride.id);
-    await new Promise((r) => setTimeout(r, 800));
-
-    const booking: RideBooking = {
-      id: generateId(),
-      rideId: ride.id,
-      driverName: ride.driverName,
-      vehicleType,
-      pickup,
-      destination,
-      estimatedFare: ride.estimatedFare,
-      etaMin: ride.etaMin,
-      plateNumber: ride.plateNumber,
-      status: 'confirmed',
-      bookedAt: new Date().toISOString(),
-    };
-
-    setActiveBooking(booking);
-    setBookingRideId(null);
-    addHistory({
-      query: `${pickup} → ${destination}`,
-      type: 'ride',
-      meta: `${ride.driverName} · ${formatCurrency(ride.estimatedFare)}`,
-    });
-    showToast(`Booking confirmed with ${ride.driverName}`);
-  };
-
-  const cancelBooking = () => {
-    setActiveBooking(null);
-    showToast('Ride cancelled');
   };
 
   if (loading) return <LoadingState />;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Book a Ride</h2>
-        <p className="text-sm text-gray-500">
-          Pick a vehicle, find partners on the map, and book a taxi or habal-habal near you
-        </p>
-      </div>
-
-      <Card className="lg:hidden">
-        <RideTripForm
-          pickup={pickup}
-          destination={destination}
-          onPickupChange={setPickup}
-          onDestinationChange={setDestination}
-          onSwap={swapLocations}
-          onSearch={findDrivers}
-          searching={searching}
-        />
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)_300px] xl:grid-cols-[240px_minmax(0,1fr)_320px]">
-        {/* Left — vehicle choices + trip form (desktop) */}
-        <div className="space-y-4">
-          <Card className="space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Ride type</p>
-            <VehicleTypePicker value={vehicleType} onChange={handleVehicleChange} layout="vertical" />
-          </Card>
-
-          <Card className="hidden space-y-3 lg:block">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Your trip</p>
-            <RideTripForm
-              pickup={pickup}
-              destination={destination}
-              onPickupChange={setPickup}
-              onDestinationChange={setDestination}
-              onSwap={swapLocations}
-              onSearch={findDrivers}
-              searching={searching}
-              compact
-            />
-          </Card>
-
-          <Card className="hidden bg-gradient-to-br from-lacvay-green/[0.04] to-lacvay-lime/10 lg:block">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-lacvay-green-dark">
-              {vehicleInfo.label} tips
-            </p>
-            <p className="mt-2 text-[12px] leading-relaxed text-gray-600">{fareHint.note}</p>
-            <p className="mt-2 text-[12px] font-semibold text-lacvay-green-dark">
-              {formatCurrency(fareHint.min)} – {formatCurrency(fareHint.max)} typical
-            </p>
-          </Card>
+    <div className="space-y-8">
+      {/* Header Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-lacvay-green/90 via-emerald-700 to-teal-800 p-6 text-white shadow-lg sm:p-8">
+        <div className="relative z-10 max-w-2xl space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-100 backdrop-blur-md">
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+            Ride-Hailing & Transit Partners
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
+            Book Rides Across Batangas City
+          </h1>
+          <p className="text-sm leading-relaxed text-emerald-50/90 sm:text-base">
+            Choose from certified ride-hailing and dedicated city taxi services. Enjoy upfront fares,
+            safe point-to-point transit, and reliable pickups throughout Batangas City, terminals, and ports.
+          </p>
         </div>
 
-        {/* Center — map */}
-        <Card padding="sm" className="overflow-hidden p-0 lg:min-h-[520px]">
-          <div className="border-b border-gray-100 px-4 py-2.5">
-            <h3 className="text-[13px] font-bold text-gray-900">Live map</h3>
-            <p className="text-[11px] text-gray-500">
-              {partners.length} online
-              {tripDistanceKm != null && ` · trip ~${tripDistanceKm.toFixed(1)} km`}
-            </p>
-          </div>
-          <PartnersMap
-            partners={partners}
-            tripDistanceKm={tripDistanceKm}
-            selectedId={selectedRideId}
-            onSelect={setSelectedRideId}
-            className="h-[280px] w-full sm:h-[360px] lg:h-[calc(100%-44px)] lg:min-h-[460px]"
-          />
-        </Card>
+        {/* Decorative Background Accents */}
+        <div className="pointer-events-none absolute -bottom-10 -right-10 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+        <div className="pointer-events-none absolute -top-8 right-24 h-40 w-40 rounded-full bg-teal-400/20 blur-xl" />
+      </div>
 
-        {/* Right — partner list */}
-        <div className="flex min-h-0 flex-col">
-          <div className="mb-2 flex items-center justify-between px-0.5">
-            <div>
-              <h3 className="text-[13px] font-bold text-gray-900">Nearby partners</h3>
-              <p className="text-[11px] text-gray-500">
-                {partners.length} online · tap to highlight on map
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap items-center gap-2">
+        {filterTabs.map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setFilter(tab.value)}
+            className={`rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+              filter === tab.value
+                ? 'bg-lacvay-green text-white shadow-md'
+                : 'bg-white text-gray-600 border border-gray-100 shadow-soft hover:bg-gray-50'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Partner Promotional Cards Grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {filteredProviders.map((provider) => (
+          <Card
+            key={provider.id}
+            className="group flex flex-col justify-between overflow-hidden border border-gray-100 bg-white p-6 shadow-card transition-all duration-200 hover:-translate-y-1 hover:shadow-xl rounded-2xl"
+          >
+            <div className="space-y-4">
+              {/* Top Row: Logo & Badges */}
+              <div className="flex items-start gap-4">
+                <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-gray-100 bg-white p-2 shadow-sm transition group-hover:shadow-md">
+                  {provider.logo_url ? (
+                    <img
+                      src={provider.logo_url}
+                      alt={`${provider.provider_name} logo`}
+                      className="h-full w-full object-contain"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <Car className="h-8 w-8 text-lacvay-green" />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <h3 className="text-xl font-bold text-gray-900 tracking-tight">
+                      {provider.provider_name}
+                    </h3>
+                  </div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-lacvay-green">
+                    {provider.service_type}
+                  </p>
+                  {provider.tag && (
+                    <span
+                      className={`mt-1.5 inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${getTagBadgeColor(
+                        provider.tag
+                      )}`}
+                    >
+                      {provider.tag}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Highlight callout */}
+              {provider.highlight && (
+                <div className="rounded-xl bg-emerald-50/70 border border-emerald-100/80 px-3.5 py-2 text-xs font-medium text-emerald-900 flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <span>{provider.highlight}</span>
+                </div>
+              )}
+
+              {/* Description */}
+              <p className="text-sm leading-relaxed text-gray-600 line-clamp-3">
+                {provider.description}
+              </p>
+
+              {/* Key Features List */}
+              {provider.features && provider.features.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                    Service Highlights
+                  </p>
+                  <ul className="space-y-1.5">
+                    {provider.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-xs text-gray-700">
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-lacvay-green mt-0.5" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Coverage Area */}
+              {provider.coverageArea && (
+                <div className="flex items-center gap-1.5 pt-1 text-xs text-gray-500">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <span>Coverage: {provider.coverageArea}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Button */}
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <Button
+                type="button"
+                className="w-full justify-center gap-2 font-semibold shadow-sm group-hover:shadow"
+                onClick={() => setSelectedProvider(provider)}
+              >
+                <span>{provider.ctaText || `Book via ${provider.provider_name}`}</span>
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Informational Guidance Box */}
+      <div className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-soft sm:p-7">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3.5">
+            <div className="rounded-xl bg-lacvay-green/10 p-2.5 text-lacvay-green">
+              <Navigation className="h-6 w-6" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-base font-bold text-gray-900">Looking for Traditional Commuting?</h4>
+              <p className="text-sm text-gray-600">
+                Prefer to ride local jeepneys or tricycles? Check our step-by-step commute guides or official city fare calculator.
               </p>
             </div>
           </div>
-
-          <div className="flex max-h-[520px] flex-col gap-2 overflow-y-auto pr-0.5 lg:max-h-none lg:flex-1">
-            {partners.length === 0 ? (
-              <Card>
-                <EmptyState
-                  title={`No ${vehicleInfo.label.toLowerCase()}s online`}
-                  description="Try another vehicle type or check back soon."
-                />
-              </Card>
-            ) : (
-              partners.map((ride) => (
-                <PartnerListItem
-                  key={ride.id}
-                  ride={ride}
-                  tripDistanceKm={tripDistanceKm}
-                  selected={selectedRideId === ride.id}
-                  onSelect={() => setSelectedRideId(ride.id)}
-                  onBook={() => bookRide(ride)}
-                  booking={bookingRideId === ride.id}
-                />
-              ))
-            )}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              to="/commute"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-soft hover:bg-gray-50 transition"
+            >
+              <Compass className="h-4 w-4 text-lacvay-green" />
+              Commute Guides
+            </Link>
+            <Link
+              to="/fares"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-lacvay-green px-4 py-2 text-xs font-semibold text-white shadow-soft hover:bg-emerald-700 transition"
+            >
+              Fare Matrix
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Mobile vehicle picker */}
-      <Card className="lg:hidden">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Ride type</p>
-        <VehicleTypePicker value={vehicleType} onChange={handleVehicleChange} layout="horizontal" />
-      </Card>
+      {/* Coming Soon Modal Dialog */}
+      {selectedProvider && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setSelectedProvider(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl transition-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 overflow-hidden rounded-xl border border-gray-100 p-1 flex items-center justify-center bg-white">
+                  {selectedProvider.logo_url ? (
+                    <img
+                      src={selectedProvider.logo_url}
+                      alt={selectedProvider.provider_name}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <Car className="h-5 w-5 text-lacvay-green" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900">{selectedProvider.provider_name}</h3>
+                  <p className="text-xs text-gray-500">{selectedProvider.service_type}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedProvider(null)}
+                className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+                aria-label="Close dialog"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-      {activeBooking && (
-        <BookingStatusCard booking={activeBooking} onCancel={cancelBooking} />
+            <div className="my-5 space-y-4">
+              <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200/80 p-3 text-amber-800 text-xs font-medium">
+                <Clock className="h-4 w-4 shrink-0 text-amber-600" />
+                <span>Direct In-App Booking Integration Coming Soon</span>
+              </div>
+
+              <p className="text-sm leading-relaxed text-gray-600">
+                Direct booking integration for <strong className="text-gray-900">{selectedProvider.provider_name}</strong> is currently being finalized on the LACVAY platform.
+              </p>
+
+              <div className="rounded-2xl bg-gray-50 p-4 border border-gray-100 space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-700">
+                  <Info className="h-4 w-4 text-lacvay-green" />
+                  <span>Commuter Tip for Batangas City</span>
+                </div>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {selectedProvider.id === 'angkas'
+                    ? 'Angkas is ideal for skipping the Diversion Road and Kumintang traffic during morning and evening rush hours. Riders supply sanitized hairnets with every ride.'
+                    : selectedProvider.id === 'grab'
+                    ? 'Grab is ideal for family trips, airport or terminal drop-offs with heavy luggage. Enjoy upfront digital fares through GCash or GrabPay.'
+                    : 'Idol Taxi is Batangas City’s dedicated local sedan fleet. Perfect for metered transfers from Batangas Grand Terminal and Port passenger terminals.'}
+                </p>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              className="w-full justify-center"
+              onClick={() => setSelectedProvider(null)}
+            >
+              Got it
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
 }
+

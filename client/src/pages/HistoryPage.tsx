@@ -8,7 +8,7 @@ const typeLabels: Record<string, string> = {
   route: 'Route',
   fare: 'Fare Check',
   attraction: 'Attraction',
-  ride: 'Ride Booking',
+  ride: 'Ride Option',
 };
 
 export default function HistoryPage() {
@@ -18,7 +18,7 @@ export default function HistoryPage() {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold text-gray-900">History</h2>
-        <EmptyState title="No history yet" description="Your searches, routes, and bookings will appear here." />
+        <EmptyState title="No history yet" description="Your searches, routes, and activity will appear here." />
       </div>
     );
   }

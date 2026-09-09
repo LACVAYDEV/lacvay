@@ -1,83 +1,129 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { User } from '@/types';
-import { authService, type Credentials, type SignUpData } from '@/services/authService';
-import { isTranspoPartner } from '@/lib/auth';
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import type { User, Session } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types';
+import { supabase } from '@/lib/supabase';
+
+type UserProfile = Database['public']['Tables']['profiles']['Row'];
 
 interface AuthContextValue {
   user: User | null;
-  initializing: boolean;
-  isAuthenticated: boolean;
-  isTranspoPartner: boolean;
-  signIn: (credentials: Credentials) => Promise<User>;
-  signUp: (data: SignUpData) => Promise<User>;
-  signInAsGuest: () => Promise<User>;
-  signInAsPartner: () => Promise<User>;
+  session: Session | null;
+  profile: UserProfile | null;
+  isLoading: boolean;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, fullName: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  updateUser: (patch: Partial<User>) => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [initializing, setInitializing] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        if (error.code !== 'PGRST116') { // PGRST116 is "No rows found"
+          console.error('Error fetching user profile:', error);
+        }
+        setProfile(null);
+      } else {
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching profile:', err);
+      setProfile(null);
+    }
+  }, []);
 
   useEffect(() => {
-    setUser(authService.getSession());
-    setInitializing(false);
-  }, []);
-
-  const signIn = useCallback(async (credentials: Credentials) => {
-    const next = await authService.signIn(credentials);
-    setUser(next);
-    return next;
-  }, []);
-
-  const signUp = useCallback(async (data: SignUpData) => {
-    const next = await authService.signUp(data);
-    setUser(next);
-    return next;
-  }, []);
-
-  const signInAsGuest = useCallback(async () => {
-    const next = await authService.signInAsGuest();
-    setUser(next);
-    return next;
-  }, []);
-
-  const signInAsPartner = useCallback(async () => {
-    const next = await authService.signInAsPartner();
-    setUser(next);
-    return next;
-  }, []);
-
-  const signOut = useCallback(async () => {
-    await authService.signOut();
-    setUser(null);
-  }, []);
-
-  const updateUser = useCallback((patch: Partial<User>) => {
-    setUser((prev) => {
-      if (!prev) return prev;
-      const next = { ...prev, ...patch };
-      authService.persistUser(next);
-      return next;
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id).finally(() => setIsLoading(false));
+      } else {
+        setIsLoading(false);
+      }
     });
-  }, []);
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [fetchProfile]);
+
+  const signInWithEmail = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  };
+
+  const signUpWithEmail = async (email: string, password: string, fullName: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        }
+      }
+    });
+    if (error) throw error;
+  };
+
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) throw error;
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        initializing,
-        isAuthenticated: user !== null,
-        isTranspoPartner: isTranspoPartner(user),
-        signIn,
-        signUp,
-        signInAsGuest,
-        signInAsPartner,
+        session,
+        profile,
+        isLoading,
+        signInWithEmail,
+        signUpWithEmail,
+        signInWithGoogle,
         signOut,
-        updateUser,
+        refreshProfile,
       }}
     >
       {children}

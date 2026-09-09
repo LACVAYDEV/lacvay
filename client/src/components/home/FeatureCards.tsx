@@ -17,17 +17,10 @@ const features = [
   },
   {
     title: 'Book a Ride',
-    description: 'See transport partners on the map with base fare and per-km rates.',
+    description: 'Explore Grab, Angkas, and Idol Taxi services in Batangas City.',
     image: '/images/icon-ride.png',
-    cta: 'Book Now',
+    cta: 'View Services',
     path: '/rides',
-  },
-  {
-    title: 'Tricycle TODA',
-    description: 'See which TODA covers your barangay — tricycles are not bookable in-app.',
-    image: '/images/promo-tricycle.png',
-    cta: 'View Areas',
-    path: '/toda',
   },
   {
     title: 'Commute Guide',

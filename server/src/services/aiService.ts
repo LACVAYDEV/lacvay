@@ -24,7 +24,7 @@ async function callGemini(message: string): Promise<string | null> {
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -38,10 +38,15 @@ async function callGemini(message: string): Promise<string | null> {
       },
     );
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`Gemini API returned status ${res.status}:`, errorText);
+      return null;
+    }
     const data = await res.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     return data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
-  } catch {
+  } catch (error) {
+    console.error('Failed to call Gemini API:', error);
     return null;
   }
 }

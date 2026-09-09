@@ -1,5 +1,6 @@
-import { touristSpots, restaurants, commuteGuides, rides, promotions, searchIndex, mockUser } from '@/data/mockData';
-import type { TouristSpot, Restaurant, CommuteGuide, Ride, Promotion, SearchResult, TouristCategory, RestaurantCuisine, User } from '@/types';
+import { touristSpots, restaurants, commuteGuides, rides, externalProviders, promotions, searchIndex, mockUser } from '@/data/mockData';
+import type { TouristSpot, Restaurant, CommuteGuide, Ride, ExternalProvider, Promotion, SearchResult, TouristCategory, RestaurantCuisine, User } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 export const dataService = {
   getUser(): Promise<User> {
@@ -30,6 +31,34 @@ export const dataService = {
 
   getCommuteGuide(id: string): Promise<CommuteGuide | undefined> {
     return Promise.resolve(commuteGuides.find((g) => g.id === id));
+  },
+
+  async getExternalProviders(): Promise<ExternalProvider[]> {
+    try {
+      const { data, error } = await supabase
+        .from('external_providers')
+        .select('*')
+        .eq('is_active', true);
+      if (!error && data && data.length > 0) {
+        return data.map((item) => {
+          const matched = externalProviders.find(
+            (p) => p.provider_name.toLowerCase() === item.provider_name.toLowerCase()
+          );
+          return {
+            ...item,
+            logo_url: item.logo_url || matched?.logo_url,
+            tag: matched?.tag,
+            features: matched?.features,
+            coverageArea: matched?.coverageArea,
+            highlight: matched?.highlight,
+            ctaText: matched?.ctaText,
+          };
+        });
+      }
+    } catch {
+      // Fall back to mock external providers
+    }
+    return externalProviders;
   },
 
   getRides(): Promise<Ride[]> {
