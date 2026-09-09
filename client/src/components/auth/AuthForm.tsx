@@ -1,10 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
-import { Compass, Eye, EyeOff, Loader2, Lock, Mail, User, Car } from 'lucide-react';
-=======
-import { Eye, EyeOff, Loader2, Lock, Mail, User, CheckCircle2 } from 'lucide-react';
->>>>>>> 7b4e925bb6cea8ed26f7c926906b0981432d7458
+import { Car, CheckCircle2, Compass, Eye, EyeOff, Loader2, Lock, Mail, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { validateEmail, validateName, validatePassword } from '@/services/authService';
 import { getHomePath } from '@/lib/auth';
@@ -107,7 +103,6 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     setSubmitting(true);
     try {
-<<<<<<< HEAD
       const user = isSignUp
         ? await signUp({
             name,
@@ -130,21 +125,6 @@ export function AuthForm({ mode }: AuthFormProps) {
       navigate(getHomePath(user), { replace: true });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
-=======
-      if (isSignUp) {
-        await signUpWithEmail(email, password, name);
-        setNoticeVariant('success');
-        setNotice('Account created! Check your email to confirm your account, or simply log in.');
-        setName('');
-        setPassword('');
-        setConfirmPassword('');
-      } else {
-        await signInWithEmail(email, password);
-        navigate('/', { replace: true });
-      }
-    } catch (err: any) {
-      setFormError(err.message || 'Something went wrong. Please try again.');
->>>>>>> 7b4e925bb6cea8ed26f7c926906b0981432d7458
     } finally {
       setSubmitting(false);
     }
@@ -153,13 +133,12 @@ export function AuthForm({ mode }: AuthFormProps) {
   const handleGuest = async () => {
     setGuestLoading(true);
     try {
-<<<<<<< HEAD
       const user = await signInAsGuest();
       navigate(getHomePath(user), { replace: true });
-=======
-      await signInWithGoogle();
     } catch (err: any) {
-      setFormError(err.message || 'Google sign in failed');
+      setFormError(err.message || 'Guest sign in failed');
+    } finally {
+      setGuestLoading(false);
     }
   };
 
@@ -182,7 +161,6 @@ export function AuthForm({ mode }: AuthFormProps) {
       setNotice('Password reset email sent! Check your inbox.');
     } catch (err: any) {
       setFormError(err.message || 'Failed to send reset email');
->>>>>>> 7b4e925bb6cea8ed26f7c926906b0981432d7458
     } finally {
       setGuestLoading(false);
     }
