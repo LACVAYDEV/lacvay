@@ -35,17 +35,3 @@ export function PublicOnlyRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** Renders routes only for registered drivers. Redirects commuters to map or become-driver. */
-export function DriverRoute({ children }: { children: ReactNode }) {
-  const { session, isDriver, isLoading } = useAuth();
-  const location = useLocation();
-
-  if (isLoading) return <AppSplash />;
-  if (!session) {
-    return <Navigate to="/welcome" replace state={{ from: location.pathname }} />;
-  }
-  if (!isDriver) {
-    return <Navigate to="/become-driver" replace />;
-  }
-  return <>{children}</>;
-}

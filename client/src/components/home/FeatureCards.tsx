@@ -17,9 +17,9 @@ const features = [
   },
   {
     title: 'Book a Ride',
-    description: 'Book tricycles, taxis, or motorcycle riders near you.',
+    description: 'Explore Grab, Angkas, and Idol Taxi services in Batangas City.',
     image: '/images/icon-ride.png',
-    cta: 'Book Now',
+    cta: 'View Services',
     path: '/rides',
   },
   {

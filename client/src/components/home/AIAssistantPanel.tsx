@@ -5,6 +5,8 @@ import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
 
+import { MarkdownContent } from '@/components/ui/MarkdownContent';
+
 export function AIAssistantPanel() {
   const { aiMessages, aiLoading, sendAI, aiSuggestions } = useApp();
   const [input, setInput] = useState('');
@@ -41,11 +43,11 @@ export function AIAssistantPanel() {
                 : 'ml-6 rounded-tr-md bg-lacvay-green text-white',
             )}
           >
-            {msg.content.split('\n').filter(Boolean).map((line, i) => (
-              <p key={i} className={cn(i > 0 && 'mt-1', i === 0 && msg.role === 'assistant' && 'font-bold text-lacvay-green-dark')}>
-                {line}
-              </p>
-            ))}
+            <MarkdownContent
+              content={msg.content}
+              isUser={msg.role === 'user'}
+              className="text-[11.5px]"
+            />
           </div>
         ))}
         {aiLoading && (

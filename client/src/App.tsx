@@ -2,7 +2,7 @@ import { Suspense, lazy, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
-import { ProtectedRoute, PublicOnlyRoute, DriverRoute, AppSplash } from '@/components/auth/RouteGuards';
+import { ProtectedRoute, PublicOnlyRoute, AppSplash } from '@/components/auth/RouteGuards';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoadingState } from '@/components/ui/States';
 
@@ -19,9 +19,9 @@ const AIAssistantPage = lazy(() => import('@/pages/AIAssistantPage'));
 const RestaurantsPage = lazy(() => import('@/pages/RestaurantsPage'));
 const PromotionsPage = lazy(() => import('@/pages/PromotionsPage'));
 const SavedPage = lazy(() => import('@/pages/SavedPage'));
+const SavedPlaces = lazy(() => import('@/pages/SavedPlaces'));
 const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
-const BecomeDriverPage = lazy(() => import('@/pages/BecomeDriverPage'));
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -41,19 +41,9 @@ function AppShell() {
           <Route path="/restaurants" element={<RestaurantsPage />} />
           <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/saved" element={<SavedPage />} />
+          <Route path="/saved-places" element={<SavedPlaces />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/become-driver" element={<BecomeDriverPage />} />
-          <Route
-            path="/driver-dashboard"
-            element={
-              <DriverRoute>
-                <div className="flex min-h-screen items-center justify-center">
-                  <h1 className="text-xl font-bold">Driver Dashboard (Coming Soon)</h1>
-                </div>
-              </DriverRoute>
-            }
-          />
         </Routes>
       </Suspense>
     </AppLayout>

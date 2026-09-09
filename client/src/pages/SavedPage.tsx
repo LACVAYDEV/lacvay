@@ -24,7 +24,20 @@ export default function SavedPage() {
   if (savedPlaces.length === 0) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900">Saved</h2>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Saved</h2>
+            <p className="text-sm text-gray-500">Your locally saved routes and recommendations</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/saved-places')}
+            className="inline-flex items-center gap-2 rounded-2xl border border-lacvay-green/30 bg-lacvay-green/10 px-4 py-2.5 text-xs font-bold text-lacvay-green shadow-soft transition hover:bg-lacvay-green hover:text-white"
+          >
+            <Bookmark className="h-4 w-4" />
+            View Account Bookmarks
+          </button>
+        </div>
         <EmptyState title="Nothing saved yet" description="Save tourist spots, restaurants, and routes to find them here." />
       </div>
     );
@@ -39,7 +52,20 @@ export default function SavedPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Saved</h2>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Saved</h2>
+          <p className="text-sm text-gray-500">Your saved routes and spots</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/saved-places')}
+          className="inline-flex items-center gap-2 rounded-2xl border border-lacvay-green/30 bg-lacvay-green/10 px-4 py-2.5 text-xs font-bold text-lacvay-green shadow-soft transition hover:bg-lacvay-green hover:text-white"
+        >
+          <Bookmark className="h-4 w-4" />
+          View Account Bookmarks
+        </button>
+      </div>
       {Object.entries(grouped).map(([type, items]) => (
         <div key={type}>
           <h3 className="mb-3 flex items-center gap-2 font-semibold text-gray-800">

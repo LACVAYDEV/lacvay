@@ -1,4 +1,4 @@
-import type { TouristSpot, Restaurant, Promotion, Ride, CommuteGuide, SearchResult, User } from '@/types';
+import type { TouristSpot, Restaurant, Promotion, Ride, CommuteGuide, SearchResult, User, ExternalProvider } from '@/types';
 
 export const mockUser: User = {
   id: 'user-1',
@@ -183,6 +183,64 @@ export const promotions: Promotion[] = [
   },
 ];
 
+export const externalProviders: ExternalProvider[] = [
+  {
+    id: 'grab',
+    provider_name: 'Grab',
+    service_type: 'Car & Taxi Hailing',
+    tag: 'Most Popular',
+    description: "Southeast Asia's leading on-demand ride-hailing service. Book 4-wheel rides, GrabCar, and metered taxis with upfront pricing and live tracking across Batangas City and CALABARZON.",
+    logo_url: '/images/Grab.jpg',
+    coverageArea: 'Batangas City, Lipa & CALABARZON',
+    highlight: 'Point-to-point comfort with fixed upfront fares',
+    features: [
+      'On-Demand 4-Wheel Sedans & 6-Seaters',
+      'Upfront Fares & Cashless E-Wallet Payments',
+      'Real-Time GPS Tracking & Verified Drivers',
+      'Ideal for luggage, families & group travel',
+    ],
+    ctaText: 'Book via Grab',
+    is_active: true,
+  },
+  {
+    id: 'angkas',
+    provider_name: 'Angkas',
+    service_type: 'Motorcycle Taxi',
+    tag: 'Fastest Solo Commute',
+    description: 'Beat the Batangas City rush hour traffic with professional, safety-certified motorcycle bikers. Perfect for quick hops between terminals, malls, and city offices.',
+    logo_url: '/images/Angkas.jpg',
+    coverageArea: 'Batangas City Proper & Diversion Corridor',
+    highlight: 'Weave through traffic with 99.997% safety record',
+    features: [
+      'Fastest transit during peak city traffic hours',
+      'Safety-trained & background-checked bikers',
+      'Sanitized passenger helmets & disposable hairnets',
+      'Affordable point-to-point solo commuter fares',
+    ],
+    ctaText: 'Book via Angkas',
+    is_active: true,
+  },
+  {
+    id: 'idol-taxi',
+    provider_name: 'Idol Taxi',
+    service_type: 'City Taxi & Metered Fleet',
+    tag: 'Batangas Local Fleet',
+    description: 'Batangas & Southern Luzon’s premier metered taxi hailing fleet. Providing clean, air-conditioned sedans for city transit, Grand Terminal pickups, and Batangas Port transfers.',
+    logo_url: '/images/IdolTaxi.jpeg',
+    coverageArea: 'Batangas City, Grand Terminal, Port & Bauan',
+    highlight: 'Dedicated local fleet with metered & scheduled service',
+    features: [
+      'Air-conditioned metered sedans',
+      'Terminal and seaport transfer specialists',
+      'Local Batangueño drivers who know every shortcut',
+      'Convenient booking for scheduled & airport trips',
+    ],
+    ctaText: 'Book via Idol Taxi',
+    is_active: true,
+  },
+];
+
+/** @deprecated Legacy mock driver rides - replaced by partner external providers */
 export const rides: Ride[] = [
   { id: 'r1', driverName: "Juan's Tricycle", vehicleType: 'tricycle', rating: 4.9, distanceKm: 0.8, estimatedFare: 80, etaMin: 5 },
   { id: 'r2', driverName: 'Maria Taxi', vehicleType: 'taxi', rating: 4.7, distanceKm: 1.2, estimatedFare: 150, etaMin: 8, plateNumber: 'ABC 1234' },

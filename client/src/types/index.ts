@@ -6,7 +6,7 @@ export type TransportType =
   | 'private'
   | 'walking';
 
-/** Transport modes a driver can be booked for. */
+/** Transport modes available for rides. */
 export type BookableVehicle = Exclude<TransportType, 'jeepney' | 'walking'>;
 
 export type TouristCategory =
@@ -28,6 +28,70 @@ export type RestaurantCuisine =
   | 'Fine Dining';
 
 export type SavedItemType = 'tourist-spot' | 'restaurant' | 'route' | 'commute-guide';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name?: string | null;
+  avatar_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ExternalProvider {
+  id: string;
+  provider_name: string;
+  service_type: string;
+  description?: string | null;
+  logo_url?: string | null;
+  android_link?: string | null;
+  ios_link?: string | null;
+  web_link?: string | null;
+  is_active: boolean;
+  tag?: string;
+  features?: string[];
+  coverageArea?: string;
+  highlight?: string;
+  ctaText?: string;
+}
+
+export interface Place {
+  id: string;
+  name: string;
+  description?: string | null;
+  category: string;
+  image_url?: string | null;
+  latitude: number;
+  longitude: number;
+  is_featured?: boolean | null;
+  metadata?: Record<string, any> | null;
+  created_at?: string | null;
+}
+
+export interface UserFavorite {
+  id: string;
+  user_id: string;
+  place_id: string;
+  created_at?: string;
+  places?: Place;
+  place?: Place;
+}
+
+export interface ChatSession {
+  id: string;
+  user_id: string;
+  title: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at?: string;
+}
 
 /** @deprecated Use Supabase auth user directly */
 export interface User {

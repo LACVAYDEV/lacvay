@@ -3,14 +3,13 @@ import type { User, Session } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 import { supabase } from '@/lib/supabase';
 
-type DriverProfile = Database['public']['Tables']['driver_profiles']['Row'];
+type UserProfile = Database['public']['Tables']['profiles']['Row'];
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
-  profile: DriverProfile | null;
+  profile: UserProfile | null;
   isLoading: boolean;
-  isDriver: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, fullName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -23,20 +22,20 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<DriverProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('driver_profiles')
+        .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
       
       if (error) {
         if (error.code !== 'PGRST116') { // PGRST116 is "No rows found"
-          console.error('Error fetching driver profile:', error);
+          console.error('Error fetching user profile:', error);
         }
         setProfile(null);
       } else {
@@ -120,7 +119,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         isLoading,
-        isDriver: profile !== null,
         signInWithEmail,
         signUpWithEmail,
         signInWithGoogle,
