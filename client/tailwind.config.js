@@ -51,13 +51,6 @@ export default {
           '33%': { transform: 'translate3d(26px, -20px, 0) scale(1.08)' },
           '66%': { transform: 'translate3d(-20px, 16px, 0) scale(0.94)' },
         },
-        'route-dash': {
-          '100%': { strokeDashoffset: '-12' },
-        },
-        'pulse-ring': {
-          '0%': { transform: 'scale(0.65)', opacity: '0.65' },
-          '80%, 100%': { transform: 'scale(2.4)', opacity: '0' },
-        },
         marquee: {
           '0%': { transform: 'translateX(0)' },
           '100%': { transform: 'translateX(-50%)' },
@@ -75,8 +68,6 @@ export default {
         'float-in':
           'fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both, float 7s ease-in-out 1s infinite',
         drift: 'drift 20s ease-in-out infinite',
-        'route-dash': 'route-dash 0.9s linear infinite',
-        'pulse-ring': 'pulse-ring 2.8s cubic-bezier(0.24, 0, 0.38, 1) infinite',
         marquee: 'marquee 38s linear infinite',
       },
     },

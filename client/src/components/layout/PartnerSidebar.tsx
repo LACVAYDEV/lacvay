@@ -1,44 +1,28 @@
 import { NavLink } from 'react-router-dom';
 import {
-  Home,
-  Map,
-  BookOpen,
-  Coins,
-  Car,
-  Bike,
-  Camera,
-  Sparkles,
-  UtensilsCrossed,
-  Tag,
-  Bookmark,
-  History,
+  LayoutDashboard,
+  Inbox,
+  Wallet,
   Settings,
+  History,
 } from 'lucide-react';
 import { LogoMark, PalmDecor } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { to: '/', label: 'Home', icon: Home, end: true },
-  { to: '/map', label: 'Map & Routes', icon: Map },
-  { to: '/commute', label: 'Commute Guide', icon: BookOpen },
-  { to: '/fares', label: 'Fare Checker', icon: Coins },
-  { to: '/toda', label: 'Tricycle TODA', icon: Bike },
-  { to: '/rides', label: 'Book a Ride', icon: Car },
-  { to: '/tourist-spots', label: 'Tourist Spots', icon: Camera },
-  { to: '/ai-assistant', label: 'AI Travel Assistant', icon: Sparkles },
-  { to: '/restaurants', label: 'Nearby Restaurants', icon: UtensilsCrossed },
-  { to: '/promotions', label: 'Promotions', icon: Tag },
-  { to: '/saved', label: 'Saved', icon: Bookmark },
-  { to: '/history', label: 'History', icon: History },
+  { to: '/partner', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/partner/requests', label: 'Ride Requests', icon: Inbox },
+  { to: '/partner/earnings', label: 'Earnings', icon: Wallet },
+  { to: '/partner/history', label: 'Trip History', icon: History },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
-interface SidebarProps {
+interface PartnerSidebarProps {
   onNavigate?: () => void;
   className?: string;
 }
 
-export function Sidebar({ onNavigate, className }: SidebarProps) {
+export function PartnerSidebar({ onNavigate, className }: PartnerSidebarProps) {
   return (
     <aside
       className={cn(
@@ -48,13 +32,15 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
     >
       <PalmDecor className="pointer-events-none absolute -bottom-4 left-0 w-full" />
 
-      <div className="relative mb-7 flex items-center gap-2.5 px-1.5">
-        <LogoMark className="h-9 w-7 shrink-0" />
-        <div className="min-w-0">
-          <h1 className="text-[19px] font-extrabold leading-none tracking-tight text-lacvay-green">
-            LACVAY
-          </h1>
-          <p className="mt-1 truncate text-[10px] text-gray-500">Batangas City Assistant</p>
+      <div className="relative mb-7 px-1.5">
+        <div className="flex items-center gap-2.5">
+          <LogoMark className="h-9 w-7 shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-[19px] font-extrabold leading-none tracking-tight text-lacvay-green">
+              LACVAY
+            </h1>
+            <p className="mt-1 truncate text-[10px] text-gray-500">Transport Partner</p>
+          </div>
         </div>
       </div>
 
@@ -83,10 +69,4 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
   );
 }
 
-export const mobileNavItems = [
-  navItems[0],
-  navItems[1],
-  navItems[4],
-  navItems[3],
-  navItems[5],
-];
+export const partnerMobileNavItems = navItems.slice(0, 4);

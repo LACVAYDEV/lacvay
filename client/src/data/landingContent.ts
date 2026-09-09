@@ -28,7 +28,7 @@ export const landingFeatures: LandingFeature[] = [
   },
   {
     title: 'Book a Ride',
-    description: 'Find tricycles, motorcycle riders, taxis, and private rides available near your location.',
+    description: 'Book a taxi or habal-habal rider available near your location.',
     image: '/images/icon-ride.png',
   },
   {
@@ -47,12 +47,12 @@ export const landingSteps: LandingStep[] = [
   {
     order: 2,
     title: 'Compare routes and fares',
-    description: 'See jeepney, tricycle, motorcycle, and taxi options side by side with travel time and estimated fare.',
+    description: 'See jeepney, tricycle TODA zones, habal-habal, and taxi options with travel time and estimated fare.',
   },
   {
     order: 3,
     title: 'Ride with confidence',
-    description: 'Follow the commute guide step by step, or book a ride from a driver near you.',
+    description: 'Follow the commute guide step by step, book a taxi or habal-habal, or find your tricycle TODA area.',
   },
 ];
 
