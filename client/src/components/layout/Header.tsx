@@ -11,11 +11,34 @@ export function Header() {
   const [results, setResults] = useState<Awaited<ReturnType<typeof dataService.search>>>([]);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [temperature, setTemperature] = useState<number | null>(null);
   const navigate = useNavigate();
   const { addHistory } = useApp();
   const { user, signOut } = useAuth();
   const searchRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  // Fetch live weather for Batangas City
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch(
+          'https://api.open-meteo.com/v1/forecast?latitude=13.7626&longitude=121.0040&current=temperature_2m&timezone=auto'
+        );
+        const data = await res.json() as { current?: { temperature_2m?: number } };
+        if (data.current?.temperature_2m !== undefined) {
+          setTemperature(Math.round(data.current.temperature_2m));
+        }
+      } catch (err) {
+        console.error('Failed to fetch weather:', err);
+      }
+    };
+
+    void fetchWeather();
+    // Refresh every 30 minutes
+    const interval = setInterval(() => void fetchWeather(), 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -78,7 +101,7 @@ export function Header() {
         <div className="hidden items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-soft sm:flex">
           <Sun className="h-4 w-4 text-lacvay-yellow" fill="#FFC400" strokeWidth={1.5} />
           <div className="leading-tight">
-            <p className="text-[12.5px] font-bold text-gray-800">28°C</p>
+            <p className="text-[12.5px] font-bold text-gray-800">{temperature ? `${temperature}°C` : '---'}</p>
             <p className="text-[9.5px] text-gray-500">Batangas City</p>
           </div>
         </div>

@@ -4,18 +4,11 @@ interface LogoMarkProps {
 
 export function LogoMark({ className }: LogoMarkProps) {
   return (
-    <svg viewBox="0 0 40 50" className={className} fill="none" aria-hidden="true">
-      <path
-        d="M20 0C8.954 0 0 8.954 0 20c0 13.5 20 30 20 30s20-16.5 20-30C40 8.954 31.046 0 20 0Z"
-        fill="#159447"
-      />
-      <path
-        d="M20 8.5c-6.2 2.2-9.6 6.3-9.6 11.1 0 4.9 3.4 8.9 9.6 11.1 6.2-2.2 9.6-6.2 9.6-11.1 0-4.8-3.4-8.9-9.6-11.1Z"
-        fill="#C8E82A"
-      />
-      <path d="M20 11v18.5" stroke="#159447" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M20 19.5l5.2-3.6M20 24.5l-5.2-3.6" stroke="#159447" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
+    <img
+      src="/images/logo.jpg"
+      alt="LACVAY Logo"
+      className={className}
+    />
   );
 }
 
