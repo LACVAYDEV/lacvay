@@ -6,11 +6,7 @@ import { MapPinSolid } from '@/components/ui/Logo';
 import { landingTicker } from '@/data/landingContent';
 
 const heroBackground: CSSProperties = {
-  backgroundImage: [
-    'radial-gradient(45% 60% at 78% 6%, rgba(255,196,0,0.45) 0%, rgba(255,196,0,0) 62%)',
-    'radial-gradient(50% 60% at 62% 100%, rgba(200,232,42,0.5) 0%, rgba(200,232,42,0) 68%)',
-    'linear-gradient(100deg, #FFFFFF 0%, #FCFEF6 40%, #F1FADD 100%)',
-  ].join(', '),
+  backgroundColor: '#F7F3EA',
 };
 
 /** Softens both ends of the scrolling ticker so items fade rather than clip. */
@@ -38,15 +34,6 @@ export function LandingHero() {
 
   return (
     <section className="relative overflow-hidden" style={heroBackground}>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-28 top-4 h-72 w-72 animate-drift rounded-full bg-lacvay-lime/30 blur-3xl"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-16 -top-10 h-80 w-80 animate-drift rounded-full bg-lacvay-yellow/25 blur-3xl [animation-delay:-8s]"
-      />
-
       <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2 lg:py-20">
         <div>
           <span className="inline-flex animate-fade-up items-center gap-1.5 rounded-full bg-white/85 px-3 py-1.5 text-[11.5px] font-semibold text-lacvay-green-dark shadow-soft">
@@ -76,7 +63,7 @@ export function LandingHero() {
           >
             <Link
               to="/signup"
-              className="group relative overflow-hidden rounded-full bg-gradient-to-r from-lacvay-green to-lacvay-lime px-6 py-3 text-[14px] font-bold text-white shadow-soft transition duration-300 hover:-translate-y-0.5 hover:shadow-card"
+              className="group relative overflow-hidden rounded-full bg-lacvay-green px-6 py-3 text-[14px] font-bold text-white shadow-soft transition duration-300 hover:-translate-y-0.5 hover:bg-lacvay-green-dark hover:shadow-card"
             >
               <span
                 aria-hidden="true"
@@ -122,14 +109,14 @@ export function LandingHero() {
             <path
               d="M60 130 C 230 50, 300 300, 470 255 S 760 370, 850 520"
               fill="none"
-              stroke="#159447"
+              stroke="#6B1B2E"
               strokeOpacity="0.4"
               strokeWidth="5"
               strokeDasharray="3 9"
               strokeLinecap="round"
               className="animate-route-dash"
             />
-            <circle cx="60" cy="130" r="9" fill="#159447" fillOpacity="0.5" />
+            <circle cx="60" cy="130" r="9" fill="#6B1B2E" fillOpacity="0.5" />
           </svg>
 
           <img

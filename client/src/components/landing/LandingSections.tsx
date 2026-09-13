@@ -27,7 +27,7 @@ export function LandingFeatures() {
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {landingFeatures.map((f) => (
             <article key={f.title} className="rounded-[22px] bg-lacvay-cream p-5 transition hover:shadow-card">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-lacvay-lime/30 to-lacvay-green/5">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-lacvay-blush">
                 <img src={f.image} alt="" className="h-10 w-10 object-contain mix-blend-multiply" />
               </div>
               <h3 className="mt-4 text-[15px] font-bold text-gray-900">{f.title}</h3>
@@ -36,10 +36,10 @@ export function LandingFeatures() {
           ))}
         </div>
 
-        <div className="mt-6 grid items-center gap-8 rounded-[26px] bg-gradient-to-br from-lacvay-green to-lacvay-green-dark p-6 sm:p-9 lg:grid-cols-2">
+        <div className="mt-6 grid items-center gap-8 rounded-[26px] bg-lacvay-green p-6 sm:p-9 lg:grid-cols-2">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[11.5px] font-semibold text-white">
-              <Sparkles className="h-3.5 w-3.5 text-lacvay-lime" />
+              <Sparkles className="h-3.5 w-3.5 text-lacvay-yellow" />
               AI Travel Assistant
             </span>
             <h3 className="mt-4 text-[24px] font-extrabold leading-tight text-white sm:text-[28px]">
@@ -58,7 +58,7 @@ export function LandingFeatures() {
                 className={
                   m.role === 'user'
                     ? 'ml-8 rounded-2xl rounded-tr-md bg-lacvay-green px-3.5 py-2.5 text-[12px] leading-relaxed text-white'
-                    : 'mr-4 rounded-2xl rounded-tl-md bg-gradient-to-br from-lacvay-lime/25 to-lacvay-green/5 px-3.5 py-2.5 text-[12px] leading-relaxed text-gray-700'
+                    : 'mr-4 rounded-2xl rounded-tl-md bg-lacvay-blush px-3.5 py-2.5 text-[12px] leading-relaxed text-gray-700'
                 }
               >
                 {m.text}
@@ -80,7 +80,7 @@ export function LandingHowItWorks() {
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {landingSteps.map((step) => (
             <article key={step.order} className="relative rounded-[22px] bg-white p-6 shadow-soft">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-lacvay-green to-lacvay-lime text-[15px] font-extrabold text-white">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-lacvay-green text-[15px] font-extrabold text-white">
                 {step.order}
               </span>
               <h3 className="mt-4 text-[15px] font-bold text-gray-900">{step.title}</h3>
@@ -285,7 +285,7 @@ export function LandingCTA() {
   return (
     <section className="bg-white py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-lacvay-green via-lacvay-green to-lacvay-lime px-6 py-12 text-center sm:px-10">
+        <div className="relative overflow-hidden rounded-[26px] bg-lacvay-green px-6 py-12 text-center sm:px-10">
           <h2 className="text-[26px] font-extrabold tracking-tight text-white sm:text-[32px]">
             Ready to explore Batangas City?
           </h2>

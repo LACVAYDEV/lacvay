@@ -29,7 +29,7 @@ export default function PromotionsPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {promotions.map((p) => (
-          <Card key={p.id} className="bg-gradient-to-br from-lacvay-yellow/20 to-lacvay-lime/20">
+          <Card key={p.id} className="bg-lacvay-yellow/15">
             <h3 className="text-xl font-extrabold text-lacvay-green-dark">{p.title}</h3>
             <p className="mt-2 text-sm text-gray-700">{p.description}</p>
             {p.promoCode && (

@@ -46,7 +46,7 @@ export function LandingNav() {
           </Link>
           <Link
             to="/signup"
-            className="rounded-full bg-gradient-to-r from-lacvay-green to-lacvay-lime px-4 py-2 text-[13px] font-semibold text-white shadow-soft transition hover:opacity-95"
+            className="rounded-full bg-lacvay-green px-4 py-2 text-[13px] font-semibold text-white shadow-soft transition hover:bg-lacvay-green-dark"
           >
             Get Started
           </Link>
@@ -85,7 +85,7 @@ export function LandingNav() {
           </Link>
           <Link
             to="/signup"
-            className="flex-1 rounded-full bg-gradient-to-r from-lacvay-green to-lacvay-lime py-2 text-center text-[13px] font-semibold text-white"
+            className="flex-1 rounded-full bg-lacvay-green py-2 text-center text-[13px] font-semibold text-white"
           >
             Get Started
           </Link>

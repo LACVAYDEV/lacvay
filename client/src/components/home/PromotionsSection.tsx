@@ -20,7 +20,7 @@ export function PromotionsSection() {
       </div>
 
       <div className="space-y-4">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-lacvay-yellow/35 via-lacvay-yellow/20 to-lacvay-lime/25 p-4">
+        <div className="relative overflow-hidden rounded-2xl bg-lacvay-yellow/20 p-4">
           <div className="relative z-10 max-w-[62%]">
             <p className="text-[14px] font-extrabold text-amber-600">{main.title}</p>
             <p className="mt-1 text-[11.5px] leading-relaxed text-gray-700">{main.description}</p>

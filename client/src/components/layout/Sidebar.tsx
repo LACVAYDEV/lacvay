@@ -13,7 +13,7 @@ import {
   History,
   Settings,
 } from 'lucide-react';
-import { LogoMark, PalmDecor } from '@/components/ui/Logo';
+import { LogoMark, SidebarWaveArt } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -40,23 +40,21 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'relative flex h-full w-[248px] shrink-0 flex-col overflow-hidden bg-white px-3.5 py-5',
+        'relative flex h-full w-[248px] shrink-0 flex-col overflow-hidden bg-lacvay-green px-3.5 py-5',
         className,
       )}
     >
-      <PalmDecor className="pointer-events-none absolute -bottom-4 left-0 w-full" />
-
       <div className="relative mb-7 flex items-center gap-2.5 px-1.5">
-        <LogoMark className="h-9 w-7 shrink-0" />
+        <LogoMark className="h-9 w-7 shrink-0 rounded-full ring-1 ring-white/30" />
         <div className="min-w-0">
-          <h1 className="text-[19px] font-extrabold leading-none tracking-tight text-lacvay-green">
+          <h1 className="text-[19px] font-extrabold leading-none tracking-tight text-white">
             LACVAY
           </h1>
-          <p className="mt-1 truncate text-[10px] text-gray-500">Batangas City Assistant</p>
+          <p className="mt-1 truncate text-[10px] text-white/60">Batangas City Assistant</p>
         </div>
       </div>
 
-      <nav className="relative flex-1 space-y-0.5 overflow-y-auto">
+      <nav className="relative min-h-0 flex-1 space-y-0.5 overflow-y-auto">
         {navItems.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -67,8 +65,8 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
               cn(
                 'flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12.5px] font-medium transition',
                 isActive
-                  ? 'bg-gradient-to-r from-lacvay-green to-lacvay-lime text-white shadow-soft'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-lacvay-green-dark',
+                  ? 'bg-lacvay-blush text-lacvay-green shadow-soft'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white',
               )
             }
           >
@@ -77,6 +75,25 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
           </NavLink>
         ))}
       </nav>
+
+      <div className="relative mt-3 shrink-0 px-2">
+        <p className="font-script text-[22px] leading-[1.05] text-white/90">More places,</p>
+        <svg
+          viewBox="0 0 90 10"
+          className="-mt-1 ml-1 h-2 w-[70px] text-white/70"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M2 5c10-6 18 6 28 0s18-6 28 0 18 6 28 0"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+        <p className="font-script text-[22px] leading-[1.05] text-white/90">More stories.</p>
+      </div>
+      <SidebarWaveArt className="pointer-events-none -mb-5 -mt-2 w-full shrink-0" />
     </aside>
   );
 }

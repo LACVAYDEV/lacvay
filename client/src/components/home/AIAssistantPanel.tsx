@@ -39,7 +39,7 @@ export function AIAssistantPanel() {
             className={cn(
               'rounded-2xl px-3.5 py-2.5 text-[11.5px] leading-relaxed',
               msg.role === 'assistant'
-                ? 'rounded-tl-md bg-gradient-to-br from-lacvay-lime/20 to-lacvay-green/5 text-gray-700'
+                ? 'rounded-tl-md bg-lacvay-blush text-gray-700'
                 : 'ml-6 rounded-tr-md bg-lacvay-green text-white',
             )}
           >
@@ -109,7 +109,7 @@ export function AIAssistantFab() {
     <button
       type="button"
       onClick={() => navigate('/ai-assistant')}
-      className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-lacvay-green to-lacvay-lime text-white shadow-lg xl:hidden"
+      className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-lacvay-green text-white shadow-lg xl:hidden"
       aria-label="Open AI Travel Assistant"
     >
       <Sparkles className="h-6 w-6" />

@@ -99,7 +99,7 @@ export function Header() {
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <div className="hidden items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-soft sm:flex">
-          <Sun className="h-4 w-4 text-lacvay-yellow" fill="#FFC400" strokeWidth={1.5} />
+          <Sun className="h-4 w-4 text-lacvay-yellow" fill="#F2A93D" strokeWidth={1.5} />
           <div className="leading-tight">
             <p className="text-[12.5px] font-bold text-gray-800">{temperature ? `${temperature}°C` : '---'}</p>
             <p className="text-[9.5px] text-gray-500">Batangas City</p>

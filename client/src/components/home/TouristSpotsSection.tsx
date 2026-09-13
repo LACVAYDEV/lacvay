@@ -43,7 +43,7 @@ export function TouristSpotsSection() {
             <p className="mt-2 text-[12.5px] font-bold leading-snug text-gray-900 group-hover:text-lacvay-green line-clamp-2">
               {spot.name}
             </p>
-            <span className="mt-1.5 inline-block rounded-full bg-lacvay-lime/30 px-2 py-0.5 text-[10px] font-semibold text-lacvay-green-dark whitespace-nowrap">
+            <span className="mt-1.5 inline-block text-[10px] font-semibold text-lacvay-green-dark whitespace-nowrap">
               {spot.categoryLabel ?? spot.category}
             </span>
           </button>

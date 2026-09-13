@@ -25,30 +25,17 @@ const perks = [
 ];
 
 const panelBackground: CSSProperties = {
-  backgroundImage: [
-    'radial-gradient(115% 85% at 88% -5%, rgba(200, 232, 42, 0.26) 0%, rgba(200, 232, 42, 0) 55%)',
-    'radial-gradient(95% 75% at -10% 105%, rgba(4, 92, 46, 0.85) 0%, rgba(4, 92, 46, 0) 62%)',
-    'linear-gradient(158deg, #17A150 0%, #159447 42%, #08783D 100%)',
-  ].join(', '),
-};
-
-const dotGrid: CSSProperties = {
-  backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px)',
-  backgroundSize: '22px 22px',
+  backgroundColor: '#6B1B2E',
 };
 
 /** Fades the illustration into the panel instead of leaving a hard image edge. */
 const illustrationFade: CSSProperties = {
-  maskImage: 'linear-gradient(to top, #000 38%, transparent 86%)',
-  WebkitMaskImage: 'linear-gradient(to top, #000 38%, transparent 86%)',
+  maskImage: 'linear-gradient(to top, #000 30%, transparent 78%)',
+  WebkitMaskImage: 'linear-gradient(to top, #000 30%, transparent 78%)',
 };
 
 const formBackground: CSSProperties = {
-  backgroundImage: [
-    'radial-gradient(75% 55% at 100% 0%, rgba(200, 232, 42, 0.18) 0%, rgba(200, 232, 42, 0) 62%)',
-    'radial-gradient(65% 50% at 0% 100%, rgba(21, 148, 71, 0.09) 0%, rgba(21, 148, 71, 0) 60%)',
-    'linear-gradient(180deg, #FFFFFF 0%, #FAFBF4 100%)',
-  ].join(', '),
+  backgroundColor: '#FFFFFF',
 };
 
 export default function AuthPage() {
@@ -59,13 +46,12 @@ export default function AuthPage() {
     <div className="auth-page flex min-h-screen bg-lacvay-cream lg:h-screen lg:overflow-hidden">
       <aside className="auth-showcase relative hidden w-[46%] max-w-[660px] shrink-0 overflow-hidden lg:block">
         <div className="absolute inset-0" style={panelBackground} />
-        <div className="absolute inset-0 opacity-70" style={dotGrid} />
 
         <img
-          src="/images/hero-batangas.png"
+          src="/images/hero-batangas-transparent.png"
           alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-0 left-0 w-full opacity-90 mix-blend-multiply"
+          className="pointer-events-none absolute bottom-0 left-0 w-full"
           style={illustrationFade}
         />
 
@@ -82,7 +68,7 @@ export default function AuthPage() {
           <div className="mt-10 max-w-md 2xl:mt-14">
             <h2 className="text-[30px] font-extrabold leading-[1.14] tracking-tight text-white xl:text-[34px]">
               Your travel buddy in
-              <span className="block text-lacvay-lime">Batangas City</span>
+              <span className="block text-lacvay-yellow">Batangas City</span>
             </h2>
             <p className="mt-4 max-w-sm text-[13.5px] leading-relaxed text-white/80">
               Routes, fares, rides, and recommendations for every corner of the city — all in one
@@ -97,7 +83,7 @@ export default function AuthPage() {
                     key={type}
                     className="flex items-center gap-1.5 rounded-full bg-white/[0.14] px-3 py-1.5 text-[11.5px] font-semibold text-white ring-1 ring-inset ring-white/20"
                   >
-                    <Icon className="h-3.5 w-3.5 text-lacvay-lime" />
+                    <Icon className="h-3.5 w-3.5 text-white" />
                     {label}
                   </span>
                 );
@@ -108,7 +94,7 @@ export default function AuthPage() {
               {perks.map(({ icon: Icon, title, text }) => (
                 <li key={title} className="flex gap-3.5">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.14] ring-1 ring-inset ring-white/20">
-                    <Icon className="h-4 w-4 text-lacvay-lime" />
+                    <Icon className="h-4 w-4 text-lacvay-yellow" />
                   </span>
                   <div>
                     <p className="text-[13.5px] font-bold text-white">{title}</p>
