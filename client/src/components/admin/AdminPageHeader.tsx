@@ -15,7 +15,7 @@ export function AdminPageHeader({ eyebrow, title, description, actions }: AdminP
         {eyebrow && (
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-lacvay-green/70">{eyebrow}</p>
         )}
-        <h1 className={cn('text-[26px] font-extrabold leading-tight tracking-tight text-lacvay-green-dark', eyebrow && 'mt-1')}>
+        <h1 className={cn('text-[22px] font-extrabold leading-tight tracking-tight text-lacvay-green-dark sm:text-[26px]', eyebrow && 'mt-1')}>
           {title}
         </h1>
         {description && <p className="mt-1.5 max-w-xl text-[13px] text-gray-500">{description}</p>}

@@ -175,7 +175,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-lacvay-green-dark">
+        <h1 className="text-[22px] font-extrabold leading-tight tracking-tight text-lacvay-green-dark sm:text-[26px]">
           Welcome back, {displayName}
         </h1>
         <p className="mt-1.5 text-[13px] text-gray-500">

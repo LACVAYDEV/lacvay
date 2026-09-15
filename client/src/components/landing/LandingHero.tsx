@@ -42,7 +42,7 @@ export function LandingHero() {
           </span>
 
           <h1
-            className="mt-5 animate-fade-up text-[32px] font-extrabold leading-[1.1] tracking-tight text-lacvay-green-dark sm:text-[40px] lg:text-[48px]"
+            className="mt-5 animate-fade-up text-[28px] font-extrabold leading-[1.12] tracking-tight text-lacvay-green-dark sm:text-[40px] lg:text-[48px]"
             style={{ animationDelay: '90ms' }}
           >
             Get around <span className="whitespace-nowrap">Batangas City</span>

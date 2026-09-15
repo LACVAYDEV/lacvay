@@ -58,7 +58,7 @@ export default function RidesPage() {
             <Sparkles className="h-3.5 w-3.5 text-lacvay-yellow" />
             Ride booking guide
           </div>
-          <h1 className="text-[1.65rem] font-extrabold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
+          <h1 className="text-[1.4rem] font-extrabold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
             How to Book Angkas & Taxis in Batangas
           </h1>
           <p className="text-sm leading-relaxed text-white/85 sm:text-base">
