@@ -121,6 +121,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          role: string
           updated_at: string | null
         }
         Insert: {
@@ -129,6 +130,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          role?: string
           updated_at?: string | null
         }
         Update: {
@@ -137,7 +139,47 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          role?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      promotions: {
+        Row: {
+          created_at: string
+          description: string
+          discount: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          promo_code: string | null
+          title: string
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          discount?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          promo_code?: string | null
+          title: string
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          discount?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          promo_code?: string | null
+          title?: string
+          updated_at?: string
+          valid_until?: string | null
         }
         Relationships: []
       }

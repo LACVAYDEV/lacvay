@@ -27,8 +27,8 @@ export const landingFeatures: LandingFeature[] = [
     image: '/images/icon-fare.png',
   },
   {
-    title: 'Book a Ride',
-    description: 'Find tricycles, motorcycle riders, taxis, and private rides available near your location.',
+    title: 'Ride Guide',
+    description: 'Learn how to book Angkas motorcycle taxis and metered taxis through official apps.',
     image: '/images/icon-ride.png',
   },
   {
@@ -52,7 +52,7 @@ export const landingSteps: LandingStep[] = [
   {
     order: 3,
     title: 'Ride with confidence',
-    description: 'Follow the commute guide step by step, or book a ride from a driver near you.',
+    description: 'Follow the commute guide step by step, or use the ride guide to book Angkas and taxis.',
   },
 ];
 

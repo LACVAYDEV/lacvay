@@ -8,7 +8,7 @@ const typeLabels: Record<string, string> = {
   route: 'Route',
   fare: 'Fare Check',
   attraction: 'Attraction',
-  ride: 'Ride Option',
+  ride: 'Ride Guide',
 };
 
 export default function HistoryPage() {

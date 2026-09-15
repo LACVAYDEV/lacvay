@@ -2,7 +2,6 @@ import type { CSSProperties } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Coins, MapPinned, Sparkles } from 'lucide-react';
 import { AuthForm } from '@/components/auth/AuthForm';
-import { LogoMark } from '@/components/ui/Logo';
 import { transportIcons } from '@/components/ui/TransportIcons';
 import { fareCheckerOptions } from '@/lib/transport';
 

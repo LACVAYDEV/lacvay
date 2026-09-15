@@ -1,11 +1,17 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star } from 'lucide-react';
-import { touristSpots } from '@/data/mockData';
+import { dataService } from '@/services/dataService';
+import type { TouristSpot } from '@/types';
 import { Card } from '@/components/ui/Card';
 
 export function TouristSpotsSection() {
   const navigate = useNavigate();
-  const featured = touristSpots.slice(0, 4);
+  const [featured, setFeatured] = useState<TouristSpot[]>([]);
+
+  useEffect(() => {
+    dataService.getTouristSpots().then((spots) => setFeatured(spots.slice(0, 4)));
+  }, []);
 
   return (
     <Card className="h-full">

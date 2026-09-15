@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, ChevronDown, Sun, LogOut } from 'lucide-react';
+import { Search, Bell, ChevronDown, Sun, LogOut, Shield, User } from 'lucide-react';
 import { dataService } from '@/services/dataService';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +14,7 @@ export function Header() {
   const [temperature, setTemperature] = useState<number | null>(null);
   const navigate = useNavigate();
   const { addHistory } = useApp();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin, isAdminMode, chooseSessionMode } = useAuth();
   const searchRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -155,6 +155,34 @@ export function Header() {
               >
                 Settings
               </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    if (isAdminMode) {
+                      chooseSessionMode('user');
+                      navigate('/');
+                    } else {
+                      chooseSessionMode('admin');
+                      navigate('/admin');
+                    }
+                  }}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-[12.5px] font-medium text-lacvay-green hover:bg-lacvay-green/5"
+                >
+                  {isAdminMode ? (
+                    <>
+                      <User className="h-3.5 w-3.5" />
+                      Switch to traveler
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="h-3.5 w-3.5" />
+                      Open admin panel
+                    </>
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => { setProfileOpen(false); void signOut(); }}

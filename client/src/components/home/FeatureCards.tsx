@@ -16,10 +16,10 @@ const features = [
     path: '/fares',
   },
   {
-    title: 'Book a Ride',
-    description: 'Explore Grab, Angkas, and Idol Taxi services in Batangas City.',
+    title: 'Ride Guide',
+    description: 'Step-by-step instructions for booking Angkas, Grab, and local taxis.',
     image: '/images/icon-ride.png',
-    cta: 'View Services',
+    cta: 'View Guide',
     path: '/rides',
   },
   {

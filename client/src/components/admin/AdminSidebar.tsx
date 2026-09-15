@@ -1,42 +1,22 @@
 import { NavLink } from 'react-router-dom';
-import {
-  Home,
-  Map,
-  BookOpen,
-  Coins,
-  Car,
-  Camera,
-  Sparkles,
-  UtensilsCrossed,
-  Tag,
-  Bookmark,
-  History,
-  Settings,
-} from 'lucide-react';
+import { LayoutDashboard, MapPin, Tag, Users, UtensilsCrossed } from 'lucide-react';
 import { LogoMark, SidebarWaveArt } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
-const navItems = [
-  { to: '/', label: 'Home', icon: Home, end: true },
-  { to: '/map', label: 'Map & Routes', icon: Map },
-  { to: '/commute', label: 'Commute Guide', icon: BookOpen },
-  { to: '/fares', label: 'Fare Checker', icon: Coins },
-  { to: '/rides', label: 'Ride Guide', icon: Car },
-  { to: '/tourist-spots', label: 'Tourist Spots', icon: Camera },
-  { to: '/ai-assistant', label: 'AI Travel Assistant', icon: Sparkles },
-  { to: '/restaurants', label: 'Nearby Restaurants', icon: UtensilsCrossed },
-  { to: '/promotions', label: 'Promotions', icon: Tag },
-  { to: '/saved', label: 'Saved', icon: Bookmark },
-  { to: '/history', label: 'History', icon: History },
-  { to: '/settings', label: 'Settings', icon: Settings },
+export const adminNavItems = [
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true as const },
+  { to: '/admin/users', label: 'Users', icon: Users, end: false as const },
+  { to: '/admin/places', label: 'Tourist Spots', icon: MapPin, end: false as const },
+  { to: '/admin/restaurants', label: 'Eateries', icon: UtensilsCrossed, end: false as const },
+  { to: '/admin/promotions', label: 'Promotions', icon: Tag, end: false as const },
 ];
 
-interface SidebarProps {
+interface AdminSidebarProps {
   onNavigate?: () => void;
   className?: string;
 }
 
-export function Sidebar({ onNavigate, className }: SidebarProps) {
+export function AdminSidebar({ onNavigate, className }: AdminSidebarProps) {
   return (
     <aside
       className={cn(
@@ -50,12 +30,16 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
           <h1 className="text-[19px] font-extrabold leading-none tracking-tight text-white">
             LACVAY
           </h1>
-          <p className="mt-1 truncate text-[10px] text-white/60">Batangas City Assistant</p>
+          <p className="mt-1 truncate text-[10px] text-white/60">Admin Console</p>
         </div>
       </div>
 
+      <p className="relative mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
+        Manage
+      </p>
+
       <nav className="relative min-h-0 flex-1 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ to, label, icon: Icon, end }) => (
+        {adminNavItems.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -77,7 +61,7 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
       </nav>
 
       <div className="relative mt-3 shrink-0 px-2">
-        <p className="font-script text-[22px] leading-[1.05] text-white/90">More places,</p>
+        <p className="font-script text-[22px] leading-[1.05] text-white/90">Curate the city,</p>
         <svg
           viewBox="0 0 90 10"
           className="-mt-1 ml-1 h-2 w-[70px] text-white/70"
@@ -91,11 +75,9 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
             strokeLinecap="round"
           />
         </svg>
-        <p className="font-script text-[22px] leading-[1.05] text-white/90">More stories.</p>
+        <p className="font-script text-[22px] leading-[1.05] text-white/90">share the stories.</p>
       </div>
       <SidebarWaveArt className="pointer-events-none -mb-5 -mt-2 w-full shrink-0" />
     </aside>
   );
 }
-
-export const mobileNavItems = navItems.slice(0, 5);
