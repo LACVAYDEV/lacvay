@@ -1,8 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 import { Sidebar, mobileNavItems } from './Sidebar';
-import { PartnerSidebar, partnerMobileNavItems } from './PartnerSidebar';
 import { Header } from './Header';
 import { LogoMark } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
@@ -14,9 +12,6 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutProps) {
-  const { isTranspoPartner } = useAuth();
-  const bottomNav = isTranspoPartner ? partnerMobileNavItems : mobileNavItems;
-
   return (
     <div className="flex min-h-screen bg-lacvay-cream">
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex">
@@ -39,11 +34,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
             >
               <X className="h-5 w-5" />
             </button>
-            {isTranspoPartner ? (
-              <PartnerSidebar onNavigate={() => setSidebarOpen(false)} />
-            ) : (
-              <Sidebar onNavigate={() => setSidebarOpen(false)} />
-            )}
+            <Sidebar onNavigate={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}
@@ -67,7 +58,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
 
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-100 bg-white px-2 py-1.5 lg:hidden">
           <div className="flex justify-around">
-            {bottomNav.map(({ to, label, icon: Icon, end }) => (
+            {mobileNavItems.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}

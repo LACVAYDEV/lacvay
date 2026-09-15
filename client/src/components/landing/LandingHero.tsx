@@ -1,8 +1,8 @@
 import { useState, type CSSProperties } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ArrowRight, MapPin, Loader2, Bus, Coins, Sparkles } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { getHomePath } from '@/lib/auth';
+import { useNavigate } from 'react-router-dom';
+import { MapPinSolid } from '@/components/ui/Logo';
 import { landingTicker } from '@/data/landingContent';
 
 const heroBackground: CSSProperties = {
@@ -16,24 +16,20 @@ const tickerFade: CSSProperties = {
 };
 
 const highlights = [
-  { icon: Bus, label: 'Jeepney, TODA tricycle, taxi & habal-habal' },
+  { icon: Bus, label: 'Jeepney, tricycle, taxi & motorcycle' },
   { icon: Coins, label: 'Transparent fare estimates' },
   { icon: Sparkles, label: 'AI travel assistant' },
 ];
 
 export function LandingHero() {
-  const { signInAsGuest } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const exploreDemo = async () => {
+  const exploreDemo = () => {
     setLoading(true);
-    try {
-      const user = await signInAsGuest();
-      navigate(getHomePath(user), { replace: true });
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => {
+      navigate('/map');
+    }, 300);
   };
 
   return (
@@ -57,7 +53,7 @@ export function LandingHero() {
             className="mt-4 max-w-lg animate-fade-up text-[14px] leading-relaxed text-gray-600 sm:text-[15px]"
             style={{ animationDelay: '180ms' }}
           >
-            Find routes by jeepney or tricycle TODA, book a taxi or habal-habal, check fares before you
+            Find routes by jeepney, tricycle, taxi, or motorcycle rider, check fares before you
             ride, and ask an AI assistant anything about the city.
           </p>
 
@@ -104,8 +100,10 @@ export function LandingHero() {
           </ul>
         </div>
 
-        <div className="relative mx-auto w-full max-w-[520px] sm:max-w-[560px] lg:mx-0 lg:ml-auto lg:-mr-4 lg:max-w-[620px] xl:-mr-10 xl:max-w-[680px]">
-          <div
+        <div className="relative mx-auto w-full max-w-[460px] lg:mx-0 lg:ml-auto">
+          <svg
+            viewBox="0 0 900 600"
+            className="pointer-events-none absolute inset-0 h-full w-full"
             aria-hidden="true"
           >
             <path
@@ -127,6 +125,14 @@ export function LandingHero() {
             className="relative w-full animate-float-in mix-blend-multiply"
             style={{ animationDelay: '220ms, 1.2s' }}
           />
+
+          <span
+            aria-hidden="true"
+            className="absolute left-[63%] top-[14%] flex h-9 w-9 items-center justify-center"
+          >
+            <span className="absolute h-6 w-6 animate-pulse-ring rounded-full bg-lacvay-green/40" />
+            <MapPinSolid className="relative h-8 w-6 drop-shadow-sm" />
+          </span>
 
           <div
             className="absolute left-0 top-4 animate-fade-up sm:left-2"

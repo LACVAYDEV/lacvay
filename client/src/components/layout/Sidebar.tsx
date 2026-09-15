@@ -5,7 +5,6 @@ import {
   BookOpen,
   Coins,
   Car,
-  Bike,
   Camera,
   Sparkles,
   UtensilsCrossed,
@@ -99,10 +98,4 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
   );
 }
 
-export const mobileNavItems = [
-  navItems[0],
-  navItems[1],
-  navItems[4],
-  navItems[3],
-  navItems[5],
-];
+export const mobileNavItems = navItems.slice(0, 5);

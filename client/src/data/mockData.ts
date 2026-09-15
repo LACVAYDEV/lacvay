@@ -5,7 +5,6 @@ export const mockUser: User = {
   name: 'Juan',
   email: 'juan@example.com',
   avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Juan',
-  role: 'traveler',
 };
 
 export const touristSpots: TouristSpot[] = [
@@ -169,7 +168,7 @@ export const promotions: Promotion[] = [
   {
     id: 'summer-promo',
     title: 'Summer Promo!',
-    description: '10% OFF on habal-habal rides this week!',
+    description: '10% OFF on tricycle rides this week!',
     promoCode: 'LACVAY10',
     discount: '10% OFF',
     validUntil: '2026-09-30',
@@ -243,13 +242,14 @@ export const externalProviders: ExternalProvider[] = [
 
 /** @deprecated Legacy mock driver rides - replaced by partner external providers */
 export const rides: Ride[] = [
-  { id: 'r2', driverName: 'Maria Taxi', vehicleType: 'taxi', rating: 4.7, distanceKm: 1.2, baseFare: 40, perKmFee: 14, coordinates: { lat: 13.7582, lng: 121.0612 }, isOnline: true, estimatedFare: 150, etaMin: 8, plateNumber: 'ABC 1234', tripsCompleted: 890, vehicleLabel: 'White sedan · AC' },
-  { id: 'r5', driverName: 'Ramon Rider', vehicleType: 'motorcycle', rating: 4.8, distanceKm: 0.4, baseFare: 25, perKmFee: 8, coordinates: { lat: 13.7558, lng: 121.0565 }, isOnline: true, estimatedFare: 45, etaMin: 3, plateNumber: 'MC 8821', tripsCompleted: 530, vehicleLabel: '125cc · helmet provided' },
-  { id: 'r6', driverName: 'Habal Batangas', vehicleType: 'motorcycle', rating: 4.6, distanceKm: 1.1, baseFare: 20, perKmFee: 9, coordinates: { lat: 13.7541, lng: 121.0598 }, isOnline: true, estimatedFare: 65, etaMin: 5, plateNumber: 'MC 4417', tripsCompleted: 318, vehicleLabel: 'Motorcycle taxi' },
-  { id: 'r7', driverName: 'Kuya Ben Moto', vehicleType: 'motorcycle', rating: 4.9, distanceKm: 1.6, baseFare: 30, perKmFee: 7, coordinates: { lat: 13.7595, lng: 121.0542 }, isOnline: true, estimatedFare: 85, etaMin: 6, plateNumber: 'MC 2093', tripsCompleted: 672, vehicleLabel: 'Habal-habal rider' },
-  { id: 'r8', driverName: 'Lito Taxi', vehicleType: 'taxi', rating: 4.5, distanceKm: 2.4, baseFare: 45, perKmFee: 16, coordinates: { lat: 13.7528, lng: 121.0625 }, isOnline: false, estimatedFare: 180, etaMin: 12, plateNumber: 'XYZ 7788', tripsCompleted: 445, vehicleLabel: 'Metered taxi' },
-  { id: 'r10', driverName: 'Mang Tony Taxi', vehicleType: 'taxi', rating: 4.8, distanceKm: 0.9, baseFare: 40, perKmFee: 15, coordinates: { lat: 13.7572, lng: 121.0551 }, isOnline: true, estimatedFare: 120, etaMin: 6, plateNumber: 'TAX 3341', tripsCompleted: 760, vehicleLabel: 'Toyota Vios · AC' },
-  { id: 'r11', driverName: 'Jepoy Rider', vehicleType: 'motorcycle', rating: 4.5, distanceKm: 0.7, baseFare: 22, perKmFee: 8, coordinates: { lat: 13.7561, lng: 121.0601 }, isOnline: true, estimatedFare: 50, etaMin: 4, plateNumber: 'MC 7720', tripsCompleted: 290, vehicleLabel: 'Quick city runs' },
+  { id: 'r1', driverName: "Juan's Tricycle", vehicleType: 'tricycle', rating: 4.9, distanceKm: 0.8, estimatedFare: 80, etaMin: 5 },
+  { id: 'r2', driverName: 'Maria Taxi', vehicleType: 'taxi', rating: 4.7, distanceKm: 1.2, estimatedFare: 150, etaMin: 8, plateNumber: 'ABC 1234' },
+  { id: 'r3', driverName: 'Pedro Trike', vehicleType: 'tricycle', rating: 4.8, distanceKm: 0.5, estimatedFare: 60, etaMin: 3 },
+  { id: 'r4', driverName: 'Batangas Express', vehicleType: 'private', rating: 4.9, distanceKm: 2.1, estimatedFare: 250, etaMin: 10 },
+  { id: 'r5', driverName: 'Ramon Rider', vehicleType: 'motorcycle', rating: 4.8, distanceKm: 0.4, estimatedFare: 45, etaMin: 3, plateNumber: 'MC 8821' },
+  { id: 'r6', driverName: 'Habal Batangas', vehicleType: 'motorcycle', rating: 4.6, distanceKm: 1.1, estimatedFare: 65, etaMin: 5, plateNumber: 'MC 4417' },
+  { id: 'r7', driverName: 'Kuya Ben Moto', vehicleType: 'motorcycle', rating: 4.9, distanceKm: 1.6, estimatedFare: 85, etaMin: 6, plateNumber: 'MC 2093' },
+  { id: 'r8', driverName: 'Lito Taxi', vehicleType: 'taxi', rating: 4.5, distanceKm: 2.4, estimatedFare: 180, etaMin: 12, plateNumber: 'XYZ 7788' },
 ];
 
 export const commuteGuides: CommuteGuide[] = [

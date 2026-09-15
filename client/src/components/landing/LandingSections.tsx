@@ -35,7 +35,7 @@ export function LandingFeatures() {
               </div>
               <h3 className="mt-4 text-[15px] font-bold text-gray-900">{f.title}</h3>
               <p className="mt-2 text-[12.5px] leading-relaxed text-gray-600">{f.description}</p>
-            </Reveal>
+            </article>
           ))}
         </div>
 
@@ -68,7 +68,7 @@ export function LandingFeatures() {
               </div>
             ))}
           </div>
-        </Reveal>
+        </div>
       </div>
     </section>
   );
@@ -90,7 +90,7 @@ export function LandingHowItWorks() {
               </span>
               <h3 className="mt-4 text-[15px] font-bold text-gray-900">{step.title}</h3>
               <p className="mt-2 text-[12.5px] leading-relaxed text-gray-600">{step.description}</p>
-            </Reveal>
+            </article>
           ))}
         </div>
       </div>
@@ -317,7 +317,7 @@ export function LandingCTA() {
               Sign In
             </Link>
           </div>
-        </Reveal>
+        </div>
       </div>
     </section>
   );

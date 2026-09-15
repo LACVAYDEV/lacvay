@@ -1,16 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Car, CheckCircle2, Compass, Eye, EyeOff, Loader2, Lock, Mail, User } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, Mail, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { validateEmail, validateName, validatePassword } from '@/services/authService';
-import { getHomePath } from '@/lib/auth';
-import type { OnDemandVehicle, UserRole } from '@/types';
-import {
-  defaultPartnerRates,
-  validatePartnerBaseFare,
-  validatePartnerPerKmFee,
-} from '@/lib/partnerRates';
-import { onDemandRideOptions } from '@/lib/transport';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 type AuthMode = 'signin' | 'signup';
@@ -20,8 +12,6 @@ interface FieldErrors {
   email?: string;
   password?: string;
   confirmPassword?: string;
-  baseFare?: string;
-  perKmFee?: string;
 }
 
 interface AuthFormProps {
@@ -44,9 +34,27 @@ function passwordScore(value: string): number {
   return Math.min(score, 3);
 }
 
+function validateEmail(email: string): string | null {
+  if (!email.trim()) return 'Email is required';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Enter a valid email address';
+  return null;
+}
+
+function validatePassword(password: string): string | null {
+  if (!password) return 'Password is required';
+  if (password.length < 6) return 'Password must be at least 6 characters';
+  return null;
+}
+
+function validateName(name: string): string | null {
+  if (!name.trim()) return 'Name is required';
+  if (name.trim().length < 2) return 'Enter your full name';
+  return null;
+}
+
 export function AuthForm({ mode }: AuthFormProps) {
   const isSignUp = mode === 'signup';
-  const { signIn, signUp, signInAsGuest, signInAsPartner } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
@@ -54,26 +62,11 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [noticeVariant, setNoticeVariant] = useState<'info' | 'success'>('info');
   const [submitting, setSubmitting] = useState(false);
-  const [guestLoading, setGuestLoading] = useState(false);
-  const [partnerLoading, setPartnerLoading] = useState(false);
-  const [accountRole, setAccountRole] = useState<UserRole>('traveler');
-  const [partnerVehicle, setPartnerVehicle] = useState<OnDemandVehicle>('motorcycle');
-  const [baseFare, setBaseFare] = useState(String(defaultPartnerRates.motorcycle.baseFare));
-  const [perKmFee, setPerKmFee] = useState(String(defaultPartnerRates.motorcycle.perKmFee));
-  const [vehicleLabel, setVehicleLabel] = useState('');
-  const [plateNumber, setPlateNumber] = useState('');
-
-  const selectPartnerVehicle = (type: OnDemandVehicle) => {
-    setPartnerVehicle(type);
-    setBaseFare(String(defaultPartnerRates[type].baseFare));
-    setPerKmFee(String(defaultPartnerRates[type].perKmFee));
-  };
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   const validate = (): boolean => {
     const next: FieldErrors = {};
@@ -82,12 +75,6 @@ export function AuthForm({ mode }: AuthFormProps) {
     next.password = validatePassword(password) ?? undefined;
     if (isSignUp && password !== confirmPassword) {
       next.confirmPassword = 'Passwords do not match';
-    }
-    if (isSignUp && accountRole === 'transpo_partner') {
-      const base = parseFloat(baseFare);
-      const km = parseFloat(perKmFee);
-      next.baseFare = validatePartnerBaseFare(base) ?? undefined;
-      next.perKmFee = validatePartnerPerKmFee(km) ?? undefined;
     }
 
     const cleaned = Object.fromEntries(Object.entries(next).filter(([, v]) => v)) as FieldErrors;
@@ -103,42 +90,26 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     setSubmitting(true);
     try {
-      const user = isSignUp
-        ? await signUp({
-            name,
-            email,
-            password,
-            role: accountRole,
-            ...(accountRole === 'transpo_partner'
-              ? {
-                  partnerSetup: {
-                    vehicleType: partnerVehicle,
-                    baseFare: parseFloat(baseFare),
-                    perKmFee: parseFloat(perKmFee),
-                    vehicleLabel: vehicleLabel.trim() || undefined,
-                    plateNumber: plateNumber.trim() || undefined,
-                  },
-                }
-              : {}),
-          })
-        : await signIn({ email, password });
-      navigate(getHomePath(user), { replace: true });
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      if (isSignUp) {
+        await signUpWithEmail(email, password, name);
+        setNotice('Check your email to confirm your account (if email confirmation is enabled), or simply log in.');
+      } else {
+        await signInWithEmail(email, password);
+        navigate('/', { replace: true });
+      }
+    } catch (err: any) {
+      setFormError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleGuest = async () => {
-    setGuestLoading(true);
+  const handleGoogleSignIn = async () => {
+    setFormError(null);
     try {
-      const user = await signInAsGuest();
-      navigate(getHomePath(user), { replace: true });
+      await signInWithGoogle();
     } catch (err: any) {
-      setFormError(err.message || 'Guest sign in failed');
-    } finally {
-      setGuestLoading(false);
+      setFormError(err.message || 'Google sign in failed');
     }
   };
 
@@ -157,30 +128,18 @@ export function AuthForm({ mode }: AuthFormProps) {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
-      setNoticeVariant('success');
       setNotice('Password reset email sent! Check your inbox.');
     } catch (err: any) {
       setFormError(err.message || 'Failed to send reset email');
     } finally {
-      setGuestLoading(false);
+      setResettingPassword(false);
     }
   };
 
-  const handlePartnerDemo = async () => {
-    setPartnerLoading(true);
-    try {
-      const user = await signInAsPartner();
-      navigate(getHomePath(user), { replace: true });
-    } finally {
-      setPartnerLoading(false);
-    }
-  };
-
-  const inputClass = (hasError?: string, hasTrailing?: boolean, compact?: boolean) =>
+  const inputClass = (hasError?: string, hasTrailing?: boolean) =>
     cn(
-      'w-full rounded-2xl border bg-gray-50/80 py-3 text-[13px] outline-none transition placeholder:text-gray-400 focus:bg-white',
-      compact ? 'px-4' : 'pl-11',
-      hasTrailing ? 'pr-11' : compact ? 'pr-4' : 'pr-4',
+      'w-full rounded-2xl border bg-gray-50/80 py-3 pl-11 text-[13px] outline-none transition placeholder:text-gray-400 focus:bg-white',
+      hasTrailing ? 'pr-11' : 'pr-4',
       hasError
         ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100'
         : 'border-gray-200 focus:border-lacvay-green focus:ring-2 focus:ring-lacvay-green/15',
@@ -191,7 +150,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const strength = strengthLevels[score];
 
   return (
-    <div>
+    <div className="auth-form">
       <div className="flex rounded-full bg-gray-100 p-1">
         <Link
           to="/login"
@@ -244,131 +203,6 @@ export function AuthForm({ mode }: AuthFormProps) {
             {errors.name && (
               <p role="alert" className="mt-1.5 text-[11.5px] text-red-600">{errors.name}</p>
             )}
-
-            <div className="mt-4">
-              <p className="mb-2 block text-[12px] font-medium text-gray-700">I am signing up as</p>
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { value: 'traveler' as const, label: 'Traveler', hint: 'Book rides & explore' },
-                  { value: 'transpo_partner' as const, label: 'Transport Partner', hint: 'Taxi or habal-habal rider' },
-                ]).map(({ value, label, hint }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setAccountRole(value)}
-                    aria-pressed={accountRole === value}
-                    className={cn(
-                      'rounded-2xl border px-3 py-3 text-left transition',
-                      accountRole === value
-                        ? 'border-lacvay-green bg-lacvay-green/[0.06]'
-                        : 'border-gray-200 bg-gray-50 hover:border-lacvay-green/30',
-                    )}
-                  >
-                    <p className="text-[12.5px] font-bold text-gray-900">{label}</p>
-                    <p className="mt-0.5 text-[10.5px] text-gray-500">{hint}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {isSignUp && accountRole === 'transpo_partner' && (
-          <div className="rounded-2xl border border-lacvay-green/20 bg-lacvay-green/[0.04] p-4 space-y-4">
-            <div>
-              <p className="text-[12px] font-semibold text-gray-900">Your rates</p>
-              <p className="mt-0.5 text-[11px] text-gray-500">
-                Passengers see these on the map when you are online. You can update them later in Settings.
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-[12px] font-medium text-gray-700">Vehicle type</p>
-              <div className="grid grid-cols-2 gap-2">
-                {onDemandRideOptions.map(({ type, label }) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => selectPartnerVehicle(type)}
-                    aria-pressed={partnerVehicle === type}
-                    className={cn(
-                      'rounded-xl border px-3 py-2.5 text-[12px] font-semibold transition',
-                      partnerVehicle === type
-                        ? 'border-lacvay-green bg-white text-lacvay-green-dark'
-                        : 'border-gray-200 bg-white/80 text-gray-600 hover:border-lacvay-green/30',
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="base-fare" className="mb-1.5 block text-[12px] font-medium text-gray-700">
-                  Base fare (₱)
-                </label>
-                <input
-                  id="base-fare"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={baseFare}
-                  onChange={(e) => setBaseFare(e.target.value)}
-                  className={inputClass(errors.baseFare, false, true)}
-                />
-                {errors.baseFare && (
-                  <p role="alert" className="mt-1.5 text-[11.5px] text-red-600">{errors.baseFare}</p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="per-km" className="mb-1.5 block text-[12px] font-medium text-gray-700">
-                  Per km (₱)
-                </label>
-                <input
-                  id="per-km"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={perKmFee}
-                  onChange={(e) => setPerKmFee(e.target.value)}
-                  className={inputClass(errors.perKmFee, false, true)}
-                />
-                {errors.perKmFee && (
-                  <p role="alert" className="mt-1.5 text-[11.5px] text-red-600">{errors.perKmFee}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="vehicle-label" className="mb-1.5 block text-[12px] font-medium text-gray-700">
-                  Vehicle details <span className="font-normal text-gray-400">(optional)</span>
-                </label>
-                <input
-                  id="vehicle-label"
-                  type="text"
-                  value={vehicleLabel}
-                  onChange={(e) => setVehicleLabel(e.target.value)}
-                  placeholder="e.g. 125cc · helmet provided"
-                  className={inputClass(undefined, false, true)}
-                />
-              </div>
-              <div>
-                <label htmlFor="plate" className="mb-1.5 block text-[12px] font-medium text-gray-700">
-                  Plate no. <span className="font-normal text-gray-400">(optional)</span>
-                </label>
-                <input
-                  id="plate"
-                  type="text"
-                  value={plateNumber}
-                  onChange={(e) => setPlateNumber(e.target.value)}
-                  placeholder="MC 1234"
-                  className={inputClass(undefined, false, true)}
-                />
-              </div>
-            </div>
           </div>
         )}
 
@@ -402,10 +236,11 @@ export function AuthForm({ mode }: AuthFormProps) {
             {!isSignUp && (
               <button
                 type="button"
-                onClick={() => setNotice('Password reset will be available once Firebase Auth is connected.')}
-                className="text-[11.5px] font-semibold text-lacvay-green hover:underline"
+                onClick={handleForgotPassword}
+                disabled={resettingPassword}
+                className="text-[11.5px] font-semibold text-lacvay-green hover:underline disabled:opacity-50"
               >
-                Forgot password?
+                {resettingPassword ? 'Sending...' : 'Forgot password?'}
               </button>
             )}
           </div>
@@ -462,22 +297,14 @@ export function AuthForm({ mode }: AuthFormProps) {
               <Lock className={iconClass} />
               <input
                 id="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
+                type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter your password"
                 aria-invalid={Boolean(errors.confirmPassword)}
-                className={inputClass(errors.confirmPassword, true)}
+                className={inputClass(errors.confirmPassword)}
               />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-gray-400 transition hover:text-gray-600"
-                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-              >
-                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
             </div>
             {errors.confirmPassword && (
               <p role="alert" className="mt-1.5 text-[11.5px] text-red-600">{errors.confirmPassword}</p>
@@ -492,16 +319,8 @@ export function AuthForm({ mode }: AuthFormProps) {
         )}
 
         {notice && (
-          <p
-            className={cn(
-              'flex items-start gap-2 rounded-2xl px-4 py-3 text-[12px] font-medium',
-              noticeVariant === 'success'
-                ? 'bg-lacvay-green/10 text-lacvay-green-dark'
-                : 'bg-lacvay-lime/20 text-lacvay-green-dark',
-            )}
-          >
-            {noticeVariant === 'success' && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-lacvay-green" />}
-            <span>{notice}</span>
+          <p className="rounded-2xl bg-lacvay-lime/20 px-4 py-3 text-[12px] font-medium text-lacvay-green-dark">
+            {notice}
           </p>
         )}
 
@@ -521,33 +340,16 @@ export function AuthForm({ mode }: AuthFormProps) {
         <span className="h-px flex-1 bg-gray-200" />
       </div>
 
-      <button
-        type="button"
-        onClick={handleGuest}
-        disabled={guestLoading || partnerLoading}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white py-3 text-[13.5px] font-semibold text-gray-800 transition hover:border-lacvay-green/30 hover:bg-lacvay-green/[0.04] disabled:opacity-60"
-      >
-        {guestLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin text-lacvay-green" />
-        ) : (
-          <Compass className="h-4 w-4 text-lacvay-green" />
-        )}
-        Continue as guest
-      </button>
-
-      <button
-        type="button"
-        onClick={handlePartnerDemo}
-        disabled={partnerLoading || guestLoading}
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-lacvay-green/25 bg-lacvay-green/[0.05] py-3 text-[13.5px] font-semibold text-lacvay-green-dark transition hover:bg-lacvay-green/10 disabled:opacity-60"
-      >
-        {partnerLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin text-lacvay-green" />
-        ) : (
-          <Car className="h-4 w-4 text-lacvay-green" />
-        )}
-        Try Transport Partner demo
-      </button>
+      <div className="space-y-2.5">
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-[12.5px] font-semibold text-gray-800 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/50"
+        >
+          <img src="/images/google-logo.svg" alt="" aria-hidden="true" className="h-[19px] w-[19px]" />
+          Continue with Google
+        </button>
+      </div>
 
       <p className="mt-6 text-center text-[12px] text-gray-500">
         {isSignUp ? 'Already have an account? ' : "Don't have an account yet? "}

@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Coins, MapPinned, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, Coins, MapPinned, Sparkles } from 'lucide-react';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { transportIcons } from '@/components/ui/TransportIcons';
 import { fareCheckerOptions } from '@/lib/transport';
@@ -9,7 +9,7 @@ const perks = [
   {
     icon: MapPinned,
     title: 'Routes that make sense',
-    text: 'Step-by-step directions by jeepney, tricycle TODA, taxi, or habal-habal.',
+    text: 'Step-by-step directions by jeepney, tricycle, taxi, or motorcycle rider.',
   },
   {
     icon: Coins,
@@ -42,8 +42,8 @@ export default function AuthPage() {
   const mode = pathname === '/signup' ? 'signup' : 'signin';
 
   return (
-    <div className="flex min-h-screen bg-lacvay-cream">
-      <aside className="relative hidden w-[46%] max-w-[660px] shrink-0 overflow-hidden lg:block">
+    <div className="auth-page flex min-h-screen bg-lacvay-cream lg:h-screen lg:overflow-hidden">
+      <aside className="auth-showcase relative hidden w-[46%] max-w-[660px] shrink-0 overflow-hidden lg:block">
         <div className="absolute inset-0" style={panelBackground} />
 
         <img
@@ -102,14 +102,6 @@ export default function AuthPage() {
                 </li>
               ))}
             </ul>
-
-            <div className="mt-8 flex items-start gap-3 rounded-2xl bg-white/[0.12] p-4 ring-1 ring-inset ring-white/20 backdrop-blur-sm">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-lacvay-lime" />
-              <p className="text-[12px] leading-relaxed text-white/85">
-                No account needed to look around. Continue as a guest and sign up later to keep your
-                saved places and history.
-              </p>
-            </div>
           </div>
         </div>
       </aside>
@@ -139,13 +131,12 @@ export default function AuthPage() {
             <div className="auth-form-card rounded-[28px] border border-gray-100 bg-white p-6 shadow-card sm:p-8">
               <AuthForm mode={mode} />
             </div>
-            <AuthForm mode={mode} />
-          </div>
 
-          <p className="mt-5 px-2 text-center text-[11.5px] leading-relaxed text-gray-400">
-            LACVAY is a travel assistant for Batangas City. Your saved places and search history
-            stay tied to your account.
-          </p>
+            <p className="mt-5 px-2 text-center text-[11.5px] leading-relaxed text-gray-400">
+              LACVAY is a travel assistant for Batangas City. Your saved places and search history
+              stay tied to your account.
+            </p>
+          </div>
         </div>
       </main>
     </div>
