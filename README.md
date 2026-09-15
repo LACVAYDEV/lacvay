@@ -77,6 +77,8 @@ Copy `.env.example` to `.env` and optionally set:
 - `GEMINI_API_KEY` — Enables real AI responses
 - `GOOGLE_MAPS_API_KEY` — For future Google Maps integration
 - `VITE_API_URL` — API base URL (defaults to proxy `/api`)
+- `SUPABASE_SERVICE_ROLE_KEY` — Server-only key required for admin actions and account deletion. Never expose this as a `VITE_` variable.
+- `DEFAULT_USER_PASSWORD` — Optional server-only temporary password used by the admin reset action.
 
 ## Routes
 

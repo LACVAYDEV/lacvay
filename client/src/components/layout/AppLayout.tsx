@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Sidebar, mobileNavItems } from './Sidebar';
@@ -12,6 +13,51 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const dialog = dialogRef.current;
+    const focusableSelector =
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>(focusableSelector) ?? []);
+    focusable()[0]?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setSidebarOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const elements = focusable();
+      if (elements.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      menuButtonRef.current?.focus();
+    };
+  }, [setSidebarOpen, sidebarOpen]);
+
   return (
     <div className="flex min-h-screen bg-lacvay-cream">
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex">
@@ -23,9 +69,15 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setSidebarOpen(false)}
-            role="presentation"
+            aria-hidden="true"
           />
-          <div className="absolute inset-y-0 left-0 shadow-xl">
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Main navigation"
+            className="absolute inset-y-0 left-0 shadow-xl"
+          >
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
@@ -39,9 +91,10 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-[248px]">
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-[248px]" inert={sidebarOpen ? true : undefined}>
         <div className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 lg:hidden">
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={() => setSidebarOpen(true)}
             className="rounded-xl p-1.5 hover:bg-gray-100"

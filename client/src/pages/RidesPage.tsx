@@ -5,10 +5,12 @@ import {
   MapPin,
   Sparkles,
   Compass,
-  ExternalLink,
-  Phone,
   Lightbulb,
   Smartphone,
+  ShieldCheck,
+  Accessibility,
+  Moon,
+  PhoneCall,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { dataService } from '@/services/dataService';
@@ -18,6 +20,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { LoadingState } from '@/components/ui/States';
+import { launchTransportApp, transportApps, type TransportAppKey } from '@/lib/transportApps';
 
 export default function RidesPage() {
   const [providers, setProviders] = useState<ExternalProvider[]>([]);
@@ -65,13 +68,77 @@ export default function RidesPage() {
         </div>
       </Card>
 
+      <section aria-labelledby="transport-safety-heading">
+        <Card className="border border-amber-200 bg-amber-50/70">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 h-6 w-6 shrink-0 text-amber-700" />
+            <div>
+              <h2 id="transport-safety-heading" className="text-lg font-bold text-gray-900">
+                Travel safely
+              </h2>
+              <p className="mt-1 text-sm text-gray-700">
+                Routes, fares, schedules, and provider availability can change. Confirm details with the
+                driver, operator, terminal, or provider app before traveling.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="flex gap-3 rounded-2xl bg-white/80 p-4">
+              <ShieldCheck className="h-5 w-5 shrink-0 text-lacvay-green" />
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Verify before boarding</h3>
+                <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                  Use licensed or platform-listed providers. Match the rider, driver, vehicle, plate number,
+                  and booking details. Motorcycle passengers should wear a properly fitted helmet.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-2xl bg-white/80 p-4">
+              <Accessibility className="h-5 w-5 shrink-0 text-lacvay-green" />
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Accessibility</h3>
+                <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                  Vehicle accessibility varies. Contact the operator before departure if you need step-free
+                  access, mobility-device space, seating assistance, or help with luggage.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-2xl bg-white/80 p-4">
+              <Moon className="h-5 w-5 shrink-0 text-lacvay-green" />
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Late-night travel</h3>
+                <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                  Book ahead, wait in a well-lit public place, share your trip details with someone you trust,
+                  keep your phone charged, and avoid unverified roadside offers.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-2xl bg-white/80 p-4">
+              <PhoneCall className="h-5 w-5 shrink-0 text-red-600" />
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Emergency help</h3>
+                <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                  In an immediate emergency in the Philippines, call <a href="tel:911" className="font-bold text-red-700 hover:underline">911</a>.
+                  Also use the provider app&apos;s emergency or trip-sharing tools when available.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </section>
+
       <div className="space-y-8">
         {providers.map((provider) => {
           const guide = rideGuides[provider.id];
           if (!guide) return null;
 
-          const androidLink = provider.android_link ?? guide.androidLink;
-          const iosLink = provider.ios_link ?? guide.iosLink;
+          const appKey: TransportAppKey | null =
+            provider.id === 'idol-taxi'
+              ? 'idolTaxi'
+              : provider.id === 'angkas' || provider.id === 'grab'
+                ? provider.id
+                : null;
+          const app = appKey ? transportApps[appKey] : null;
 
           return (
             <Card key={provider.id} className="overflow-hidden p-0">
@@ -145,39 +212,23 @@ export default function RidesPage() {
                     </ul>
                   </div>
 
-                  {(androidLink || iosLink || guide.phoneNumber) && (
+                  {app && appKey && (
                     <div className="space-y-2">
-                      <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Get the app</p>
-                      {androidLink && (
-                        <a
-                          href={androidLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-lacvay-green/30 hover:text-lacvay-green"
-                        >
-                          <Smartphone className="h-4 w-4" />
-                          Android app
-                          <ExternalLink className="h-3.5 w-3.5 opacity-50" />
-                        </a>
-                      )}
-                      {iosLink && (
-                        <a
-                          href={iosLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-lacvay-green/30 hover:text-lacvay-green"
-                        >
-                          <Smartphone className="h-4 w-4" />
-                          iOS app
-                          <ExternalLink className="h-3.5 w-3.5 opacity-50" />
-                        </a>
-                      )}
-                      {guide.phoneNumber && (
-                        <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                          <Phone className="h-4 w-4 text-lacvay-green" />
-                          Call dispatch: {guide.phoneNumber}
-                        </div>
-                      )}
+                      <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                        Book with {app.name}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => launchTransportApp(appKey)}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-lacvay-green px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-lacvay-green-dark"
+                        aria-label={`Open ${app.name} or install it from your app store`}
+                      >
+                        <Smartphone className="h-4 w-4" />
+                        Open {app.name}
+                      </button>
+                      <p className="text-center text-[11px] leading-relaxed text-gray-500">
+                        Opens the app when installed, otherwise redirects to your device&apos;s app store.
+                      </p>
                     </div>
                   )}
                 </div>

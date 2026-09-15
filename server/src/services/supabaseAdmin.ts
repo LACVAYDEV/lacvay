@@ -1,12 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database.types.js';
+import '../config/env.js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !serviceRoleKey) {
   console.warn(
-    'SUPABASE_SERVICE_ROLE_KEY is not set — admin password reset will be unavailable.',
+    'SUPABASE_SERVICE_ROLE_KEY is not set — admin actions and account deletion will be unavailable.',
   );
 }
 

@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database.types.js';
+import '../config/env.js';
 
 declare global {
   namespace Express {

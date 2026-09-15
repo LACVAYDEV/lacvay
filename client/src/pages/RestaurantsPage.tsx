@@ -39,12 +39,13 @@ export default function RestaurantsPage() {
         <p className="text-sm text-gray-500">Discover local dining around Batangas City</p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter restaurants by cuisine">
         {cuisines.map((c) => (
           <button
             key={c}
             type="button"
             onClick={() => setFilter(c)}
+            aria-pressed={filter === c}
             className={`rounded-full px-4 py-2 text-sm font-semibold ${
               filter === c ? 'bg-lacvay-green text-white' : 'bg-white text-gray-600 shadow-soft'
             }`}

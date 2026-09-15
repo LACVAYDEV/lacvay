@@ -78,12 +78,13 @@ export default function TouristSpotsPage() {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter tourist spots by category">
         {categories.map((c) => (
           <button
             key={c}
             type="button"
             onClick={() => setFilter(c)}
+            aria-pressed={filter === c}
             className={`rounded-full px-4 py-2 text-sm font-semibold ${
               filter === c ? 'bg-lacvay-green text-white' : 'bg-white text-gray-600 shadow-soft'
             }`}

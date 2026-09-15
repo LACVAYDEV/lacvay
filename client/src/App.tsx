@@ -8,6 +8,8 @@ import { LoadingState } from '@/components/ui/States';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
+const LegalPage = lazy(() => import('@/pages/LegalPage'));
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const MapPage = lazy(() => import('@/pages/MapPage'));
 const CommutePage = lazy(() => import('@/pages/CommutePage'));
@@ -91,6 +93,9 @@ export default function App() {
                   </PublicOnlyRoute>
                 }
               />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/privacy" element={<LegalPage />} />
+              <Route path="/terms" element={<LegalPage />} />
               <Route
                 path="/choose-mode"
                 element={

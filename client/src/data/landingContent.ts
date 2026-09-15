@@ -28,7 +28,7 @@ export const landingFeatures: LandingFeature[] = [
   },
   {
     title: 'Ride Guide',
-    description: 'Learn how to book Angkas motorcycle taxis and metered taxis through official apps.',
+    description: 'Learn how to book Angkas motorcycle taxis and metered taxis through provider apps.',
     image: '/images/icon-ride.png',
   },
   {

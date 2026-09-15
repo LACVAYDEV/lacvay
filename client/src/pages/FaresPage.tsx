@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { TransportType } from '@/types';
 import { calculateFare } from '@/lib/fareCalculator';
-import { fareCheckerOptions, getTransportLabel } from '@/lib/transport';
+import { fareCheckerOptions, getTransportLabel, getTransportOption } from '@/lib/transport';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
 import { Input, Select } from '@/components/ui/Input';
@@ -9,9 +10,14 @@ import { Button } from '@/components/ui/Button';
 import { formatFareRange } from '@/lib/utils';
 
 export default function FaresPage() {
-  const [origin, setOrigin] = useState('Current Location');
-  const [destination, setDestination] = useState('');
-  const [transport, setTransport] = useState<TransportType>('jeepney');
+  const [params] = useSearchParams();
+  const requestedTransport = params.get('transport') as TransportType | null;
+  const initialTransport = requestedTransport && getTransportOption(requestedTransport)
+    ? requestedTransport
+    : 'jeepney';
+  const [origin, setOrigin] = useState(params.get('from') || 'Current Location');
+  const [destination, setDestination] = useState(params.get('to') || '');
+  const [transport, setTransport] = useState<TransportType>(initialTransport);
   const [distance, setDistance] = useState('');
   const [result, setResult] = useState<ReturnType<typeof calculateFare> | null>(null);
   const { addHistory } = useApp();
