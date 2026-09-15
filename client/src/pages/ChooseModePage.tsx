@@ -27,7 +27,7 @@ export default function ChooseModePage() {
     <div className="flex min-h-screen items-center justify-center bg-lacvay-cream px-4 py-10">
       <div className="w-full max-w-lg space-y-6">
         <div className="flex flex-col items-center text-center">
-          <LogoMark className="h-12 w-9" />
+          <LogoMark className="size-24" />
           <h1 className="mt-4 text-2xl font-bold text-gray-900">How would you like to continue?</h1>
           <p className="mt-2 text-sm text-gray-500">
             Your account has admin access. Choose traveler mode for the regular app, or admin mode to manage content.

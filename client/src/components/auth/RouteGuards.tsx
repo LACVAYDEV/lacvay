@@ -16,7 +16,7 @@ export function AppSplash() {
 
       <div className="flex flex-col items-center gap-3">
 
-        <LogoMark className="h-12 w-9 animate-pulse" />
+        <LogoMark className="size-24 animate-pulse" />
 
         <p className="text-sm font-semibold text-lacvay-green">LACVAY</p>
 

@@ -29,7 +29,7 @@ export function LandingFooter() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2.5">
-              <LogoMark className="h-9 w-7" />
+              <LogoMark className="size-12" />
               <span className="text-[19px] font-extrabold tracking-tight text-lacvay-green">LACVAY</span>
             </div>
             <p className="mt-3 max-w-xs text-[12.5px] leading-relaxed text-gray-600">

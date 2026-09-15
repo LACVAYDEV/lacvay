@@ -57,9 +57,9 @@ export default function AuthPage() {
         <div className="relative flex h-full flex-col p-10 xl:p-14">
           <Link to="/welcome" className="flex items-center gap-2.5 self-start">
             <img
-              src="/images/logo.jpg"
+              src="/images/lacvay-logo.png"
               alt="LACVAY Logo"
-              className="h-14 w-14 rounded-2xl object-cover ring-1 ring-inset ring-white/20"
+              className="size-16 object-contain"
             />
             <span className="text-[20px] font-extrabold tracking-tight text-white">LACVAY</span>
           </Link>
@@ -118,9 +118,9 @@ export default function AuthPage() {
 
           <span className="flex items-center gap-2 lg:hidden">
             <img
-              src="/images/logo.jpg"
+              src="/images/lacvay-logo.png"
               alt="LACVAY Logo"
-              className="h-10 w-10 rounded-lg object-cover"
+              className="size-12 object-contain"
             />
             <span className="text-[17px] font-extrabold tracking-tight text-lacvay-green">LACVAY</span>
           </span>

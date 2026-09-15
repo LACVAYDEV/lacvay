@@ -66,7 +66,7 @@ export function AdminLayout() {
           >
             <Menu className="h-6 w-6" />
           </button>
-          <LogoMark className="h-7 w-5" />
+          <LogoMark className="size-10" />
           <span className="text-[17px] font-extrabold text-lacvay-green">LACVAY Admin</span>
         </div>
 

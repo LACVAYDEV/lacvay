@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+
 interface LogoMarkProps {
   className?: string;
 }
@@ -5,9 +7,9 @@ interface LogoMarkProps {
 export function LogoMark({ className }: LogoMarkProps) {
   return (
     <img
-      src="/images/logo.jpg"
+      src="/images/lacvay-logo.png"
       alt="LACVAY Logo"
-      className={className}
+      className={cn('h-auto w-auto shrink-0 object-contain', className)}
     />
   );
 }
@@ -54,58 +56,61 @@ export function PalmDecor({ className }: LogoMarkProps) {
 /** Decorative sun-over-mountains waves for the sidebar footer, echoing the brand mark. */
 export function SidebarWaveArt({ className }: LogoMarkProps) {
   return (
-    <svg viewBox="0 0 240 130" className={className} fill="none" aria-hidden="true">
-      <circle cx="176" cy="16" r="7" fill="#F3E4C8" />
-      <g stroke="#F3E4C8" strokeWidth="2" strokeLinecap="round">
-        <path d="M176 1v-6" />
-        <path d="M176 31v6" />
-        <path d="M161 16h-6" />
-        <path d="M191 16h6" />
-        <path d="M165.5 5.5l-4-4" />
-        <path d="M186.5 26.5l4 4" />
-        <path d="M186.5 5.5l4-4" />
-        <path d="M165.5 26.5l-4 4" />
+    <svg
+      viewBox="0 0 248 86"
+      preserveAspectRatio="none"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="186" cy="20" r="6" fill="#F3E4C8" />
+      <g stroke="#F3E4C8" strokeWidth="1.75" strokeLinecap="round">
+        <path d="M186 8v-4" />
+        <path d="M186 32v4" />
+        <path d="M174 20h-4" />
+        <path d="M198 20h4" />
+        <path d="M177.5 11.5l-3-3" />
+        <path d="M194.5 28.5l3 3" />
+        <path d="M194.5 11.5l3-3" />
+        <path d="M177.5 28.5l-3 3" />
       </g>
       <path
-        d="M112 44 L134 26 L150 40 L168 22 L200 44"
+        d="M122 36 L142 22 L156 34 L172 18 L202 36"
         stroke="#F3E4C8"
-        strokeWidth="2.25"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
         opacity="0.9"
       />
 
-      {/* Back ribbon: navy fill with a cream crest, high on the left */}
       <path
-        d="M-5 38 C 25 28, 50 28, 75 42 C 100 56, 122 58, 148 42 C 165 32, 182 24, 202 18 L 202 130 L -5 130 Z"
+        d="M0 32 C 32 24, 58 24, 84 36 C 110 48, 132 50, 158 36 C 176 26, 196 18, 248 14 L 248 86 L 0 86 Z"
         fill="#123A5C"
       />
       <path
-        d="M-5 38 C 25 28, 50 28, 75 42 C 100 56, 122 58, 148 42 C 165 32, 182 24, 202 18"
+        d="M0 32 C 32 24, 58 24, 84 36 C 110 48, 132 50, 158 36 C 176 26, 196 18, 248 14"
         stroke="#F3E4C8"
         strokeWidth="2"
         opacity="0.9"
       />
 
-      {/* Middle ribbon: background-colored wave that crosses over the back ribbon */}
       <path
-        d="M-5 78 C 22 66, 46 82, 72 70 C 100 57, 128 40, 158 54 C 178 64, 195 76, 212 84 L 212 130 L -5 130 Z"
+        d="M0 54 C 28 44, 52 58, 78 48 C 106 36, 134 24, 164 36 C 184 44, 210 56, 248 62 L 248 86 L 0 86 Z"
         fill="#6B1B2E"
       />
       <path
-        d="M-5 78 C 22 66, 46 82, 72 70 C 100 57, 128 40, 158 54 C 178 64, 195 76, 212 84"
+        d="M0 54 C 28 44, 52 58, 78 48 C 106 36, 134 24, 164 36 C 184 44, 210 56, 248 62"
         stroke="#FFFFFF"
         strokeWidth="2"
         opacity="0.85"
       />
 
-      {/* Front ribbon: navy fill, deep dip on the left rising steeply on the right */}
       <path
-        d="M-5 104 C 28 112, 62 98, 92 102 C 122 106, 150 92, 174 68 C 192 50, 210 40, 245 34 L 245 130 L -5 130 Z"
+        d="M0 70 C 32 76, 64 66, 94 68 C 124 70, 152 60, 176 44 C 194 32, 216 24, 248 22 L 248 86 L 0 86 Z"
         fill="#123A5C"
       />
       <path
-        d="M-5 104 C 28 112, 62 98, 92 102 C 122 106, 150 92, 174 68 C 192 50, 210 40, 245 34"
+        d="M0 70 C 32 76, 64 66, 94 68 C 124 70, 152 60, 176 44 C 194 32, 216 24, 248 22"
         stroke="#FFFFFF"
         strokeWidth="2.25"
         opacity="0.95"

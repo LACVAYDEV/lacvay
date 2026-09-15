@@ -106,7 +106,7 @@ export function PlaceCard({
         {/* Top Badges */}
         <div className="absolute left-3 top-3 flex items-center gap-1.5">
           {place.category && (
-            <Badge variant="lime" className="backdrop-blur-md shadow-sm">
+            <Badge className="border-0 bg-lacvay-green/90 text-white shadow-sm backdrop-blur-md">
               {place.category}
             </Badge>
           )}

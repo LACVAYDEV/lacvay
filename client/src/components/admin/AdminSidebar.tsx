@@ -24,8 +24,8 @@ export function AdminSidebar({ onNavigate, className }: AdminSidebarProps) {
         className,
       )}
     >
-      <div className="relative mb-7 flex items-center gap-2.5 px-1.5">
-        <LogoMark className="h-9 w-7 shrink-0 rounded-full ring-1 ring-white/30" />
+      <div className="relative mb-6 flex items-center gap-3 px-0.5">
+        <LogoMark className="size-20" />
         <div className="min-w-0">
           <h1 className="text-[19px] font-extrabold leading-none tracking-tight text-white">
             LACVAY
@@ -60,24 +60,26 @@ export function AdminSidebar({ onNavigate, className }: AdminSidebarProps) {
         ))}
       </nav>
 
-      <div className="relative mt-3 shrink-0 px-2">
-        <p className="font-script text-[22px] leading-[1.05] text-white/90">Curate the city,</p>
-        <svg
-          viewBox="0 0 90 10"
-          className="-mt-1 ml-1 h-2 w-[70px] text-white/70"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M2 5c10-6 18 6 28 0s18-6 28 0 18 6 28 0"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-        <p className="font-script text-[22px] leading-[1.05] text-white/90">share the stories.</p>
+      <div className="relative -mx-3.5 -mb-5 mt-2 h-[92px] shrink-0">
+        <SidebarWaveArt className="pointer-events-none absolute inset-0 h-full w-full" />
+        <div className="absolute left-5 top-2.5">
+          <p className="font-script text-[18px] leading-none text-white/90">Curate the city,</p>
+          <svg
+            viewBox="0 0 90 10"
+            className="-mt-0.5 ml-1 h-1.5 w-[56px] text-white/70"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M2 5c10-6 18 6 28 0s18-6 28 0 18 6 28 0"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+          <p className="-mt-0.5 font-script text-[18px] leading-none text-white/90">share the stories.</p>
+        </div>
       </div>
-      <SidebarWaveArt className="pointer-events-none -mb-5 -mt-2 w-full shrink-0" />
     </aside>
   );
 }

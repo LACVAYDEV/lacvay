@@ -25,7 +25,7 @@ function SpotGridCard({ spot, onSelect }: { spot: TouristSpot; onSelect: () => v
           className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
         />
         <div className="absolute left-2 top-2">
-          <Badge variant="lime">{spot.category}</Badge>
+          <Badge className="border-0 bg-lacvay-green/90 text-white shadow-sm backdrop-blur-md">{spot.category}</Badge>
         </div>
         <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[11px] font-bold text-lacvay-yellow shadow-sm">
           <Star className="h-3 w-3 fill-current" />
