@@ -16,10 +16,10 @@ const features = [
     path: '/fares',
   },
   {
-    title: 'Book a Ride',
-    description: 'Explore Grab, Angkas, and Idol Taxi services in Batangas City.',
+    title: 'Ride Guide',
+    description: 'Step-by-step instructions for booking Angkas, Grab, and local taxis.',
     image: '/images/icon-ride.png',
-    cta: 'View Services',
+    cta: 'View Guide',
     path: '/rides',
   },
   {
@@ -43,7 +43,7 @@ export function FeatureCards() {
           onClick={() => navigate(f.path)}
           className="group flex flex-col rounded-[22px] bg-white p-4 text-left shadow-card transition hover:-translate-y-0.5 hover:shadow-lg"
         >
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-lacvay-lime/25 to-lacvay-green/5">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-lacvay-blush">
             <img src={f.image} alt="" className="h-9 w-9 object-contain mix-blend-multiply" />
           </div>
           <h3 className="text-[14px] font-bold text-gray-900">{f.title}</h3>

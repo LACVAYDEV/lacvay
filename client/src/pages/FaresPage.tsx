@@ -47,7 +47,7 @@ export default function FaresPage() {
       </Card>
 
       {result && (
-        <Card className="bg-gradient-to-br from-lacvay-green/5 to-lacvay-lime/10">
+        <Card className="bg-lacvay-blush">
           <p className="text-sm text-gray-500">Estimated Fare by {getTransportLabel(result.transportType)}</p>
           <p className="mt-1 text-3xl font-extrabold text-lacvay-green-dark">
             {formatFareRange(result.estimatedFareMin, result.estimatedFareMax)}

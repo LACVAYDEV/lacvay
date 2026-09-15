@@ -1,6 +1,7 @@
-import { touristSpots, restaurants, commuteGuides, rides, externalProviders, promotions, searchIndex, mockUser } from '@/data/mockData';
+import { commuteGuides, rides, externalProviders, mockUser } from '@/data/mockData';
 import type { TouristSpot, Restaurant, CommuteGuide, Ride, ExternalProvider, Promotion, SearchResult, TouristCategory, RestaurantCuisine, User } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { contentRepository } from '@/services/contentRepository';
 
 export const dataService = {
   getUser(): Promise<User> {
@@ -8,21 +9,19 @@ export const dataService = {
   },
 
   getTouristSpots(category?: TouristCategory): Promise<TouristSpot[]> {
-    const spots = category ? touristSpots.filter((s) => s.category === category) : touristSpots;
-    return Promise.resolve(spots);
+    return contentRepository.getTouristSpots(category);
   },
 
   getTouristSpot(id: string): Promise<TouristSpot | undefined> {
-    return Promise.resolve(touristSpots.find((s) => s.id === id));
+    return contentRepository.getTouristSpot(id);
   },
 
   getRestaurants(cuisine?: RestaurantCuisine): Promise<Restaurant[]> {
-    const list = cuisine ? restaurants.filter((r) => r.cuisine.includes(cuisine)) : restaurants;
-    return Promise.resolve(list);
+    return contentRepository.getRestaurants(cuisine);
   },
 
   getRestaurant(id: string): Promise<Restaurant | undefined> {
-    return Promise.resolve(restaurants.find((r) => r.id === id));
+    return contentRepository.getRestaurant(id);
   },
 
   getCommuteGuides(): Promise<CommuteGuide[]> {
@@ -66,14 +65,14 @@ export const dataService = {
   },
 
   getPromotions(): Promise<Promotion[]> {
-    return Promise.resolve(promotions);
+    return contentRepository.getPromotions();
   },
 
   search(query: string): Promise<SearchResult[]> {
     const q = query.toLowerCase().trim();
     if (!q) return Promise.resolve([]);
-    return Promise.resolve(
-      searchIndex.filter(
+    return contentRepository.getSearchIndex().then((index) =>
+      index.filter(
         (item) => item.title.toLowerCase().includes(q) || item.subtitle.toLowerCase().includes(q),
       ),
     );

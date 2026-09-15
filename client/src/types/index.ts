@@ -29,11 +29,14 @@ export type RestaurantCuisine =
 
 export type SavedItemType = 'tourist-spot' | 'restaurant' | 'route' | 'commute-guide';
 
+export type UserRole = 'user' | 'admin';
+
 export interface UserProfile {
   id: string;
   email: string;
   full_name?: string | null;
   avatar_url?: string | null;
+  role?: UserRole | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -185,8 +188,11 @@ export interface Promotion {
   description: string;
   promoCode?: string;
   discount?: string;
+  /** Ad creative — image or video URL shown to travelers. */
   imageUrl?: string;
   validUntil?: string;
+  /** When false, hidden from traveler-facing pages. */
+  isActive?: boolean;
 }
 
 export interface SavedPlace {

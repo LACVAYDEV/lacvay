@@ -1,11 +1,17 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star } from 'lucide-react';
-import { touristSpots } from '@/data/mockData';
+import { dataService } from '@/services/dataService';
+import type { TouristSpot } from '@/types';
 import { Card } from '@/components/ui/Card';
 
 export function TouristSpotsSection() {
   const navigate = useNavigate();
-  const featured = touristSpots.slice(0, 4);
+  const [featured, setFeatured] = useState<TouristSpot[]>([]);
+
+  useEffect(() => {
+    dataService.getTouristSpots().then((spots) => setFeatured(spots.slice(0, 4)));
+  }, []);
 
   return (
     <Card className="h-full">
@@ -26,9 +32,9 @@ export function TouristSpotsSection() {
             key={spot.id}
             type="button"
             onClick={() => navigate(`/tourist-spots/${spot.id}`)}
-            className="group flex h-full min-w-0 flex-col text-left"
+            className="group flex flex-col text-left"
           >
-            <div className="relative aspect-[4/5] w-full shrink-0 overflow-hidden rounded-2xl bg-gray-100">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-gray-100 flex-shrink-0">
               <img
                 src={spot.imageUrl}
                 alt={spot.name}
@@ -40,10 +46,10 @@ export function TouristSpotsSection() {
                 {spot.rating}
               </span>
             </div>
-            <p className="mt-2 text-[12.5px] font-bold leading-snug text-gray-900 group-hover:text-lacvay-green">
+            <p className="mt-2 text-[12.5px] font-bold leading-snug text-gray-900 group-hover:text-lacvay-green line-clamp-2">
               {spot.name}
             </p>
-            <span className="mt-1.5 inline-block rounded-full bg-lacvay-lime/30 px-2 py-0.5 text-[10px] font-semibold text-lacvay-green-dark">
+            <span className="mt-1.5 inline-block text-[10px] font-semibold text-lacvay-green-dark whitespace-nowrap">
               {spot.categoryLabel ?? spot.category}
             </span>
           </button>

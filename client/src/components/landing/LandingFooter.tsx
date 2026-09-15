@@ -17,7 +17,7 @@ const columns = [
       { label: 'Map & Routes', href: '#features' },
       { label: 'Fare Checker', href: '#features' },
       { label: 'Commute Guide', href: '#features' },
-      { label: 'Book a Ride', href: '#features' },
+      { label: 'Ride Guide', href: '#features' },
     ],
   },
 ];

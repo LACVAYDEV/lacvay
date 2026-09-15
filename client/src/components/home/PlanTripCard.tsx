@@ -121,7 +121,7 @@ export function PlanTripCard({
       <button
         type="button"
         onClick={findRoutes}
-        className="mt-4 w-full rounded-xl bg-gradient-to-r from-lacvay-green via-lacvay-lime to-lacvay-yellow py-2.5 text-[13px] font-bold text-white shadow-soft transition hover:opacity-95"
+        className="mt-4 w-full rounded-xl bg-lacvay-green py-2.5 text-[13px] font-bold text-white shadow-soft transition hover:bg-lacvay-green-dark"
       >
         {isOnDemandVehicle(transport)
           ? 'Book Ride'

@@ -20,7 +20,41 @@ body {
   margin: 0;
   font-family: 'Poppins', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background: #f8faf5;
+  background: #f7f3ea;
+}
+
+.home-hero {
+  background-position: center, left 14%;
+  background-repeat: no-repeat;
+  background-size: cover, 135% auto;
+}
+
+.home-hero-landmark {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .home-hero-landmark {
+    position: absolute;
+    inset: 0 calc(22% - 177px) 0 auto;
+    display: block;
+    width: 421px;
+    background: url('/images/logo1.jpg') center / 100% 100% no-repeat;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      #000 24%,
+      #000 76%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      #000 24%,
+      #000 76%,
+      transparent 100%
+    );
+  }
 }
 
 .leaflet-container {

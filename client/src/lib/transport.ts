@@ -7,7 +7,7 @@ export interface TransportOption {
   description: string;
   /** Public modes a commuter can estimate a fare for. */
   hasFareEstimate: boolean;
-  /** Modes that can be booked through Book a Ride. */
+  /** Legacy flag — in-app booking removed; see Ride Guide for Angkas/taxi apps. */
   isBookable: boolean;
 }
 
@@ -28,24 +28,24 @@ export const transportOptions: TransportOption[] = [
   },
   {
     type: 'motorcycle',
-    label: 'Habal-habal',
-    description: 'Motorcycle taxi riders for quick solo trips — bookable in the app.',
+    label: 'Motorcycle',
+    description: 'Motorcycle taxi (habal-habal) — book via Angkas; see Ride Guide.',
     hasFareEstimate: true,
-    isBookable: true,
+    isBookable: false,
   },
   {
     type: 'taxi',
     label: 'Taxi',
-    description: 'Metered air-conditioned rides across the city.',
+    description: 'Metered air-conditioned rides — book via Grab or local taxi; see Ride Guide.',
     hasFareEstimate: true,
-    isBookable: true,
+    isBookable: false,
   },
   {
     type: 'private',
     label: 'Private',
     description: 'Private car hire or your own vehicle.',
     hasFareEstimate: false,
-    isBookable: true,
+    isBookable: false,
   },
   {
     type: 'walking',
@@ -73,7 +73,7 @@ export const tripPlannerOptions = transportOptions.filter((o) => o.type !== 'wal
 /** Options offered in the Fare Checker. */
 export const fareCheckerOptions = transportOptions.filter((o) => o.hasFareEstimate);
 
-/** Options offered in Book a Ride. */
+/** @deprecated In-app booking removed — use Ride Guide for Angkas and taxi apps. */
 export const bookableOptions = transportOptions.filter((o) => o.isBookable);
 
 /** Taxi and habal-habal — bookable through the dedicated booking page. */

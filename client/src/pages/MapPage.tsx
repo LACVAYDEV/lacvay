@@ -86,7 +86,7 @@ export default function MapPage() {
                   <Popup>{lm.name}</Popup>
                 </Marker>
               ))}
-              <Polyline positions={routeLine} pathOptions={{ color: '#159447', weight: 4 }} />
+              <Polyline positions={routeLine} pathOptions={{ color: '#6B1B2E', weight: 4 }} />
             </MapContainer>
           </div>
         </Card>

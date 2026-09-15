@@ -3,7 +3,9 @@ import { dataService } from '@/services/dataService';
 import type { Promotion } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { LoadingState } from '@/components/ui/States';
+import { Badge } from '@/components/ui/Badge';
+import { LoadingState, EmptyState } from '@/components/ui/States';
+import { PromotionAdMedia } from '@/components/promotions/PromotionAdMedia';
 import { useApp } from '@/context/AppContext';
 
 export default function PromotionsPage() {
@@ -24,36 +26,59 @@ export default function PromotionsPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Promotions</h2>
-        <p className="text-sm text-gray-500">Local deals and business promotions in Batangas City</p>
+        <p className="text-sm text-gray-500">Local deals and business ads in Batangas City</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {promotions.map((p) => (
-          <Card key={p.id} className="bg-gradient-to-br from-lacvay-yellow/20 to-lacvay-lime/20">
-            <h3 className="text-xl font-extrabold text-lacvay-green-dark">{p.title}</h3>
-            <p className="mt-2 text-sm text-gray-700">{p.description}</p>
-            {p.promoCode && (
-              <div className="mt-4 flex items-center gap-3">
-                <code className="rounded-xl bg-white px-4 py-2 font-mono text-sm font-bold shadow-soft">{p.promoCode}</code>
-                <Button size="sm" onClick={() => { navigator.clipboard?.writeText(p.promoCode!); showToast('Promo code copied!'); }}>
-                  Copy Code
-                </Button>
+      {promotions.length === 0 ? (
+        <EmptyState title="No active promotions" description="Check back later for local deals and offers." />
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {promotions.map((p) => (
+            <Card key={p.id} padding="sm" className="overflow-hidden p-0">
+              <div className="relative aspect-[16/10] bg-gray-100">
+                <PromotionAdMedia url={p.imageUrl} title={p.title} />
+                {p.discount && (
+                  <div className="absolute left-3 top-3">
+                    <Badge variant="yellow">{p.discount}</Badge>
+                  </div>
+                )}
               </div>
-            )}
-            {p.validUntil && <p className="mt-3 text-xs text-gray-500">Valid until {p.validUntil}</p>}
-          </Card>
-        ))}
+              <div className="p-4">
+                <h3 className="text-lg font-extrabold text-lacvay-green-dark">{p.title}</h3>
+                <p className="mt-2 text-sm text-gray-700">{p.description}</p>
+                {p.promoCode && (
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <code className="rounded-xl bg-lacvay-cream px-4 py-2 font-mono text-sm font-bold shadow-soft">
+                      {p.promoCode}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(p.promoCode!);
+                        showToast('Promo code copied!');
+                      }}
+                    >
+                      Copy Code
+                    </Button>
+                  </div>
+                )}
+                {p.validUntil && <p className="mt-3 text-xs text-gray-500">Valid until {p.validUntil}</p>}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
-        <Card>
-          <h3 className="text-xl font-bold text-gray-900">Promote Your Business</h3>
-          <p className="mt-2 text-sm text-gray-500">
-            Boost your visibility and reach more customers in Batangas City. List your restaurant, shop, or transport service on LACVAY.
-          </p>
-          <Button className="mt-4" onClick={() => showToast('Business promotion request submitted!')}>
-            Promote Business
-          </Button>
-        </Card>
-      </div>
+      <Card>
+        <h3 className="text-xl font-bold text-gray-900">Promote Your Business</h3>
+        <p className="mt-2 text-sm text-gray-500">
+          Boost your visibility and reach more customers in Batangas City. List your restaurant, shop, or transport service on LACVAY.
+        </p>
+        <Button className="mt-4" onClick={() => showToast('Business promotion request submitted!')}>
+          Promote Business
+        </Button>
+      </Card>
     </div>
   );
 }

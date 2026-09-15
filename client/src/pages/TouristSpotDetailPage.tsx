@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Star, MapPin, Clock, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
 import { dataService } from '@/services/dataService';
-import { touristSpots } from '@/data/mockData';
 import type { TouristSpot } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
@@ -13,6 +12,7 @@ import { LoadingState, EmptyState } from '@/components/ui/States';
 export default function TouristSpotDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [spot, setSpot] = useState<TouristSpot | null>(null);
+  const [allSpots, setAllSpots] = useState<TouristSpot[]>([]);
   const [loading, setLoading] = useState(true);
   const [isNavigating, setIsNavigating] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -25,8 +25,9 @@ export default function TouristSpotDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    dataService.getTouristSpot(id).then((s) => {
+    Promise.all([dataService.getTouristSpot(id), dataService.getTouristSpots()]).then(([s, spots]) => {
       setSpot(s ?? null);
+      setAllSpots(spots);
       setLoading(false);
       setIsNavigating(false);
     });
@@ -54,10 +55,10 @@ export default function TouristSpotDetailPage() {
     saveAnimTimer.current = setTimeout(() => setJustSaved(false), 400);
   };
 
-  const currentSpotIndex = touristSpots.findIndex((touristSpot) => touristSpot.id === spot.id);
-  const previousSpot = currentSpotIndex > 0 ? touristSpots[currentSpotIndex - 1] : undefined;
-  const nextSpot = currentSpotIndex >= 0 && currentSpotIndex < touristSpots.length - 1
-    ? touristSpots[currentSpotIndex + 1]
+  const currentSpotIndex = allSpots.findIndex((touristSpot) => touristSpot.id === spot.id);
+  const previousSpot = currentSpotIndex > 0 ? allSpots[currentSpotIndex - 1] : undefined;
+  const nextSpot = currentSpotIndex >= 0 && currentSpotIndex < allSpots.length - 1
+    ? allSpots[currentSpotIndex + 1]
     : undefined;
 
   const navigateToSpot = (destination: TouristSpot, direction: 'previous' | 'next') => {

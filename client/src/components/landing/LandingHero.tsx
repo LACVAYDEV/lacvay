@@ -6,23 +6,7 @@ import { getHomePath } from '@/lib/auth';
 import { landingTicker } from '@/data/landingContent';
 
 const heroBackground: CSSProperties = {
-  backgroundImage: [
-    'radial-gradient(38% 55% at 84% 0%, rgba(255,196,0,0.42) 0%, rgba(255,196,0,0) 60%)',
-    'radial-gradient(46% 52% at 68% 98%, rgba(200,232,42,0.46) 0%, rgba(200,232,42,0) 66%)',
-    'radial-gradient(58% 68% at 6% 24%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0) 62%)',
-    'linear-gradient(104deg, #FFFFFF 0%, #FDFEF8 36%, #F3FBE1 72%, #E9F7D0 100%)',
-  ].join(', '),
-};
-
-/**
- * Sits behind the illustration. The artwork is multiplied over it, so the white
- * areas of the PNG let this glow through and ground the art on the gradient.
- */
-const artGlow: CSSProperties = {
-  backgroundImage: [
-    'radial-gradient(52% 44% at 50% 40%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 72%)',
-    'radial-gradient(42% 26% at 52% 86%, rgba(21,148,71,0.18) 0%, rgba(21,148,71,0) 74%)',
-  ].join(', '),
+  backgroundColor: '#F7F3EA',
 };
 
 /** Softens both ends of the scrolling ticker so items fade rather than clip. */
@@ -54,16 +38,7 @@ export function LandingHero() {
 
   return (
     <section className="relative overflow-hidden" style={heroBackground}>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-28 top-4 h-72 w-72 animate-drift rounded-full bg-lacvay-lime/30 blur-3xl"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-16 -top-10 h-80 w-80 animate-drift rounded-full bg-lacvay-yellow/25 blur-3xl [animation-delay:-8s]"
-      />
-
-      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:gap-6 lg:py-20">
+      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2 lg:py-20">
         <div>
           <span className="inline-flex animate-fade-up items-center gap-1.5 rounded-full bg-white/85 px-3 py-1.5 text-[11.5px] font-semibold text-lacvay-green-dark shadow-soft">
             <MapPin className="h-3.5 w-3.5 text-lacvay-green" />
@@ -92,7 +67,7 @@ export function LandingHero() {
           >
             <Link
               to="/signup"
-              className="group relative overflow-hidden rounded-full bg-gradient-to-r from-lacvay-green to-lacvay-lime px-6 py-3 text-[14px] font-bold text-white shadow-soft transition duration-300 hover:-translate-y-0.5 hover:shadow-card"
+              className="group relative overflow-hidden rounded-full bg-lacvay-green px-6 py-3 text-[14px] font-bold text-white shadow-soft transition duration-300 hover:-translate-y-0.5 hover:bg-lacvay-green-dark hover:shadow-card"
             >
               <span
                 aria-hidden="true"
@@ -132,9 +107,19 @@ export function LandingHero() {
         <div className="relative mx-auto w-full max-w-[520px] sm:max-w-[560px] lg:mx-0 lg:ml-auto lg:-mr-4 lg:max-w-[620px] xl:-mr-10 xl:max-w-[680px]">
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -inset-x-10 -inset-y-8"
-            style={artGlow}
-          />
+          >
+            <path
+              d="M60 130 C 230 50, 300 300, 470 255 S 760 370, 850 520"
+              fill="none"
+              stroke="#6B1B2E"
+              strokeOpacity="0.4"
+              strokeWidth="5"
+              strokeDasharray="3 9"
+              strokeLinecap="round"
+              className="animate-route-dash"
+            />
+            <circle cx="60" cy="130" r="9" fill="#6B1B2E" fillOpacity="0.5" />
+          </svg>
 
           <img
             src="/images/hero-batangas.png"

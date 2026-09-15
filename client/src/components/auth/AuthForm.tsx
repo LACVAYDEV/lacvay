@@ -508,7 +508,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         <button
           type="submit"
           disabled={submitting}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-lacvay-green to-lacvay-lime py-3 text-[14px] font-bold text-white shadow-soft transition hover:opacity-95 disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-lacvay-green py-3 text-[14px] font-bold text-white shadow-soft transition hover:bg-lacvay-green-dark disabled:opacity-60"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           {isSignUp ? 'Create Account' : 'Sign In'}

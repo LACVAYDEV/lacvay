@@ -2,7 +2,7 @@ import { Suspense, lazy, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
-import { ProtectedRoute, PublicOnlyRoute, AppSplash } from '@/components/auth/RouteGuards';
+import { ProtectedRoute, PublicOnlyRoute, AdminRoute, SessionModeRoute, AppSplash } from '@/components/auth/RouteGuards';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoadingState } from '@/components/ui/States';
 
@@ -22,6 +22,16 @@ const SavedPage = lazy(() => import('@/pages/SavedPage'));
 const SavedPlaces = lazy(() => import('@/pages/SavedPlaces'));
 const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+const AdminLayout = lazy(() => import('@/components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout })));
+const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'));
+const AdminPlacesPage = lazy(() => import('@/pages/admin/AdminPlacesPage'));
+const AdminPlaceFormPage = lazy(() => import('@/pages/admin/AdminPlaceFormPage'));
+const AdminRestaurantsPage = lazy(() => import('@/pages/admin/AdminRestaurantsPage'));
+const AdminRestaurantFormPage = lazy(() => import('@/pages/admin/AdminRestaurantFormPage'));
+const AdminPromotionsPage = lazy(() => import('@/pages/admin/AdminPromotionsPage'));
+const AdminPromotionFormPage = lazy(() => import('@/pages/admin/AdminPromotionFormPage'));
+const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'));
+const ChooseModePage = lazy(() => import('@/pages/ChooseModePage'));
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -82,10 +92,42 @@ export default function App() {
                 }
               />
               <Route
+                path="/choose-mode"
+                element={
+                  <ProtectedRoute>
+                    <ChooseModePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <Suspense fallback={<LoadingState />}>
+                      <AdminLayout />
+                    </Suspense>
+                  </AdminRoute>
+                }
+              >
+                <Route index element={<AdminDashboardPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="places" element={<AdminPlacesPage />} />
+                <Route path="places/new" element={<AdminPlaceFormPage />} />
+                <Route path="places/:id/edit" element={<AdminPlaceFormPage />} />
+                <Route path="promotions" element={<AdminPromotionsPage />} />
+                <Route path="promotions/new" element={<AdminPromotionFormPage />} />
+                <Route path="promotions/:id/edit" element={<AdminPromotionFormPage />} />
+                <Route path="restaurants" element={<AdminRestaurantsPage />} />
+                <Route path="restaurants/new" element={<AdminRestaurantFormPage />} />
+                <Route path="restaurants/:id/edit" element={<AdminRestaurantFormPage />} />
+              </Route>
+              <Route
                 path="/*"
                 element={
                   <ProtectedRoute>
-                    <AppShell />
+                    <SessionModeRoute>
+                      <AppShell />
+                    </SessionModeRoute>
                   </ProtectedRoute>
                 }
               />

@@ -19,8 +19,8 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
 
   return (
     <div className="flex min-h-screen bg-lacvay-cream">
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:border-r lg:border-gray-100">
-        {isTranspoPartner ? <PartnerSidebar /> : <Sidebar />}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex">
+        <Sidebar />
       </div>
 
       {sidebarOpen && (
@@ -34,7 +34,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              className="absolute right-2 top-3 z-10 rounded-full p-2 hover:bg-gray-100"
+              className="absolute right-2 top-3 z-10 rounded-full p-2 text-white hover:bg-white/10"
               aria-label="Close menu"
             >
               <X className="h-5 w-5" />

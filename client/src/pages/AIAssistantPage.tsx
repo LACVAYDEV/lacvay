@@ -236,7 +236,7 @@ export default function AIAssistantPage() {
                 >
                   {/* Assistant Avatar */}
                   {isAssistant && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-lacvay-green to-lacvay-lime text-white shadow-soft">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-lacvay-green text-white shadow-soft">
                       <Sparkles className="h-4 w-4" />
                     </div>
                   )}
