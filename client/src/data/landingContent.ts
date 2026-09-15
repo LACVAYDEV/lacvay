@@ -91,6 +91,6 @@ export const aiSampleChat = [
   { role: 'user' as const, text: 'How do I get to SM Batangas from the port?' },
   {
     role: 'assistant' as const,
-    text: 'Ride a jeepney from the port heading to Diversion Road and get off at SM City Batangas. It takes about 20 minutes and costs around ₱13–₱15.',
+    text: 'Ride a jeepney from the port heading to Diversion Road and get off at SM City Batangas. It takes about 20 minutes and the regular fare is ₱14.',
   },
 ];

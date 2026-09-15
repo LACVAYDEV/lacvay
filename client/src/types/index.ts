@@ -169,6 +169,7 @@ export interface FareEstimate {
   estimatedFareMin: number;
   estimatedFareMax: number;
   estimatedTravelTimeMin: number;
+  isExactFare: boolean;
 }
 
 export interface Ride {

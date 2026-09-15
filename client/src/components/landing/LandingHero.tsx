@@ -140,7 +140,7 @@ export function LandingHero() {
           >
             <div className="animate-float-sm rounded-2xl bg-white/95 px-3.5 py-2.5 shadow-card backdrop-blur [animation-delay:1.2s]">
               <p className="text-[10px] font-medium text-gray-500">Jeepney fare</p>
-              <p className="text-[15px] font-extrabold text-lacvay-green">₱13 – ₱15</p>
+              <p className="text-[15px] font-extrabold text-lacvay-green">₱14 minimum</p>
             </div>
           </div>
 

@@ -10,6 +10,7 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatFareRange(min: number, max: number): string {
+  if (min === max) return formatCurrency(min);
   return `${formatCurrency(min)} – ${formatCurrency(max)}`;
 }
 

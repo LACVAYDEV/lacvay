@@ -54,7 +54,10 @@ export default function FaresPage() {
 
       {result && (
         <Card className="bg-lacvay-blush">
-          <p className="text-sm text-gray-500">Estimated Fare by {getTransportLabel(result.transportType)}</p>
+          <p className="text-sm text-gray-500">
+            {result.isExactFare ? 'Documented regular fare' : 'Estimated fare'} by{' '}
+            {getTransportLabel(result.transportType)}
+          </p>
           <p className="mt-1 text-3xl font-extrabold text-lacvay-green-dark">
             {formatFareRange(result.estimatedFareMin, result.estimatedFareMax)}
           </p>
@@ -68,6 +71,12 @@ export default function FaresPage() {
               <p className="font-semibold">{result.estimatedTravelTimeMin} minutes</p>
             </div>
           </div>
+          {result.transportType === 'jeepney' && (
+            <p className="mt-4 text-xs leading-relaxed text-gray-500">
+              Traditional jeepney fare: ₱14 for the first 4 km, plus ₱2 for every succeeding km.
+              Ask the operator about student, senior, and PWD discounts.
+            </p>
+          )}
         </Card>
       )}
     </div>
