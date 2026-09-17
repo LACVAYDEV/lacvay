@@ -28,8 +28,14 @@ export function LandingHero() {
   const exploreDemo = () => {
     setLoading(true);
     setTimeout(() => {
-      navigate('/map');
-    }, 300);
+      const el = document.getElementById('features');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        setLoading(false);
+      } else {
+        navigate('/login');
+      }
+    }, 200);
   };
 
   return (

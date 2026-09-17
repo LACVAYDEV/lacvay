@@ -178,6 +178,27 @@ export default function AdminPromotionsPage() {
     }
   };
 
+  const handleWipeAll = async () => {
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete all ${promotions.length} promotions from the database? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await adminService.clearAllPromotions();
+      setSelectedPromotion(null);
+      await refresh();
+      showToast('All promotions have been wiped from the database');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Wipe failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <LoadingState />;
 
   return (
@@ -186,10 +207,22 @@ export default function AdminPromotionsPage() {
         title="Promotions"
         description="Manage ad creatives shown to travelers. Each promotion can include image or video media."
         actions={
-          <Button onClick={() => navigate('/admin/promotions/new')}>
-            <Plus className="h-4 w-4" />
-            Create ad
-          </Button>
+          <div className="flex items-center gap-2">
+            {promotions.length > 0 && (
+              <Button
+                variant="outline"
+                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
+                onClick={() => void handleWipeAll()}
+              >
+                <Trash2 className="h-4 w-4" />
+                Wipe all ({promotions.length})
+              </Button>
+            )}
+            <Button onClick={() => navigate('/admin/promotions/new')}>
+              <Plus className="h-4 w-4" />
+              Create ad
+            </Button>
+          </div>
         }
       />
 

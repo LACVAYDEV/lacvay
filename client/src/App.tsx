@@ -21,8 +21,6 @@ const AIAssistantPage = lazy(() => import('@/pages/AIAssistantPage'));
 const RestaurantsPage = lazy(() => import('@/pages/RestaurantsPage'));
 const PromotionsPage = lazy(() => import('@/pages/PromotionsPage'));
 const SavedPage = lazy(() => import('@/pages/SavedPage'));
-const SavedPlaces = lazy(() => import('@/pages/SavedPlaces'));
-const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const AdminLayout = lazy(() => import('@/components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout })));
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'));
@@ -53,8 +51,7 @@ function AppShell() {
           <Route path="/restaurants" element={<RestaurantsPage />} />
           <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/saved" element={<SavedPage />} />
-          <Route path="/saved-places" element={<SavedPlaces />} />
-          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/saved-places" element={<SavedPage defaultTab="places" />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Suspense>
@@ -129,11 +126,9 @@ export default function App() {
               <Route
                 path="/*"
                 element={
-                  <ProtectedRoute>
-                    <SessionModeRoute>
-                      <AppShell />
-                    </SessionModeRoute>
-                  </ProtectedRoute>
+                  <SessionModeRoute>
+                    <AppShell />
+                  </SessionModeRoute>
                 }
               />
             </Routes>

@@ -9,7 +9,17 @@ import { PlaceCard } from '@/components/places/PlaceCard';
 import { LoadingState, EmptyState } from '@/components/ui/States';
 import type { TouristSpot, TouristCategory } from '@/types';
 
-const categories: (TouristCategory | 'All')[] = ['All', 'Nature', 'Historical', 'Beach', 'Adventure', 'Family', 'Cultural'];
+const categories: (TouristCategory | 'All')[] = [
+  'All',
+  'Nature',
+  'Historical',
+  'Beach',
+  'Adventure',
+  'Family',
+  'Cultural',
+  'Establishment',
+  'Others',
+];
 
 export default function TouristSpotsPage() {
   const [spots, setSpots] = useState<TouristSpot[]>([]);
@@ -18,7 +28,7 @@ export default function TouristSpotsPage() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const { user } = useAuth();
-  const { addHistory, isSaved, saveItem, removeSaved } = useApp();
+  const { isSaved, saveItem, removeSaved } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,10 +60,9 @@ export default function TouristSpotsPage() {
         itemId: spot.id,
         type: 'tourist-spot',
         title: spot.name,
-        subtitle: spot.location,
+        subtitle: 'Batangas City',
         imageUrl: spot.imageUrl,
       });
-      addHistory({ query: spot.name, type: 'attraction' });
     } else {
       removeSaved(spot.id);
     }
@@ -65,7 +74,7 @@ export default function TouristSpotsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Tourist Spots</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Nearby Tourist Spots</h2>
           <p className="text-sm text-gray-500">Discover attractions around Batangas City and nearby areas</p>
         </div>
         <button
@@ -98,22 +107,27 @@ export default function TouristSpotsPage() {
         <EmptyState title="No spots found" description="Try a different category filter." />
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {spots.map((spot) => (
-            <PlaceCard
-              key={spot.id}
-              place={{
-                id: spot.id,
-                name: spot.name,
-                description: spot.shortDescription,
-                category: spot.categoryLabel ?? spot.category,
-                image_url: spot.imageUrl,
-                rating: spot.rating,
-                location: spot.location,
-              }}
-              isFavorited={favoriteIds.has(spot.id) || isSaved(spot.id)}
-              onFavoriteChange={(_id, isFav) => handleFavoriteChange(spot, isFav)}
-            />
-          ))}
+          {[...spots]
+            .sort((a, b) => {
+              if (a.isFeatured && !b.isFeatured) return -1;
+              if (!a.isFeatured && b.isFeatured) return 1;
+              return a.name.localeCompare(b.name);
+            })
+            .map((spot) => (
+              <PlaceCard
+                key={spot.id}
+                place={{
+                  id: spot.id,
+                  name: spot.name,
+                  description: spot.shortDescription,
+                  category: spot.categoryLabel ?? spot.category,
+                  image_url: spot.imageUrl,
+                  is_featured: spot.isFeatured,
+                }}
+                isFavorited={favoriteIds.has(spot.id) || isSaved(spot.id)}
+                onFavoriteChange={(_id, isFav) => handleFavoriteChange(spot, isFav)}
+              />
+            ))}
         </div>
       )}
     </div>

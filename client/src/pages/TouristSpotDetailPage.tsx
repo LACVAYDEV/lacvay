@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Star, MapPin, Clock, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, Navigation, ChevronLeft, ChevronRight, Compass } from 'lucide-react';
 import { dataService } from '@/services/dataService';
+import { isVideoMediaUrl } from '@/lib/mediaUtils';
 import type { TouristSpot } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
@@ -43,7 +44,7 @@ export default function TouristSpotDetailPage() {
   const toggleSave = () => {
     const saved = savedPlaces.find((p) => p.itemId === spot.id);
     if (saved) removeSaved(saved.id);
-    else saveItem({ itemId: spot.id, type: 'tourist-spot', title: spot.name, subtitle: spot.location, imageUrl: spot.imageUrl });
+    else saveItem({ itemId: spot.id, type: 'tourist-spot', title: spot.name, subtitle: 'Batangas City', imageUrl: spot.imageUrl });
   };
 
   const currentSpotIndex = allSpots.findIndex((touristSpot) => touristSpot.id === spot.id);
@@ -68,8 +69,20 @@ export default function TouristSpotDetailPage() {
       </button>
 
       <div className={`relative overflow-hidden rounded-3xl ${isNavigating ? 'tourist-spot-image-out' : incomingTransition ? 'tourist-spot-image-in' : ''}`}>
-          <img src={spot.imageUrl} alt={spot.name} className="aspect-[21/9] w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-black/25" />
+          {isVideoMediaUrl(spot.imageUrl) ? (
+            <video
+              src={spot.imageUrl}
+              controls
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="aspect-[21/9] w-full object-cover"
+            />
+          ) : (
+            <img src={spot.imageUrl} alt={spot.name} className="aspect-[21/9] w-full object-cover" />
+          )}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-black/25" />
           <button
             type="button"
             onClick={() => previousSpot && navigateToSpot(previousSpot, 'previous')}
@@ -96,9 +109,11 @@ export default function TouristSpotDetailPage() {
           <h1 className="text-3xl font-bold text-gray-900">{spot.name}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <Badge variant="lime">{spot.categoryLabel ?? spot.category}</Badge>
-            <span className="flex items-center gap-1 text-sm font-semibold text-amber-600">
-              <Star className="h-4 w-4 fill-current" /> {spot.rating}
-            </span>
+            {spot.isFeatured && (
+              <Badge variant="yellow" className="font-bold">
+                ★ Promoted Destination
+              </Badge>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
@@ -111,23 +126,23 @@ export default function TouristSpotDetailPage() {
 
       <Card>
         <p className="text-gray-600 leading-relaxed">{spot.description}</p>
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div>
-            <p className="text-xs font-semibold uppercase text-gray-400">Location</p>
-            <p className="mt-1 flex items-center gap-1 text-sm font-medium text-gray-800">
-              <MapPin className="h-4 w-4 text-lacvay-green" /> {spot.location}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase text-gray-400">Hours</p>
-            <p className="mt-1 text-sm font-medium text-gray-800">{spot.openingHours}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase text-gray-400">Travel Time</p>
-            <p className="mt-1 flex items-center gap-1 text-sm font-medium text-gray-800">
-              <Clock className="h-4 w-4 text-lacvay-green" /> {spot.estimatedTravelTime}
-            </p>
-          </div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          {spot.openingHours && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-gray-400">Opening Hours</p>
+              <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-gray-800">
+                <Clock className="h-4 w-4 text-lacvay-green" /> {spot.openingHours}
+              </p>
+            </div>
+          )}
+          {spot.coordinates && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-gray-400">Coordinates</p>
+              <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-gray-800">
+                <Compass className="h-4 w-4 text-lacvay-green" /> {spot.coordinates.lat.toFixed(4)}, {spot.coordinates.lng.toFixed(4)}
+              </p>
+            </div>
+          )}
         </div>
       </Card>
 

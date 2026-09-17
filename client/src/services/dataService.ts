@@ -1,5 +1,5 @@
 import { commuteGuides, rides, externalProviders, mockUser } from '@/data/mockData';
-import type { TouristSpot, Restaurant, CommuteGuide, Ride, ExternalProvider, Promotion, SearchResult, TouristCategory, RestaurantCuisine, User } from '@/types';
+import type { TouristSpot, Restaurant, CommuteGuide, Ride, ExternalProvider, Promotion, SearchResult, TouristCategory, User } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { contentRepository } from '@/services/contentRepository';
 
@@ -16,8 +16,8 @@ export const dataService = {
     return contentRepository.getTouristSpot(id);
   },
 
-  getRestaurants(cuisine?: RestaurantCuisine): Promise<Restaurant[]> {
-    return contentRepository.getRestaurants(cuisine);
+  getRestaurants(): Promise<Restaurant[]> {
+    return contentRepository.getRestaurants();
   },
 
   getRestaurant(id: string): Promise<Restaurant | undefined> {

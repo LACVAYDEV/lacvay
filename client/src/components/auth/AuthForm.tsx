@@ -58,7 +58,20 @@ export function AuthForm({ mode }: AuthFormProps) {
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => {
+    try {
+      return localStorage.getItem('lacvay-saved-email') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [rememberMe, setRememberMe] = useState(() => {
+    try {
+      return localStorage.getItem('lacvay-remember-me') !== 'false';
+    } catch {
+      return true;
+    }
+  });
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -94,6 +107,17 @@ export function AuthForm({ mode }: AuthFormProps) {
         await signUpWithEmail(email, password, name);
         setNotice('Check your email to confirm your account (if email confirmation is enabled), or simply log in.');
       } else {
+        try {
+          if (rememberMe) {
+            localStorage.setItem('lacvay-saved-email', email.trim());
+            localStorage.setItem('lacvay-remember-me', 'true');
+          } else {
+            localStorage.removeItem('lacvay-saved-email');
+            localStorage.setItem('lacvay-remember-me', 'false');
+          }
+        } catch {
+          // ignore localStorage failure
+        }
         await signInWithEmail(email, password);
         navigate('/', { replace: true });
       }
@@ -233,16 +257,6 @@ export function AuthForm({ mode }: AuthFormProps) {
             <label htmlFor="password" className="block text-[12px] font-medium text-gray-700">
               Password
             </label>
-            {!isSignUp && (
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                disabled={resettingPassword}
-                className="text-[11.5px] font-semibold text-lacvay-green hover:underline disabled:opacity-50"
-              >
-                {resettingPassword ? 'Sending...' : 'Forgot password?'}
-              </button>
-            )}
           </div>
           <div className="relative">
             <Lock className={iconClass} />
@@ -265,6 +279,28 @@ export function AuthForm({ mode }: AuthFormProps) {
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+
+          {!isSignUp && (
+            <div className="mt-2.5 flex items-center justify-between">
+              <label className="flex items-center gap-2 text-[12px] text-gray-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-lacvay-green accent-lacvay-green focus:ring-lacvay-green"
+                />
+                Remember me
+              </label>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={resettingPassword}
+                className="text-[11.5px] font-semibold text-lacvay-green hover:underline disabled:opacity-50"
+              >
+                {resettingPassword ? 'Sending...' : 'Forgot password?'}
+              </button>
+            </div>
+          )}
 
           {isSignUp && password.length > 0 && (
             <div className="mt-2 flex items-center gap-2">

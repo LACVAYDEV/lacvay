@@ -1,4 +1,3 @@
-import { touristSpots as defaultSpots, restaurants as defaultRestaurants, promotions as defaultPromotions } from '@/data/mockData';
 import { supabase } from '@/lib/supabase';
 import {
   PLACE_TYPE_RESTAURANT,
@@ -34,7 +33,10 @@ function disableSupabase(reason: unknown): void {
 }
 
 async function fetchTouristSpotsFromDb(category?: TouristCategory): Promise<TouristSpot[] | null> {
-  const { data, error } = await supabase.from('places').select('*').contains('metadata', { place_type: PLACE_TYPE_TOURIST });
+  const { data, error } = await supabase
+    .from('places')
+    .select('*')
+    .contains('metadata', { place_type: PLACE_TYPE_TOURIST });
   if (error) {
     if (isMissingSchemaError(error)) disableSupabase(error);
     return null;
@@ -45,7 +47,10 @@ async function fetchTouristSpotsFromDb(category?: TouristCategory): Promise<Tour
 }
 
 async function fetchRestaurantsFromDb(): Promise<Restaurant[] | null> {
-  const { data, error } = await supabase.from('places').select('*').contains('metadata', { place_type: PLACE_TYPE_RESTAURANT });
+  const { data, error } = await supabase
+    .from('places')
+    .select('*')
+    .contains('metadata', { place_type: PLACE_TYPE_RESTAURANT });
   if (error) {
     if (isMissingSchemaError(error)) disableSupabase(error);
     return null;
@@ -65,25 +70,12 @@ async function fetchPromotionsFromDb(activeOnly = true): Promise<Promotion[] | n
   return (data ?? []).map(promotionRowToPromotion);
 }
 
-async function seedSupabaseIfEmpty(): Promise<void> {
-  const { count, error } = await supabase.from('places').select('*', { count: 'exact', head: true });
-  if (error || (count ?? 0) > 0) return;
-
-  const spotRows = defaultSpots.map(({ id: _id, ...s }) => touristSpotToPlaceRow(s));
-  const restaurantRows = defaultRestaurants.map(({ id: _id, ...r }) => restaurantToPlaceRow(r));
-  await supabase.from('places').insert([...spotRows, ...restaurantRows]);
-
-  const promoRows = defaultPromotions.map(({ id: _id, ...p }) => promotionToRow(p));
-  await supabase.from('promotions').insert(promoRows);
-}
-
 export const contentRepository = {
   async getTouristSpots(category?: TouristCategory): Promise<TouristSpot[]> {
     if (useSupabase) {
       try {
-        await seedSupabaseIfEmpty();
         const rows = await fetchTouristSpotsFromDb(category);
-        if (rows !== null) return rows.length ? rows : defaultSpots.filter((s) => !category || s.category === category);
+        if (rows !== null) return rows;
       } catch (err) {
         disableSupabase(err);
       }
@@ -149,20 +141,16 @@ export const contentRepository = {
     contentStore.deleteTouristSpot(id);
   },
 
-  async getRestaurants(cuisine?: import('@/types').RestaurantCuisine): Promise<Restaurant[]> {
+  async getRestaurants(): Promise<Restaurant[]> {
     if (useSupabase) {
       try {
-        await seedSupabaseIfEmpty();
         const rows = await fetchRestaurantsFromDb();
-        if (rows !== null) {
-          return cuisine ? rows.filter((r) => r.cuisine.includes(cuisine)) : rows;
-        }
+        if (rows !== null) return rows;
       } catch (err) {
         disableSupabase(err);
       }
     }
-    const list = contentStore.getRestaurants();
-    return cuisine ? list.filter((r) => r.cuisine.includes(cuisine)) : list;
+    return contentStore.getRestaurants();
   },
 
   async getRestaurant(id: string): Promise<Restaurant | undefined> {
@@ -224,9 +212,8 @@ export const contentRepository = {
   async getPromotions(): Promise<Promotion[]> {
     if (useSupabase) {
       try {
-        await seedSupabaseIfEmpty();
         const rows = await fetchPromotionsFromDb(true);
-        if (rows !== null) return rows.length ? rows : defaultPromotions;
+        if (rows !== null) return rows;
       } catch (err) {
         disableSupabase(err);
       }
@@ -237,7 +224,6 @@ export const contentRepository = {
   async getPromotionsForAdmin(): Promise<Promotion[]> {
     if (useSupabase) {
       try {
-        await seedSupabaseIfEmpty();
         const rows = await fetchPromotionsFromDb(false);
         if (rows !== null) return rows;
       } catch (err) {
@@ -309,31 +295,55 @@ export const contentRepository = {
         id: s.id,
         type: 'tourist-spot' as const,
         title: s.name,
-        subtitle: s.location,
+        subtitle: s.location || 'Batangas City',
         path: `/tourist-spots/${s.id}`,
       })),
       ...restaurants.map((r) => ({
         id: r.id,
         type: 'restaurant' as const,
         title: r.name,
-        subtitle: r.location,
+        subtitle: r.location || 'Batangas City',
         path: '/restaurants',
       })),
     ];
   },
 
   async resetToDefaults(): Promise<void> {
+    await this.clearAllPlaces();
+    await this.clearAllPromotions();
+  },
+
+  async clearAllPlaces(): Promise<void> {
     if (useSupabase) {
       try {
-        await supabase.from('places').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        await supabase.from('promotions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        await seedSupabaseIfEmpty();
-        return;
+        const { data: all } = await supabase.from('places').select('id');
+        if (all && all.length > 0) {
+          const ids = all.map((p) => p.id);
+          const { error } = await supabase.from('places').delete().in('id', ids);
+          if (error) throw error;
+        }
       } catch (err) {
+        if (!isMissingSchemaError(err as { message?: string })) throw err;
         disableSupabase(err);
       }
     }
     contentStore.resetToDefaults();
+  },
+
+  async clearAllPromotions(): Promise<void> {
+    if (useSupabase) {
+      try {
+        const { data: all } = await supabase.from('promotions').select('id');
+        if (all && all.length > 0) {
+          const ids = all.map((p) => p.id);
+          const { error } = await supabase.from('promotions').delete().in('id', ids);
+          if (error) throw error;
+        }
+      } catch (err) {
+        if (!isMissingSchemaError(err as { message?: string })) throw err;
+        disableSupabase(err);
+      }
+    }
   },
 
   async getStats(): Promise<{ places: number; restaurants: number; promotions: number; lastUpdated: string; source: 'supabase' | 'local' }> {

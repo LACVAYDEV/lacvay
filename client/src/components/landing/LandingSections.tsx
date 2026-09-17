@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Clock3, MapPin, Sparkles, Check, Star, X } from 'lucide-react';
 import { landingFeatures, landingSteps, landingBenefits, aiSampleChat } from '@/data/landingContent';
-import { touristSpots } from '@/data/mockData';
+import { dataService } from '@/services/dataService';
+import type { TouristSpot } from '@/types';
 
 function SectionHeading({ eyebrow, title, subtitle }: { eyebrow: string; title: string; subtitle?: string }) {
   return (
@@ -94,9 +95,19 @@ export function LandingHowItWorks() {
 }
 
 export function LandingDestinations() {
-  const spots = touristSpots.slice(0, 4);
+  const [spots, setSpots] = useState<TouristSpot[]>([]);
   const [selectedSpotIndex, setSelectedSpotIndex] = useState<number | null>(null);
   const selectedSpot = selectedSpotIndex === null ? null : spots[selectedSpotIndex];
+
+  useEffect(() => {
+    let active = true;
+    void dataService.getTouristSpots().then((data) => {
+      if (active) setSpots(data.slice(0, 4));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (selectedSpotIndex === null) {
@@ -120,6 +131,10 @@ export function LandingDestinations() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedSpotIndex, spots.length]);
+
+  if (spots.length === 0) {
+    return null;
+  }
 
   return (
     <section id="destinations" className="scroll-mt-20 bg-white py-16 sm:py-20">

@@ -1,33 +1,30 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, MapPin, Navigation } from 'lucide-react';
+import { Clock, Navigation } from 'lucide-react';
 import { dataService } from '@/services/dataService';
-import type { Restaurant, RestaurantCuisine } from '@/types';
+import type { Restaurant } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { LoadingState, EmptyState } from '@/components/ui/States';
-
-const cuisines: (RestaurantCuisine | 'All')[] = ['All', 'Filipino', 'Fast Food', 'Cafe', 'Seafood', 'Budget', 'Family', 'Fine Dining'];
+import { cn } from '@/lib/utils';
 
 export default function RestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<RestaurantCuisine | 'All'>('All');
   const navigate = useNavigate();
   const { isSaved, saveItem, removeSaved, savedPlaces } = useApp();
 
   useEffect(() => {
-    dataService.getRestaurants(filter === 'All' ? undefined : filter).then((r) => {
+    dataService.getRestaurants().then((r) => {
       setRestaurants(r);
       setLoading(false);
     });
-  }, [filter]);
+  }, []);
 
   const toggleSave = (r: Restaurant) => {
     const saved = savedPlaces.find((p) => p.itemId === r.id);
     if (saved) removeSaved(saved.id);
-    else saveItem({ itemId: r.id, type: 'restaurant', title: r.name, subtitle: r.location, imageUrl: r.imageUrl });
+    else saveItem({ itemId: r.id, type: 'restaurant', title: r.name, subtitle: 'Batangas City', imageUrl: r.imageUrl });
   };
 
   if (loading) return <LoadingState />;
@@ -35,61 +32,66 @@ export default function RestaurantsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Nearby Restaurants</h2>
-        <p className="text-sm text-gray-500">Discover local dining around Batangas City</p>
-      </div>
-
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter restaurants by cuisine">
-        {cuisines.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setFilter(c)}
-            aria-pressed={filter === c}
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              filter === c ? 'bg-lacvay-green text-white' : 'bg-white text-gray-600 shadow-soft'
-            }`}
-          >
-            {c}
-          </button>
-        ))}
+        <h2 className="text-2xl font-bold text-gray-900">Nearby Restaurants & Eateries</h2>
+        <p className="text-sm text-gray-500">Discover dining spots across Batangas City</p>
       </div>
 
       {restaurants.length === 0 ? (
-        <EmptyState title="No restaurants found" />
+        <EmptyState title="No restaurants found" description="Eateries will appear here once added." />
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {restaurants.map((r) => (
-            <Card key={r.id} padding="sm" className="overflow-hidden p-0">
-              <img src={r.imageUrl} alt={r.name} className="aspect-[16/10] w-full object-cover" loading="lazy" />
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-bold text-gray-900">{r.name}</h3>
-                  <span className={`text-xs font-semibold ${r.isOpen ? 'text-lacvay-green' : 'text-red-500'}`}>
-                    {r.isOpen ? 'Open' : 'Closed'}
+            <Card key={r.id} padding="sm" className="overflow-hidden p-0 flex flex-col">
+              <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-100">
+                <img src={r.imageUrl} alt={r.name} className="h-full w-full object-cover" loading="lazy" />
+                <div className="absolute left-3 top-3">
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold shadow-sm backdrop-blur',
+                      r.isOpen
+                        ? 'bg-emerald-500/90 text-white'
+                        : 'bg-rose-500/90 text-white',
+                    )}
+                  >
+                    <span className={cn('h-1.5 w-1.5 rounded-full bg-white', r.isOpen && 'animate-pulse')} />
+                    {r.isOpen ? 'Open Now' : 'Closed'}
                   </span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {r.cuisine.map((c) => <Badge key={c} variant="gray">{c}</Badge>)}
-                </div>
-                <div className="mt-3 flex items-center gap-3 text-sm text-gray-500">
-                  <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {r.rating}</span>
-                  <span>{r.distanceKm} km</span>
-                  <span>{r.priceRange}</span>
-                </div>
-                <p className="mt-1 flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3 w-3" /> {r.location}</p>
-                <div className="mt-4 flex gap-2">
+                {r.priceRange && (
+                  <span className="absolute bottom-3 right-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-lacvay-green shadow-sm">
+                    {r.priceRange}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-1 flex-col p-4">
+                <h3 className="font-bold text-gray-900 text-[16px]">{r.name}</h3>
+
+                {r.description && (
+                  <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-gray-600">
+                    {r.description}
+                  </p>
+                )}
+
+                {r.openingHours && (
+                  <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
+                    <Clock className="h-3.5 w-3.5 text-lacvay-green shrink-0" />
+                    <span>{r.openingHours}</span>
+                  </div>
+                )}
+
+                <div className="mt-auto pt-4 flex gap-2">
                   <button
                     type="button"
                     onClick={() => navigate(`/map?to=${encodeURIComponent(r.name)}`)}
-                    className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-lacvay-green py-2 text-sm font-semibold text-white"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-lacvay-green py-2.5 text-xs font-bold text-white transition hover:bg-lacvay-green-dark"
                   >
-                    <Navigation className="h-4 w-4" /> Directions
+                    <Navigation className="h-3.5 w-3.5" /> Directions
                   </button>
                   <button
                     type="button"
                     onClick={() => toggleSave(r)}
-                    className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold"
+                    className="rounded-xl border border-gray-200 px-3.5 py-2.5 text-xs font-bold text-gray-700 transition hover:border-lacvay-green"
                   >
                     {isSaved(r.id) ? 'Saved' : 'Save'}
                   </button>

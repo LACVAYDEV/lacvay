@@ -8,6 +8,8 @@ export const placeCategories: TouristCategory[] = [
   'Adventure',
   'Family',
   'Cultural',
+  'Establishment',
+  'Others',
 ];
 
 export const emptySpot = (): Omit<TouristSpot, 'id'> => ({
@@ -15,10 +17,10 @@ export const emptySpot = (): Omit<TouristSpot, 'id'> => ({
   description: '',
   shortDescription: '',
   category: 'Nature',
-  imageUrl: '/images/spot-taal.jpg',
+  imageUrl: '',
   location: 'Batangas City',
   coordinates: { lat: 13.7565, lng: 121.0583 },
-  rating: 4.5,
-  openingHours: '8:00 AM – 5:00 PM',
-  estimatedTravelTime: '30 min from city center',
+  openTime: '08:00',
+  closeTime: '17:00',
+  isFeatured: false,
 });

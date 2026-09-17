@@ -51,6 +51,33 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_guides: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          summary: string | null
+          steps: Json | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          summary?: string | null
+          steps?: Json | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          summary?: string | null
+          steps?: Json | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       jeepney_fare_matrix: {
         Row: {
           destination_landmark: string
