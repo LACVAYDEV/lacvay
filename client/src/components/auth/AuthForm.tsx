@@ -172,7 +172,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         </Link>
       </div>
 
-      <h1 className="mt-7 text-[24px] font-extrabold tracking-tight text-gray-900">
+      <h1 className="mt-7 text-[20px] font-extrabold tracking-tight text-gray-900 sm:text-[24px]">
         {isSignUp ? 'Create your account' : 'Welcome back'}
       </h1>
       <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">

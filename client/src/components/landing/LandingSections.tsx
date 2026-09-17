@@ -9,7 +9,7 @@ function SectionHeading({ eyebrow, title, subtitle }: { eyebrow: string; title: 
   return (
     <div className="mx-auto max-w-2xl text-center">
       <p className="text-[11.5px] font-bold uppercase tracking-wider text-lacvay-green">{eyebrow}</p>
-      <h2 className="mt-2 text-[26px] font-extrabold tracking-tight text-gray-900 sm:text-[32px]">{title}</h2>
+      <h2 className="mt-2 text-[22px] font-extrabold leading-tight tracking-tight text-gray-900 sm:text-[32px]">{title}</h2>
       {subtitle && <p className="mt-3 text-[14px] leading-relaxed text-gray-600">{subtitle}</p>}
     </div>
   );
@@ -45,7 +45,7 @@ export function LandingFeatures() {
               <Sparkles className="h-3.5 w-3.5 text-lacvay-yellow" />
               AI Travel Assistant
             </span>
-            <h3 className="mt-4 text-[24px] font-extrabold leading-tight text-white sm:text-[28px]">
+            <h3 className="mt-4 text-[20px] font-extrabold leading-tight text-white sm:text-[28px]">
               Ask anything about Batangas City
             </h3>
             <p className="mt-3 max-w-md text-[13.5px] leading-relaxed text-white/80">
@@ -217,7 +217,7 @@ export function LandingDestinations() {
                 <p className="text-[11px] font-bold uppercase tracking-wider text-lacvay-green">
                   Destination overview
                 </p>
-                <h3 id="destination-dialog-title" className="mt-2 pr-10 text-[27px] font-extrabold leading-tight tracking-tight text-gray-900">
+                <h3 id="destination-dialog-title" className="mt-2 pr-10 text-[22px] font-extrabold leading-tight tracking-tight text-gray-900 sm:text-[27px]">
                   {selectedSpot.name}
                 </h3>
                 <p className="mt-4 text-[14px] leading-relaxed text-gray-600">{selectedSpot.description}</p>
@@ -296,7 +296,7 @@ export function LandingCTA() {
     <section className="bg-white py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="relative overflow-hidden rounded-[26px] bg-lacvay-green px-6 py-12 text-center sm:px-10">
-          <h2 className="text-[26px] font-extrabold tracking-tight text-white sm:text-[32px]">
+          <h2 className="text-[22px] font-extrabold leading-tight tracking-tight text-white sm:text-[32px]">
             Ready to explore Batangas City?
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[14px] leading-relaxed text-white/85">

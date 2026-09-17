@@ -4,6 +4,7 @@ import { generateId } from '@/lib/utils';
 import { sendAIMessage, AI_SUGGESTIONS } from '@/services/aiService';
 import { chatService } from '@/services/chatService';
 import { useAuth } from '@/context/AuthContext';
+import { updateUserMetadata } from '@/lib/userMetadata';
 
 interface AppContextValue {
   savedPlaces: SavedPlace[];
@@ -17,6 +18,10 @@ interface AppContextValue {
   removeSaved: (id: string) => void;
   isSaved: (itemId: string) => boolean;
   addHistory: (item: Omit<SearchHistoryItem, 'id' | 'timestamp'>) => void;
+  removeHistory: (id: string) => void;
+  clearHistory: () => void;
+  historySyncEnabled: boolean;
+  setHistorySyncEnabled: (enabled: boolean) => Promise<void>;
   sendAI: (message: string) => Promise<void>;
   showToast: (message: string) => void;
   aiSuggestions: string[];
@@ -31,6 +36,26 @@ const SAVED_KEY = 'lacvay-saved';
 const HISTORY_KEY = 'lacvay-history';
 const GUEST_SESSIONS_KEY = 'lacvay-guest-chat-sessions';
 const GUEST_MESSAGES_KEY_PREFIX = 'lacvay-guest-chat-msg-';
+const HISTORY_METADATA_KEY = 'search_history';
+const HISTORY_SYNC_METADATA_KEY = 'history_sync_enabled';
+
+function getHistoryStorageKey(userId?: string): string {
+  return userId ? `${HISTORY_KEY}-${userId}` : HISTORY_KEY;
+}
+
+function readAccountHistory(value: unknown): SearchHistoryItem[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is SearchHistoryItem => {
+    if (!item || typeof item !== 'object') return false;
+    const candidate = item as Partial<SearchHistoryItem>;
+    return (
+      typeof candidate.id === 'string' &&
+      typeof candidate.query === 'string' &&
+      typeof candidate.type === 'string' &&
+      typeof candidate.timestamp === 'string'
+    );
+  }).slice(0, 50);
+}
 
 const WELCOME_MESSAGE: AIMessage = {
   id: 'welcome',
@@ -45,21 +70,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
+  const [historySyncEnabled, setHistorySyncEnabledState] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([WELCOME_MESSAGE]);
   const [aiLoading, setAiLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  // Load saved places & search history from localStorage
+  // Load saved places from localStorage.
   useEffect(() => {
     try {
       setSavedPlaces(JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'));
-      setHistory(JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'));
     } catch {
       /* ignore */
     }
   }, []);
+
+  useEffect(() => {
+    const storageKey = getHistoryStorageKey(user?.id);
+    let localHistory: SearchHistoryItem[] = [];
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      try {
+        localHistory = readAccountHistory(JSON.parse(stored));
+      } catch {
+        localStorage.removeItem(storageKey);
+      }
+    }
+
+    const enabled = user?.user_metadata?.[HISTORY_SYNC_METADATA_KEY] === true;
+    setHistorySyncEnabledState(enabled);
+    if (enabled) {
+      const accountHistory = readAccountHistory(user?.user_metadata?.[HISTORY_METADATA_KEY]);
+      const merged = [...accountHistory, ...localHistory]
+        .filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index)
+        .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))
+        .slice(0, 50);
+      localStorage.setItem(storageKey, JSON.stringify(merged));
+      setHistory(merged);
+    } else {
+      setHistory(localHistory);
+    }
+  }, [user?.id, user?.user_metadata]);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -296,10 +348,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addHistory = useCallback((item: Omit<SearchHistoryItem, 'id' | 'timestamp'>) => {
     setHistory((prev) => {
       const next = [{ ...item, id: generateId(), timestamp: new Date().toISOString() }, ...prev].slice(0, 50);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+      localStorage.setItem(getHistoryStorageKey(user?.id), JSON.stringify(next));
+      if (historySyncEnabled && user) {
+        void updateUserMetadata({ [HISTORY_METADATA_KEY]: next }).catch(() => {
+          showToast('History was saved on this device, but account sync failed.');
+        });
+      }
       return next;
     });
-  }, []);
+  }, [historySyncEnabled, showToast, user]);
+
+  const persistHistory = useCallback((next: SearchHistoryItem[]) => {
+    setHistory(next);
+    localStorage.setItem(getHistoryStorageKey(user?.id), JSON.stringify(next));
+    if (historySyncEnabled && user) {
+      void updateUserMetadata({ [HISTORY_METADATA_KEY]: next }).catch(() => {
+        showToast('History changed on this device, but account sync failed.');
+      });
+    }
+  }, [historySyncEnabled, showToast, user]);
+
+  const removeHistory = useCallback((id: string) => {
+    persistHistory(history.filter((item) => item.id !== id));
+  }, [history, persistHistory]);
+
+  const clearHistory = useCallback(() => {
+    persistHistory([]);
+  }, [persistHistory]);
+
+  const setHistorySyncEnabled = useCallback(async (enabled: boolean) => {
+    if (!user) {
+      throw new Error('Sign in to sync history with your account.');
+    }
+    const nextHistory = enabled
+      ? [...readAccountHistory(user.user_metadata?.[HISTORY_METADATA_KEY]), ...history]
+          .filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index)
+          .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))
+          .slice(0, 50)
+      : history;
+    await updateUserMetadata({
+      [HISTORY_SYNC_METADATA_KEY]: enabled,
+      [HISTORY_METADATA_KEY]: nextHistory,
+    });
+    setHistorySyncEnabledState(enabled);
+    if (enabled) {
+      setHistory(nextHistory);
+      localStorage.setItem(getHistoryStorageKey(user.id), JSON.stringify(nextHistory));
+    }
+  }, [history, user]);
 
   // Send AI Message with automatic persistence
   const sendAI = useCallback(
@@ -391,6 +487,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         removeSaved,
         isSaved,
         addHistory,
+        removeHistory,
+        clearHistory,
+        historySyncEnabled,
+        setHistorySyncEnabled,
         sendAI,
         showToast,
         aiSuggestions: AI_SUGGESTIONS,

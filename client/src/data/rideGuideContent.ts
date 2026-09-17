@@ -7,9 +7,6 @@ export interface RideGuide {
   id: string;
   steps: RideGuideStep[];
   tips: string[];
-  androidLink?: string;
-  iosLink?: string;
-  phoneNumber?: string;
 }
 
 export const rideGuides: Record<string, RideGuide> = {
@@ -26,7 +23,7 @@ export const rideGuides: Record<string, RideGuide> = {
       },
       {
         title: 'Confirm the fare and book',
-        description: 'Review the upfront fare estimate, then tap Book. A certified biker will accept and head to your pickup point.',
+        description: 'Review the fare estimate, then tap Book. Check the assigned rider details in the provider app before boarding.',
       },
       {
         title: 'Wear the helmet and verify the rider',
@@ -42,8 +39,6 @@ export const rideGuides: Record<string, RideGuide> = {
       'Keep your phone charged — the app tracks your ride in real time.',
       'Avoid booking if you have heavy luggage; use a taxi instead.',
     ],
-    androidLink: 'https://play.google.com/store/apps/details?id=com.angkas.passenger',
-    iosLink: 'https://apps.apple.com/app/angkas-book-a-motorbike-ride/id1227390352',
   },
   grab: {
     id: 'grab',
@@ -74,8 +69,6 @@ export const rideGuides: Record<string, RideGuide> = {
       'GrabCar works well for families and groups of up to 4.',
       'Enable cashless payment in the app to avoid needing exact change.',
     ],
-    androidLink: 'https://play.google.com/store/apps/details?id=com.grabtaxi.passenger',
-    iosLink: 'https://apps.apple.com/app/grab-taxi-ride-food-delivery/id647268330',
   },
   'idol-taxi': {
     id: 'idol-taxi',
@@ -106,6 +99,5 @@ export const rideGuides: Record<string, RideGuide> = {
       'Book ahead for early-morning or late-night trips.',
       'Keep small bills ready — drivers may not have change for large notes.',
     ],
-    phoneNumber: '0917-XXX-XXXX',
   },
 };

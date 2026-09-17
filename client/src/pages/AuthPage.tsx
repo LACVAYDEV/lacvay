@@ -65,7 +65,7 @@ export default function AuthPage() {
           </Link>
 
           <div className="mt-10 max-w-md 2xl:mt-14">
-            <h2 className="text-[30px] font-extrabold leading-[1.14] tracking-tight text-white xl:text-[34px]">
+            <h2 className="text-[24px] font-extrabold leading-[1.14] tracking-tight text-white sm:text-[30px] xl:text-[34px]">
               Your travel buddy in
               <span className="block text-lacvay-yellow">Batangas City</span>
             </h2>

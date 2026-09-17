@@ -59,6 +59,12 @@ export function LandingFooter() {
             © {new Date().getFullYear()} LACVAY. Built for Batangas City.
           </p>
           <div className="flex gap-4">
+            <Link to="/privacy" className="text-[11.5px] font-semibold text-gray-600 hover:underline">
+              Privacy
+            </Link>
+            <Link to="/terms" className="text-[11.5px] font-semibold text-gray-600 hover:underline">
+              Terms
+            </Link>
             <Link to="/login" className="text-[11.5px] font-semibold text-lacvay-green hover:underline">
               Sign In
             </Link>

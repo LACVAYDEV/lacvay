@@ -1,8 +1,8 @@
 const MOCK_RESPONSES: Record<string, string> = {
-  'sm batangas': 'To reach SM City Batangas, ride a jeepney from Batangas City Grand Terminal heading to Diversion Road. Travel time is about 15–20 minutes with a fare of ₱13–₱15.',
+  'sm batangas': 'From Batangas City Grand Terminal to SM City Batangas, the documented regular fare is ₱32 across two jeepney legs. From Batangas Pier to SM City Batangas, the regular fare is ₱14.',
   'tourist': 'Top spots near Batangas City include Taal Volcano, Basilica of the Immaculate Conception, Anilao for diving, and Laiya Beach for a weekend getaway.',
   'restaurant': 'Try Lomi King for authentic Batangas lomi, Café Laguna at SM for Filipino comfort food, or Batangas Seafood Bay for fresh grilled seafood.',
-  'fare': 'Jeepney fares in Batangas City typically start at ₱13. Tricycles range from ₱20–₱40 for short trips, motorcycle taxis (habal-habal) from ₱25–₱70, and taxis use metered fares starting around ₱40.',
+  'fare': 'Traditional jeepneys charge ₱14 for the first 4 km plus ₱2 for every succeeding km. Tricycles range from ₱20–₱40 for short trips, motorcycle taxis (habal-habal) from ₱25–₱70, and taxis use metered fares starting around ₱40.',
   'jeepney': 'Jeepneys are the main public transport in Batangas City. Look for route signboards at the Grand Terminal and major roads.',
   'tricycle': 'Tricycles handle short trips inside barangays and to places jeepneys do not pass. Expect ₱20–₱40, and agree on the fare before boarding.',
   'motorcycle': 'Motorcycle taxis — habal-habal, or app-based riders — are the fastest way around traffic for a solo passenger. Fares usually run ₱25–₱70 in the city. Wear a helmet and travel light.',
@@ -31,7 +31,7 @@ async function callGemini(message: string): Promise<string | null> {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are LACVAY AI, a friendly travel assistant for Batangas City, Batangas, Philippines. Help with routes, fares, tourist spots, and local restaurants. Local transport includes jeepneys, tricycles, motorcycle taxis (habal-habal riders), metered taxis, and private car hire — mention whichever fits the trip. Keep answers concise and practical.\n\nUser: ${message}`,
+              text: `You are LACVAY AI, a friendly travel assistant for Batangas City, Batangas, Philippines. Help with routes, fares, tourist spots, and local restaurants. Traditional jeepneys charge PHP14 for the first 4 km plus PHP2 for every succeeding km. Local transport includes jeepneys, tricycles, motorcycle taxis (habal-habal riders), metered taxis, and private car hire — mention whichever fits the trip. Keep answers concise and practical and remind users to verify fares with the operator.\n\nUser: ${message}`,
             }],
           }],
         }),

@@ -71,12 +71,15 @@ export default function PromotionsPage() {
       )}
 
       <Card>
-        <h3 className="text-xl font-bold text-gray-900">Promote Your Business</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-xl font-bold text-gray-900">Promote Your Business</h3>
+          <Badge variant="gray">Coming soon</Badge>
+        </div>
         <p className="mt-2 text-sm text-gray-500">
-          Boost your visibility and reach more customers in Batangas City. List your restaurant, shop, or transport service on LACVAY.
+          Business promotion requests are not open yet. This button will be enabled when the application process is available.
         </p>
-        <Button className="mt-4" onClick={() => showToast('Business promotion request submitted!')}>
-          Promote Business
+        <Button className="mt-4" disabled>
+          Applications unavailable
         </Button>
       </Card>
     </div>
