@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Sidebar, mobileNavItems } from './Sidebar';
 import { Header } from './Header';
@@ -15,6 +15,8 @@ interface AppLayoutProps {
 export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const location = useLocation();
+  const isAssistant = location.pathname.startsWith('/ai-assistant');
 
   useEffect(() => {
     if (!sidebarOpen) return;
@@ -91,8 +93,14 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-[248px]" inert={sidebarOpen ? true : undefined}>
-        <div className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 lg:hidden">
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 flex-col lg:pl-[248px]',
+          isAssistant && 'h-screen overflow-hidden',
+        )}
+        inert={sidebarOpen ? true : undefined}
+      >
+        <div className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 lg:hidden shrink-0">
           <button
             ref={menuButtonRef}
             type="button"
@@ -107,7 +115,16 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
         </div>
 
         <Header />
-        <main className="flex-1 px-4 pb-6 md:px-6 lg:px-7">{children}</main>
+        <main
+          className={cn(
+            'flex-1 min-h-0',
+            isAssistant
+              ? 'flex flex-col overflow-hidden p-0'
+              : 'px-4 pb-6 md:px-6 lg:px-7',
+          )}
+        >
+          {children}
+        </main>
 
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-100 bg-white px-2 py-1.5 lg:hidden">
           <div className="flex justify-around">
@@ -129,7 +146,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
             ))}
           </div>
         </nav>
-        <div className="h-16 lg:hidden" />
+        {!isAssistant && <div className="h-16 lg:hidden" />}
       </div>
     </div>
   );

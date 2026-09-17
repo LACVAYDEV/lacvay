@@ -18,21 +18,34 @@ function getMockResponse(message: string): string {
   return "I'm LACVAY AI, your Batangas City travel buddy! I can help with routes, fares, tourist spots, and restaurant recommendations. Try asking about SM Batangas, tourist spots, or nearby restaurants.";
 }
 
+const SYSTEM_INSTRUCTION = `You are the LACVAY AI Travel & Transit Assistant, dedicated exclusively to Batangas City. Your purpose is to help users find tourist spots, local restaurants, commuting routes (jeepneys, tricycles), and explain local transport guidelines.
+
+STRICT RULE: You must explicitly refuse to answer any questions, perform any tasks, or generate any content that is unrelated to Batangas City tourism, commuting, or the LACVAY platform. If a user asks about general knowledge, coding, writing essays, politics, or other locations, you must decline.
+
+If the user goes off-topic, always reply with a polite refusal similar to: "I am the LACVAY Travel Assistant. I am specifically designed to help you explore and commute within Batangas City. I cannot assist with other topics. Where would you like to go in Batangas today?"
+
+Additional context you may use when relevant:
+- Traditional jeepneys charge PHP14 for the first 4 km plus PHP2 for every succeeding km.
+- Local transport includes jeepneys, tricycles, motorcycle taxis (habal-habal riders), metered taxis, and private car hire.
+- Keep answers concise and practical, and remind users to verify fares with the operator.`;
+
 async function callGemini(message: string): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: SYSTEM_INSTRUCTION }],
+          },
           contents: [{
-            parts: [{
-              text: `You are LACVAY AI, a friendly travel assistant for Batangas City, Batangas, Philippines. Help with routes, fares, tourist spots, and local restaurants. Traditional jeepneys charge PHP14 for the first 4 km plus PHP2 for every succeeding km. Local transport includes jeepneys, tricycles, motorcycle taxis (habal-habal riders), metered taxis, and private car hire — mention whichever fits the trip. Keep answers concise and practical and remind users to verify fares with the operator.\n\nUser: ${message}`,
-            }],
+            role: 'user',
+            parts: [{ text: message }],
           }],
         }),
       },

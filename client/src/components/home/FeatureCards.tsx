@@ -9,6 +9,13 @@ const features = [
     path: '/map',
   },
   {
+    title: 'Commute Guide',
+    description: 'Learn how to commute by jeepney, tricycle, taxi, or motorcycle rider.',
+    image: '/images/icon-commute.png',
+    cta: 'View Guide',
+    path: '/commute',
+  },
+  {
     title: 'Fare Checker',
     description: 'Check exact or estimated fares for your trip.',
     image: '/images/icon-fare.png',
@@ -21,13 +28,6 @@ const features = [
     image: '/images/icon-ride.png',
     cta: 'View Guide',
     path: '/rides',
-  },
-  {
-    title: 'Commute Guide',
-    description: 'Learn how to commute by jeepney, tricycle, taxi, or motorcycle rider.',
-    image: '/images/icon-commute.png',
-    cta: 'View Guide',
-    path: '/commute',
   },
 ];
 

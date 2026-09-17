@@ -1,5 +1,6 @@
 import type { Database, Json } from '@/types/database.types';
-import type { Promotion, Restaurant, RestaurantCuisine, TouristCategory, TouristSpot } from '@/types';
+import type { Promotion, Restaurant, TouristCategory, TouristSpot } from '@/types';
+import { formatOpeningHours, isCurrentlyOpenNow } from '@/lib/timeUtils';
 
 type PlaceRow = Database['public']['Tables']['places']['Row'];
 type PlaceInsert = Database['public']['Tables']['places']['Insert'];
@@ -17,6 +18,10 @@ function asRecord(value: Json | null | undefined): Record<string, unknown> {
 
 export function placeToTouristSpot(row: PlaceRow): TouristSpot {
   const meta = asRecord(row.metadata);
+  const openTime = meta.openTime ? String(meta.openTime) : undefined;
+  const closeTime = meta.closeTime ? String(meta.closeTime) : undefined;
+  const openingHours = formatOpeningHours(openTime, closeTime) || String(meta.openingHours ?? '');
+
   return {
     id: row.id,
     name: row.name,
@@ -25,33 +30,36 @@ export function placeToTouristSpot(row: PlaceRow): TouristSpot {
     category: row.category as TouristCategory,
     categoryLabel: meta.categoryLabel ? String(meta.categoryLabel) : undefined,
     imageUrl: row.image_url ?? '',
-    location: String(meta.location ?? 'Batangas City'),
+    location: 'Batangas City',
     coordinates: { lat: row.latitude, lng: row.longitude },
-    rating: Number(meta.rating ?? 4.5),
-    openingHours: String(meta.openingHours ?? ''),
-    estimatedTravelTime: String(meta.estimatedTravelTime ?? ''),
+    rating: meta.rating !== undefined && meta.rating !== null ? Number(meta.rating) : undefined,
+    openTime,
+    closeTime,
+    openingHours,
+    estimatedTravelTime: meta.estimatedTravelTime ? String(meta.estimatedTravelTime) : undefined,
+    isFeatured: Boolean(row.is_featured ?? meta.is_promoted ?? false),
   };
 }
 
 export function placeToRestaurant(row: PlaceRow): Restaurant {
   const meta = asRecord(row.metadata);
-  const cuisine = Array.isArray(meta.cuisine)
-    ? (meta.cuisine as string[]).map((c) => c as RestaurantCuisine)
-    : (['Filipino'] as RestaurantCuisine[]);
+  const openTime = meta.openTime ? String(meta.openTime) : undefined;
+  const closeTime = meta.closeTime ? String(meta.closeTime) : undefined;
+  const openingHours = formatOpeningHours(openTime, closeTime) || String(meta.openingHours ?? '');
+  const isOpen = isCurrentlyOpenNow(openTime, closeTime);
 
   return {
     id: row.id,
     name: row.name,
     description: row.description ?? '',
-    cuisine,
     imageUrl: row.image_url ?? '',
-    location: String(meta.location ?? 'Batangas City'),
+    location: 'Batangas City',
     coordinates: { lat: row.latitude, lng: row.longitude },
-    rating: Number(meta.rating ?? 4.5),
-    distanceKm: Number(meta.distanceKm ?? 2),
     priceRange: String(meta.priceRange ?? '₱₱'),
-    isOpen: meta.isOpen !== false,
-    openingHours: String(meta.openingHours ?? ''),
+    openTime,
+    closeTime,
+    openingHours,
+    isOpen,
   };
 }
 
@@ -62,6 +70,7 @@ function isUuid(value?: string): boolean {
 export function touristSpotToPlaceRow(
   spot: Omit<TouristSpot, 'id'> & { id?: string },
 ): PlaceInsert {
+  const formattedHours = formatOpeningHours(spot.openTime, spot.closeTime) || spot.openingHours || '';
   return {
     ...(isUuid(spot.id) ? { id: spot.id } : {}),
     name: spot.name,
@@ -70,15 +79,16 @@ export function touristSpotToPlaceRow(
     image_url: spot.imageUrl,
     latitude: spot.coordinates.lat,
     longitude: spot.coordinates.lng,
-    is_featured: true,
+    is_featured: Boolean(spot.isFeatured),
     metadata: {
       place_type: PLACE_TYPE_TOURIST,
       shortDescription: spot.shortDescription,
       categoryLabel: spot.categoryLabel,
-      location: spot.location,
-      rating: spot.rating,
-      openingHours: spot.openingHours,
-      estimatedTravelTime: spot.estimatedTravelTime,
+      location: 'Batangas City',
+      openTime: spot.openTime,
+      closeTime: spot.closeTime,
+      openingHours: formattedHours,
+      is_promoted: Boolean(spot.isFeatured),
     },
   };
 }
@@ -86,6 +96,7 @@ export function touristSpotToPlaceRow(
 export function restaurantToPlaceRow(
   restaurant: Omit<Restaurant, 'id'> & { id?: string },
 ): PlaceInsert {
+  const formattedHours = formatOpeningHours(restaurant.openTime, restaurant.closeTime) || restaurant.openingHours || '';
   return {
     ...(isUuid(restaurant.id) ? { id: restaurant.id } : {}),
     name: restaurant.name,
@@ -97,13 +108,11 @@ export function restaurantToPlaceRow(
     is_featured: true,
     metadata: {
       place_type: PLACE_TYPE_RESTAURANT,
-      cuisine: restaurant.cuisine,
-      location: restaurant.location,
-      rating: restaurant.rating,
-      distanceKm: restaurant.distanceKm,
+      location: 'Batangas City',
+      openTime: restaurant.openTime,
+      closeTime: restaurant.closeTime,
+      openingHours: formattedHours,
       priceRange: restaurant.priceRange,
-      isOpen: restaurant.isOpen,
-      openingHours: restaurant.openingHours,
     },
   };
 }

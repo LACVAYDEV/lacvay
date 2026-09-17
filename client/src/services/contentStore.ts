@@ -1,4 +1,3 @@
-import { touristSpots as defaultSpots, restaurants as defaultRestaurants, promotions as defaultPromotions } from '@/data/mockData';
 import type { Promotion, Restaurant, SearchResult, TouristCategory, TouristSpot } from '@/types';
 import { generateId } from '@/lib/utils';
 
@@ -11,11 +10,11 @@ interface ManagedContent {
   updatedAt: string;
 }
 
-function seedContent(): ManagedContent {
+function emptyContent(): ManagedContent {
   return {
-    touristSpots: structuredClone(defaultSpots),
-    restaurants: structuredClone(defaultRestaurants),
-    promotions: structuredClone(defaultPromotions),
+    touristSpots: [],
+    restaurants: [],
+    promotions: [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -23,16 +22,16 @@ function seedContent(): ManagedContent {
 function readStore(): ManagedContent {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return seedContent();
+    if (!raw) return emptyContent();
     const parsed = JSON.parse(raw) as ManagedContent;
     return {
-      touristSpots: parsed.touristSpots?.length ? parsed.touristSpots : seedContent().touristSpots,
-      restaurants: parsed.restaurants?.length ? parsed.restaurants : seedContent().restaurants,
-      promotions: parsed.promotions?.length ? parsed.promotions : seedContent().promotions,
+      touristSpots: Array.isArray(parsed.touristSpots) ? parsed.touristSpots : [],
+      restaurants: Array.isArray(parsed.restaurants) ? parsed.restaurants : [],
+      promotions: Array.isArray(parsed.promotions) ? parsed.promotions : [],
       updatedAt: parsed.updatedAt ?? new Date().toISOString(),
     };
   } catch {
-    return seedContent();
+    return emptyContent();
   }
 }
 
@@ -46,14 +45,14 @@ function buildSearchIndex(spots: TouristSpot[], restaurants: Restaurant[]): Sear
       id: s.id,
       type: 'tourist-spot' as const,
       title: s.name,
-      subtitle: s.location,
+      subtitle: s.location || 'Batangas City',
       path: `/tourist-spots/${s.id}`,
     })),
     ...restaurants.map((r) => ({
       id: r.id,
       type: 'restaurant' as const,
       title: r.name,
-      subtitle: r.location,
+      subtitle: r.location || 'Batangas City',
       path: '/restaurants',
     })),
   ];
@@ -65,7 +64,7 @@ export const contentStore = {
   },
 
   resetToDefaults(): ManagedContent {
-    const content = seedContent();
+    const content = emptyContent();
     writeStore(content);
     return content;
   },

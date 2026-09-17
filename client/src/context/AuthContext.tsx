@@ -189,53 +189,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   const signInWithEmail = async (email: string, password: string) => {
-
-    clearSessionMode();
-
-    setSessionMode(null);
-
+    const mode = readSessionMode() || 'user';
+    writeSessionMode(mode);
+    setSessionMode(mode);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-
     if (error) throw error;
-
   };
-
-
 
   const signUpWithEmail = async (email: string, password: string, fullName: string) => {
-
     const { error } = await supabase.auth.signUp({
-
       email,
-
       password,
-
       options: { data: { full_name: fullName } },
-
     });
-
     if (error) throw error;
-
   };
 
-
-
   const signInWithGoogle = async () => {
-
-    clearSessionMode();
-
-    setSessionMode(null);
-
+    const mode = readSessionMode() || 'user';
+    writeSessionMode(mode);
+    setSessionMode(mode);
     const { error } = await supabase.auth.signInWithOAuth({
-
       provider: 'google',
-
       options: { redirectTo: window.location.origin },
-
     });
-
     if (error) throw error;
-
   };
 
 

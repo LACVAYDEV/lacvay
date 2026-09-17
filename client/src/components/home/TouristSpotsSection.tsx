@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star } from 'lucide-react';
 import { dataService } from '@/services/dataService';
 import type { TouristSpot } from '@/types';
 import { Card } from '@/components/ui/Card';
@@ -16,11 +15,14 @@ export function TouristSpotsSection() {
   return (
     <Card className="h-full">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-[15px] font-bold text-gray-900">Popular Tourist Spots</h3>
+        <div>
+          <h3 className="text-[15px] font-bold text-gray-900">Nearby Tourist Spots</h3>
+          <p className="text-[11.5px] text-gray-500">Top attractions, historical sites, and natural escapes across Batangas</p>
+        </div>
         <button
           type="button"
           onClick={() => navigate('/tourist-spots')}
-          className="text-[12px] font-semibold text-lacvay-green hover:underline"
+          className="text-[12px] font-semibold text-lacvay-green hover:underline shrink-0 ml-2"
         >
           View All
         </button>
@@ -41,10 +43,11 @@ export function TouristSpotsSection() {
                 loading="lazy"
                 className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
               />
-              <span className="absolute right-2 top-2 flex items-center gap-0.5 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 backdrop-blur">
-                <Star className="h-2.5 w-2.5 fill-current" />
-                {spot.rating}
-              </span>
+              {spot.isFeatured && (
+                <span className="absolute left-2 top-2 rounded-full bg-amber-400/95 px-2 py-0.5 text-[9.5px] font-bold text-amber-950 shadow-sm backdrop-blur">
+                  ★ Promoted
+                </span>
+              )}
             </div>
             <p className="mt-2 text-[12.5px] font-bold leading-snug text-gray-900 group-hover:text-lacvay-green line-clamp-2">
               {spot.name}

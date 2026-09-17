@@ -305,8 +305,8 @@ export const commuteGuides: CommuteGuide[] = [
 ];
 
 export const searchIndex: SearchResult[] = [
-  ...touristSpots.map((s) => ({ id: s.id, type: 'tourist-spot' as const, title: s.name, subtitle: s.location, path: `/tourist-spots/${s.id}` })),
-  ...restaurants.map((r) => ({ id: r.id, type: 'restaurant' as const, title: r.name, subtitle: r.location, path: `/restaurants/${r.id}` })),
+  ...touristSpots.map((s) => ({ id: s.id, type: 'tourist-spot' as const, title: s.name, subtitle: s.location || 'Batangas City', path: `/tourist-spots/${s.id}` })),
+  ...restaurants.map((r) => ({ id: r.id, type: 'restaurant' as const, title: r.name, subtitle: r.location || 'Batangas City', path: `/restaurants/${r.id}` })),
   { id: 'sm-batangas', type: 'landmark', title: 'SM City Batangas', subtitle: 'Diversion Road, Batangas City', path: '/map?to=SM City Batangas' },
   { id: 'grand-terminal', type: 'landmark', title: 'Batangas City Grand Terminal', subtitle: 'Diversion Road', path: '/map?to=Batangas City Grand Terminal' },
   { id: 'pallocan', type: 'barangay', title: 'Pallocan West', subtitle: 'Batangas City', path: '/map?to=Pallocan West' },

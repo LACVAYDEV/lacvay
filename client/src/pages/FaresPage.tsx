@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import type { TransportType } from '@/types';
 import { calculateFare } from '@/lib/fareCalculator';
 import { fareCheckerOptions, getTransportLabel, getTransportOption } from '@/lib/transport';
-import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
 import { Input, Select } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -20,14 +19,12 @@ export default function FaresPage() {
   const [transport, setTransport] = useState<TransportType>(initialTransport);
   const [distance, setDistance] = useState('');
   const [result, setResult] = useState<ReturnType<typeof calculateFare> | null>(null);
-  const { addHistory } = useApp();
 
   const handleCalculate = () => {
     if (!destination.trim()) return;
     const dist = distance ? parseFloat(distance) : undefined;
     const fare = calculateFare(origin, destination, transport, dist);
     setResult(fare);
-    addHistory({ query: `${origin} → ${destination}`, type: 'fare', meta: transport });
   };
 
   return (

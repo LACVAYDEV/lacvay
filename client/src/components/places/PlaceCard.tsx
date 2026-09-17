@@ -7,6 +7,7 @@ import { favoritesService } from '@/services/favoritesService';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
+import { isVideoMediaUrl } from '@/lib/mediaUtils';
 import type { Place } from '@/types';
 
 export interface PlaceCardProps {
@@ -93,12 +94,23 @@ export function PlaceCard({
         onClick={handleCardClick}
         className="relative aspect-[16/10] w-full cursor-pointer overflow-hidden bg-gray-100"
       >
-        <img
-          src={imageUrl}
-          alt={place.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        {isVideoMediaUrl(imageUrl) ? (
+          <video
+            src={imageUrl}
+            className="h-full w-full object-cover"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+        ) : (
+          <img
+            src={imageUrl}
+            alt={place.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        )}
 
         {/* Gradient overlay for contrast */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
@@ -108,6 +120,11 @@ export function PlaceCard({
           {place.category && (
             <Badge className="border-0 bg-lacvay-green/90 text-white shadow-sm backdrop-blur-md">
               {place.category}
+            </Badge>
+          )}
+          {place.is_featured && (
+            <Badge variant="yellow" className="backdrop-blur-md shadow-sm font-bold">
+              ★ Promoted
             </Badge>
           )}
         </div>

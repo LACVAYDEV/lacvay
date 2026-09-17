@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, MapPin, Plus, Star, Trash2, X } from 'lucide-react';
+import { Clock, Plus, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -9,6 +9,7 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { adminService } from '@/services/adminService';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
+import { isVideoMediaUrl } from '@/lib/mediaUtils';
 import type { TouristSpot } from '@/types';
 
 function SpotGridCard({ spot, onSelect }: { spot: TouristSpot; onSelect: () => void }) {
@@ -19,25 +20,38 @@ function SpotGridCard({ spot, onSelect }: { spot: TouristSpot; onSelect: () => v
       className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white text-left shadow-soft transition hover:-translate-y-0.5 hover:border-lacvay-green/25 hover:shadow-lg"
     >
       <div className="relative aspect-[4/5] overflow-hidden bg-gray-100">
-        <img
-          src={spot.imageUrl}
-          alt=""
-          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-        />
-        <div className="absolute left-2 top-2">
-          <Badge className="border-0 bg-lacvay-green/90 text-white shadow-sm backdrop-blur-md">{spot.category}</Badge>
-        </div>
-        <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[11px] font-bold text-lacvay-yellow shadow-sm">
-          <Star className="h-3 w-3 fill-current" />
-          {spot.rating.toFixed(1)}
+        {isVideoMediaUrl(spot.imageUrl) ? (
+          <video
+            src={spot.imageUrl}
+            className="h-full w-full object-cover"
+            muted
+            playsInline
+            loop
+          />
+        ) : (
+          <img
+            src={spot.imageUrl}
+            alt=""
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+          />
+        )}
+        <div className="absolute left-2 top-2 flex flex-col gap-1 items-start">
+          <Badge variant="lime">{spot.category}</Badge>
+          {spot.isFeatured && (
+            <Badge variant="yellow" className="shadow-sm">
+              ★ Promoted
+            </Badge>
+          )}
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
         <p className="line-clamp-2 text-[13px] font-bold leading-snug text-gray-900">{spot.name}</p>
-        <p className="flex items-center gap-1 truncate text-[11px] text-gray-500">
-          <MapPin className="h-3 w-3 shrink-0" />
-          {spot.location}
-        </p>
+        {spot.openingHours && (
+          <p className="flex items-center gap-1 text-[11px] text-gray-500 truncate">
+            <Clock className="h-3 w-3 shrink-0 text-lacvay-green" />
+            {spot.openingHours}
+          </p>
+        )}
       </div>
     </button>
   );
@@ -67,22 +81,19 @@ function SpotDetailModal({
         </button>
         <div className="grid gap-0 md:grid-cols-[1.1fr_1fr]">
         <div className="relative aspect-[4/3] bg-gray-100 md:aspect-auto md:min-h-[420px]">
-          <img src={spot.imageUrl} alt="" className="h-full w-full object-cover" />
+          {isVideoMediaUrl(spot.imageUrl) ? (
+            <video src={spot.imageUrl} controls className="h-full w-full object-cover" />
+          ) : (
+            <img src={spot.imageUrl} alt="" className="h-full w-full object-cover" />
+          )}
         </div>
         <div className="flex flex-col gap-4 p-5 md:p-6">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="lime">{spot.category}</Badge>
-              <span className="inline-flex items-center gap-1 text-[13px] font-bold text-lacvay-yellow">
-                <Star className="h-4 w-4 fill-current" />
-                {spot.rating.toFixed(1)}
-              </span>
+              {spot.isFeatured && <Badge variant="yellow">★ Promoted Destination</Badge>}
             </div>
             <h2 className="mt-3 text-[22px] font-extrabold leading-tight text-lacvay-green-dark">{spot.name}</h2>
-            <p className="mt-1 flex items-center gap-1.5 text-[13px] text-gray-500">
-              <MapPin className="h-4 w-4 shrink-0" />
-              {spot.location}
-            </p>
           </div>
 
           {spot.shortDescription && (
@@ -94,17 +105,15 @@ function SpotDetailModal({
           )}
 
           <div className="grid gap-2 rounded-2xl bg-lacvay-cream/60 p-4 text-[12.5px]">
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-semibold text-gray-500">Opening hours</span>
-              <span className="flex items-center gap-1.5 font-medium text-gray-800">
-                <Clock className="h-3.5 w-3.5 text-lacvay-green" />
-                {spot.openingHours}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-semibold text-gray-500">Travel time</span>
-              <span className="font-medium text-gray-800">{spot.estimatedTravelTime}</span>
-            </div>
+            {spot.openingHours && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-semibold text-gray-500">Opening hours</span>
+                <span className="flex items-center gap-1.5 font-medium text-gray-800">
+                  <Clock className="h-3.5 w-3.5 text-lacvay-green" />
+                  {spot.openingHours}
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-3">
               <span className="font-semibold text-gray-500">Coordinates</span>
               <span className="font-medium text-gray-800">
@@ -171,6 +180,27 @@ export default function AdminPlacesPage() {
     }
   };
 
+  const handleWipeAll = async () => {
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete all ${places.length} destinations from the database? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await adminService.clearAllPlaces();
+      setSelectedSpot(null);
+      await refresh();
+      showToast('All destinations have been wiped from the database');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Wipe failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <LoadingState />;
 
   return (
@@ -179,10 +209,22 @@ export default function AdminPlacesPage() {
         title="Tourist Spots"
         description="Browse destinations in a catalog view. Add new spots or open one for full details."
         actions={
-          <Button onClick={() => navigate('/admin/places/new')}>
-            <Plus className="h-4 w-4" />
-            Add spot
-          </Button>
+          <div className="flex items-center gap-2">
+            {places.length > 0 && (
+              <Button
+                variant="outline"
+                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
+                onClick={() => void handleWipeAll()}
+              >
+                <Trash2 className="h-4 w-4" />
+                Wipe all ({places.length})
+              </Button>
+            )}
+            <Button onClick={() => navigate('/admin/places/new')}>
+              <Plus className="h-4 w-4" />
+              Add spot
+            </Button>
+          </div>
         }
       />
 

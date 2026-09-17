@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, LogOut, Trash2 } from 'lucide-react';
+import { Loader2, LogOut, Trash2, Mail } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Input, Select } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -169,6 +169,25 @@ export default function SettingsPage() {
           </span>
           <input type="checkbox" checked={location} onChange={(e) => setLocation(e.target.checked)} className="h-5 w-5 accent-lacvay-green" />
         </label>
+      </Card>
+
+      <Card className="space-y-3">
+        <div className="flex items-center gap-2 text-lacvay-green">
+          <Mail className="h-5 w-5" />
+          <h3 className="font-bold text-gray-900">Partner & Advertising Inquiries</h3>
+        </div>
+        <p className="text-xs leading-relaxed text-gray-600">
+          Interested in featuring your local Batangas business, transport service, or tourist establishment on LACVAY? Contact our team directly.
+        </p>
+        <div className="pt-1">
+          <a
+            href="mailto:partners@lacvay.ph?subject=LACVAY%20Partner%20%26%20Advertising%20Inquiry"
+            className="inline-flex items-center gap-2 rounded-xl bg-lacvay-green px-4 py-2.5 text-xs font-semibold text-white shadow-soft transition hover:bg-lacvay-green-dark"
+          >
+            <Mail className="h-4 w-4" />
+            partners@lacvay.ph
+          </a>
+        </div>
       </Card>
 
       <Card className="space-y-3">

@@ -16,7 +16,9 @@ export type TouristCategory =
   | 'Food'
   | 'Adventure'
   | 'Family'
-  | 'Cultural';
+  | 'Cultural'
+  | 'Establishment'
+  | 'Others';
 
 export type RestaurantCuisine =
   | 'Filipino'
@@ -80,6 +82,23 @@ export interface UserFavorite {
   place?: Place;
 }
 
+export interface SavedGuideStep {
+  order?: number;
+  title: string;
+  description?: string;
+  location?: string;
+  coordinates?: Coordinates;
+}
+
+export interface SavedGuide {
+  id: string;
+  user_id: string;
+  title: string;
+  summary?: string | null;
+  steps: SavedGuideStep[] | any;
+  created_at?: string | null;
+}
+
 export interface ChatSession {
   id: string;
   user_id: string;
@@ -118,26 +137,31 @@ export interface TouristSpot {
   /** Display label shown on cards, e.g. "Beach & Diving". Falls back to `category`. */
   categoryLabel?: string;
   imageUrl: string;
-  location: string;
+  location?: string;
   coordinates: Coordinates;
-  rating: number;
-  openingHours: string;
-  estimatedTravelTime: string;
+  rating?: number;
+  openTime?: string;
+  closeTime?: string;
+  openingHours?: string;
+  estimatedTravelTime?: string;
+  isFeatured?: boolean;
 }
 
 export interface Restaurant {
   id: string;
   name: string;
   description: string;
-  cuisine: RestaurantCuisine[];
+  cuisine?: RestaurantCuisine[];
   imageUrl: string;
-  location: string;
+  location?: string;
   coordinates: Coordinates;
-  rating: number;
-  distanceKm: number;
+  rating?: number;
+  distanceKm?: number;
   priceRange: string;
-  isOpen: boolean;
-  openingHours: string;
+  openTime?: string;
+  closeTime?: string;
+  isOpen?: boolean;
+  openingHours?: string;
 }
 
 export interface RouteStep {

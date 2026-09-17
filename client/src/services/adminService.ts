@@ -25,6 +25,8 @@ export const adminService = {
   deletePromotion: (id: string) => contentRepository.deletePromotion(id),
 
   resetContent: () => contentRepository.resetToDefaults(),
+  clearAllPlaces: () => contentRepository.clearAllPlaces(),
+  clearAllPromotions: () => contentRepository.clearAllPromotions(),
   getStats: () => contentRepository.getStats(),
   isUsingSupabase: () => contentRepository.isUsingSupabase(),
 

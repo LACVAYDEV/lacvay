@@ -8,9 +8,7 @@ import {
   Camera,
   Sparkles,
   UtensilsCrossed,
-  Tag,
   Bookmark,
-  History,
   Settings,
 } from 'lucide-react';
 import { LogoMark, SidebarWaveArt } from '@/components/ui/Logo';
@@ -22,12 +20,10 @@ const navItems = [
   { to: '/commute', label: 'Commute Guide', icon: BookOpen },
   { to: '/fares', label: 'Fare Checker', icon: Coins },
   { to: '/rides', label: 'Ride Guide', icon: Car },
-  { to: '/tourist-spots', label: 'Tourist Spots', icon: Camera },
-  { to: '/ai-assistant', label: 'AI Travel Assistant', icon: Sparkles },
+  { to: '/tourist-spots', label: 'Nearby Tourist Spots', icon: Camera },
   { to: '/restaurants', label: 'Nearby Restaurants', icon: UtensilsCrossed },
-  { to: '/promotions', label: 'Promotions', icon: Tag },
+  { to: '/ai-assistant', label: 'AI Travel Assistant', icon: Sparkles },
   { to: '/saved', label: 'Saved', icon: Bookmark },
-  { to: '/history', label: 'History', icon: History },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
