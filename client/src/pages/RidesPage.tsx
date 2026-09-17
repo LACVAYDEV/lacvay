@@ -167,6 +167,8 @@ export default function RidesPage() {
                 ? provider.id
                 : null;
           const app = appKey ? transportApps[appKey] : null;
+          const opensInstalledApp = Boolean(app?.scheme);
+          const appActionLabel = opensInstalledApp ? `Open ${app?.name}` : `View ${app?.name} App`;
           const isExpanded = expandedProviders.has(provider.id);
           const detailsId = `ride-guide-${provider.id}`;
 
@@ -215,7 +217,7 @@ export default function RidesPage() {
                       className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-lacvay-green px-4 py-2.5 text-sm font-semibold text-white shadow-soft"
                     >
                       <Smartphone className="h-4 w-4" />
-                      Open {app.name}
+                      {appActionLabel}
                     </button>
                   )}
                   <button
@@ -279,13 +281,19 @@ export default function RidesPage() {
                         type="button"
                         onClick={() => launchTransportApp(appKey)}
                         className="flex w-full items-center justify-center gap-2 rounded-xl bg-lacvay-green px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-lacvay-green-dark"
-                        aria-label={`Open ${app.name} or install it from your app store`}
+                        aria-label={
+                          opensInstalledApp
+                            ? `Open ${app.name} or install it from your app store`
+                            : `View ${app.name} in your device's app store`
+                        }
                       >
                         <Smartphone className="h-4 w-4" />
-                        Open {app.name}
+                        {appActionLabel}
                       </button>
                       <p className="text-center text-[11px] leading-relaxed text-gray-500">
-                        Opens the app when installed, otherwise redirects to your device&apos;s app store.
+                        {opensInstalledApp
+                          ? 'Opens the app when installed, otherwise redirects to your device\u0027s app store.'
+                          : `Opens the official ${app.name} listing in your device\u0027s app store.`}
                       </p>
                     </div>
                   )}

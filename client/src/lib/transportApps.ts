@@ -1,11 +1,11 @@
 export const transportApps = {
   angkas: {
     name: 'Angkas',
-    scheme: 'angkas://',
-    androidPackage: 'com.angkas.passenger',
-    iosAppId: 'id1156870020',
-    appStoreUrl: 'https://apps.apple.com/app/id1156870020',
-    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.angkas.passenger',
+    scheme: null,
+    androidPackage: 'com.angkas.customer',
+    iosAppId: 'id6464280697',
+    appStoreUrl: 'https://apps.apple.com/ph/app/angkas-motorcycle-taxi-ph/id6464280697',
+    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.angkas.customer',
   },
   grab: {
     name: 'Grab',
@@ -32,13 +32,13 @@ export function launchTransportApp(appKey: TransportAppKey): void {
   const userAgent = navigator.userAgent || navigator.vendor;
   const isAndroid = /android/i.test(userAgent);
   const isIos = /iPad|iPhone|iPod/.test(userAgent);
+  const fallbackUrl = isIos ? app.appStoreUrl : app.playStoreUrl;
 
-  if (!isAndroid && !isIos) {
-    window.open(app.playStoreUrl, '_blank', 'noopener,noreferrer');
+  if (!app.scheme || (!isAndroid && !isIos)) {
+    window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
     return;
   }
 
-  const fallbackUrl = isAndroid ? app.playStoreUrl : app.appStoreUrl;
   let fallbackTimer: number | undefined;
 
   const cancelFallback = () => {
