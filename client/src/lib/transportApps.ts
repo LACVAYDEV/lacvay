@@ -1,7 +1,7 @@
 export const transportApps = {
   angkas: {
     name: 'Angkas',
-    scheme: null,
+    scheme: 'angkas://open',
     androidPackage: 'com.angkas.customer',
     iosAppId: 'id6464280697',
     appStoreUrl: 'https://apps.apple.com/ph/app/angkas-motorcycle-taxi-ph/id6464280697',
