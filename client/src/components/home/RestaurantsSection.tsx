@@ -10,7 +10,14 @@ export function RestaurantsSection() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
 
   useEffect(() => {
-    dataService.getRestaurants().then((list) => setRestaurants(list.slice(0, 4)));
+    dataService.getRestaurants().then((list) => {
+      const sorted = [...list].sort((a, b) => {
+        if (a.isFeatured && !b.isFeatured) return -1;
+        if (!a.isFeatured && b.isFeatured) return 1;
+        return a.name.localeCompare(b.name);
+      });
+      setRestaurants(sorted.slice(0, 4));
+    });
   }, []);
 
   return (
@@ -42,15 +49,22 @@ export function RestaurantsSection() {
                 loading="lazy"
                 className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
               />
-              <span
-                className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur ${
-                  r.isOpen
-                    ? 'bg-emerald-500/90 text-white'
-                    : 'bg-rose-500/90 text-white'
-                }`}
-              >
-                {r.isOpen ? 'Open' : 'Closed'}
-              </span>
+              <div className="absolute left-2 top-2 flex flex-col gap-1 items-start">
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur ${
+                    r.isOpen
+                      ? 'bg-emerald-500/90 text-white'
+                      : 'bg-rose-500/90 text-white'
+                  }`}
+                >
+                  {r.isOpen ? 'Open' : 'Closed'}
+                </span>
+                {r.isFeatured && (
+                  <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-gray-900 shadow-sm">
+                    ★ Promoted
+                  </span>
+                )}
+              </div>
               {r.priceRange && (
                 <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-lacvay-green shadow-sm">
                   {r.priceRange}

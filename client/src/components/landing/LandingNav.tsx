@@ -17,7 +17,7 @@ export function LandingNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-        <Link to="/welcome" className="flex items-center gap-2.5">
+        <Link to="/" className="flex items-center gap-2.5">
           <LogoMark className="h-9 w-7 shrink-0" />
           <span className="leading-none">
             <span className="block text-[19px] font-extrabold tracking-tight text-lacvay-green">LACVAY</span>

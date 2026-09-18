@@ -162,6 +162,7 @@ export interface Restaurant {
   closeTime?: string;
   isOpen?: boolean;
   openingHours?: string;
+  isFeatured?: boolean;
 }
 
 export interface RouteStep {

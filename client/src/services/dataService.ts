@@ -1,12 +1,9 @@
-import { commuteGuides, rides, externalProviders, mockUser } from '@/data/mockData';
-import type { TouristSpot, Restaurant, CommuteGuide, Ride, ExternalProvider, Promotion, SearchResult, TouristCategory, User } from '@/types';
+import { commuteGuides, externalProviders } from '@/data/mockData';
+import type { TouristSpot, Restaurant, CommuteGuide, ExternalProvider, Promotion, SearchResult, TouristCategory } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { contentRepository } from '@/services/contentRepository';
 
 export const dataService = {
-  getUser(): Promise<User> {
-    return Promise.resolve(mockUser);
-  },
 
   getTouristSpots(category?: TouristCategory): Promise<TouristSpot[]> {
     return contentRepository.getTouristSpots(category);
@@ -58,10 +55,6 @@ export const dataService = {
       // Fall back to mock external providers
     }
     return externalProviders;
-  },
-
-  getRides(): Promise<Ride[]> {
-    return Promise.resolve(rides);
   },
 
   getPromotions(): Promise<Promotion[]> {

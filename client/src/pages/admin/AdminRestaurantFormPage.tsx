@@ -33,10 +33,11 @@ export default function AdminRestaurantFormPage() {
         if (!cancelled && restaurant) {
           setForm({
             ...restaurant,
-            openTime: restaurant.openTime || '08:00',
-            closeTime: restaurant.closeTime || '21:00',
-            location: 'Batangas City',
-            coordinates: restaurant.coordinates || { lat: 13.7565, lng: 121.0583 },
+            openTime: restaurant.openTime || '',
+            closeTime: restaurant.closeTime || '',
+            location: restaurant.location || 'Batangas City',
+            coordinates: restaurant.coordinates || { lat: 0, lng: 0 },
+            isFeatured: Boolean(restaurant.isFeatured),
           });
         }
       } catch {
@@ -59,9 +60,10 @@ export default function AdminRestaurantFormPage() {
     const formattedHours = formatOpeningHours(form.openTime, form.closeTime);
     const payload = {
       ...form,
-      location: 'Batangas City',
+      location: form.location || 'Batangas City',
       openingHours: formattedHours,
       isOpen: isCurrentlyOpenNow(form.openTime, form.closeTime),
+      isFeatured: Boolean(form.isFeatured),
     };
     try {
       if (isEditing && id) {
@@ -121,19 +123,38 @@ export default function AdminRestaurantFormPage() {
           folder="restaurants"
         />
 
+        {/* Promoted Toggle */}
+        <label className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-lacvay-cream/70 p-4 transition hover:bg-lacvay-cream cursor-pointer">
+          <div className="space-y-0.5">
+            <span className="block text-sm font-bold text-gray-900">
+              Promote this Eatery in Dining Guide
+            </span>
+            <span className="block text-xs text-gray-500">
+              Feature this dining spot with a highlighted badge and top-tier placement in recommendations.
+            </span>
+          </div>
+          <input
+            type="checkbox"
+            checked={Boolean(form.isFeatured)}
+            onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })}
+            className="h-5 w-5 rounded accent-lacvay-green cursor-pointer"
+          />
+        </label>
+
         {/* Coordinates */}
         <div className="grid grid-cols-2 gap-3">
           <Input
             label="Latitude"
             type="number"
             step="any"
-            value={form.coordinates?.lat ?? 13.7565}
+            placeholder="e.g. 13.7565"
+            value={form.coordinates?.lat ? form.coordinates.lat : ''}
             onChange={(e) =>
               setForm({
                 ...form,
                 coordinates: {
-                  lat: parseFloat(e.target.value) || 0,
-                  lng: form.coordinates?.lng ?? 121.0583,
+                  lat: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0,
+                  lng: form.coordinates?.lng ?? 0,
                 },
               })
             }
@@ -142,13 +163,14 @@ export default function AdminRestaurantFormPage() {
             label="Longitude"
             type="number"
             step="any"
-            value={form.coordinates?.lng ?? 121.0583}
+            placeholder="e.g. 121.0583"
+            value={form.coordinates?.lng ? form.coordinates.lng : ''}
             onChange={(e) =>
               setForm({
                 ...form,
                 coordinates: {
-                  lat: form.coordinates?.lat ?? 13.7565,
-                  lng: parseFloat(e.target.value) || 0,
+                  lat: form.coordinates?.lat ?? 0,
+                  lng: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0,
                 },
               })
             }
@@ -159,7 +181,7 @@ export default function AdminRestaurantFormPage() {
           label="Price range"
           value={form.priceRange}
           onChange={(e) => setForm({ ...form, priceRange: e.target.value })}
-          placeholder="₱₱ (e.g. ₱, ₱₱, ₱₱₱)"
+          placeholder="e.g. ₱, ₱₱, ₱₱₱"
         />
 
         {/* Operating Hours */}
@@ -170,7 +192,7 @@ export default function AdminRestaurantFormPage() {
               <label className="mb-1 block text-xs font-semibold text-gray-500">Opens at</label>
               <input
                 type="time"
-                value={form.openTime || '08:00'}
+                value={form.openTime || ''}
                 onChange={(e) => setForm({ ...form, openTime: e.target.value })}
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-lacvay-green focus:bg-white focus:ring-2 focus:ring-lacvay-green/20"
               />
@@ -179,7 +201,7 @@ export default function AdminRestaurantFormPage() {
               <label className="mb-1 block text-xs font-semibold text-gray-500">Closes at</label>
               <input
                 type="time"
-                value={form.closeTime || '21:00'}
+                value={form.closeTime || ''}
                 onChange={(e) => setForm({ ...form, closeTime: e.target.value })}
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-lacvay-green focus:bg-white focus:ring-2 focus:ring-lacvay-green/20"
               />

@@ -40,29 +40,40 @@ export default function RestaurantsPage() {
         <EmptyState title="No restaurants found" description="Eateries will appear here once added." />
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {restaurants.map((r) => (
-            <Card key={r.id} padding="sm" className="overflow-hidden p-0 flex flex-col">
-              <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-100">
-                <img src={r.imageUrl} alt={r.name} className="h-full w-full object-cover" loading="lazy" />
-                <div className="absolute left-3 top-3">
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold shadow-sm backdrop-blur',
-                      r.isOpen
-                        ? 'bg-emerald-500/90 text-white'
-                        : 'bg-rose-500/90 text-white',
+          {[...restaurants]
+            .sort((a, b) => {
+              if (a.isFeatured && !b.isFeatured) return -1;
+              if (!a.isFeatured && b.isFeatured) return 1;
+              return a.name.localeCompare(b.name);
+            })
+            .map((r) => (
+              <Card key={r.id} padding="sm" className="overflow-hidden p-0 flex flex-col">
+                <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-100">
+                  <img src={r.imageUrl} alt={r.name} className="h-full w-full object-cover" loading="lazy" />
+                  <div className="absolute left-3 top-3 flex flex-col gap-1.5 items-start">
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold shadow-sm backdrop-blur',
+                        r.isOpen
+                          ? 'bg-emerald-500/90 text-white'
+                          : 'bg-rose-500/90 text-white',
+                      )}
+                    >
+                      <span className={cn('h-1.5 w-1.5 rounded-full bg-white', r.isOpen && 'animate-pulse')} />
+                      {r.isOpen ? 'Open Now' : 'Closed'}
+                    </span>
+                    {r.isFeatured && (
+                      <span className="inline-flex items-center rounded-full bg-yellow-400 px-2.5 py-0.5 text-xs font-bold text-gray-900 shadow-sm backdrop-blur">
+                        ★ Promoted
+                      </span>
                     )}
-                  >
-                    <span className={cn('h-1.5 w-1.5 rounded-full bg-white', r.isOpen && 'animate-pulse')} />
-                    {r.isOpen ? 'Open Now' : 'Closed'}
-                  </span>
+                  </div>
+                  {r.priceRange && (
+                    <span className="absolute bottom-3 right-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-lacvay-green shadow-sm">
+                      {r.priceRange}
+                    </span>
+                  )}
                 </div>
-                {r.priceRange && (
-                  <span className="absolute bottom-3 right-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-lacvay-green shadow-sm">
-                    {r.priceRange}
-                  </span>
-                )}
-              </div>
 
               <div className="flex flex-1 flex-col p-4">
                 <h3 className="font-bold text-gray-900 text-[16px]">{r.name}</h3>

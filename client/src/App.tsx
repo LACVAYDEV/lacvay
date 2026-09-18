@@ -1,6 +1,6 @@
 import { Suspense, lazy, useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from '@/context/AuthContext';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
 import { ProtectedRoute, PublicOnlyRoute, AdminRoute, SessionModeRoute, AppSplash } from '@/components/auth/RouteGuards';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -28,6 +28,7 @@ const AdminPlacesPage = lazy(() => import('@/pages/admin/AdminPlacesPage'));
 const AdminPlaceFormPage = lazy(() => import('@/pages/admin/AdminPlaceFormPage'));
 const AdminRestaurantsPage = lazy(() => import('@/pages/admin/AdminRestaurantsPage'));
 const AdminRestaurantFormPage = lazy(() => import('@/pages/admin/AdminRestaurantFormPage'));
+const AdminTransitPage = lazy(() => import('@/pages/admin/AdminTransitPage'));
 const AdminPromotionsPage = lazy(() => import('@/pages/admin/AdminPromotionsPage'));
 const AdminPromotionFormPage = lazy(() => import('@/pages/admin/AdminPromotionFormPage'));
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'));
@@ -59,6 +60,23 @@ function AppShell() {
   );
 }
 
+/** Root route: Shows LandingPage for unauthenticated visitors, AppShell for signed-in commuters */
+function RootRoute() {
+  const { session, isLoading, needsModeChoice } = useAuth();
+
+  if (isLoading) return <AppSplash />;
+
+  if (!session) {
+    return <LandingPage />;
+  }
+
+  if (needsModeChoice) {
+    return <Navigate to="/choose-mode" replace />;
+  }
+
+  return <AppShell />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -66,6 +84,10 @@ export default function App() {
         <AppProvider>
           <Suspense fallback={<AppSplash />}>
             <Routes>
+              {/* Root URL: LandingPage for visitors; User AppShell for signed-in commuters */}
+              <Route path="/" element={<RootRoute />} />
+
+              {/* Public & Auth pages */}
               <Route
                 path="/welcome"
                 element={
@@ -93,6 +115,8 @@ export default function App() {
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/privacy" element={<LegalPage />} />
               <Route path="/terms" element={<LegalPage />} />
+
+              {/* Protected mode choice */}
               <Route
                 path="/choose-mode"
                 element={
@@ -101,6 +125,8 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+
+              {/* Protected admin section */}
               <Route
                 path="/admin"
                 element={
@@ -122,13 +148,18 @@ export default function App() {
                 <Route path="restaurants" element={<AdminRestaurantsPage />} />
                 <Route path="restaurants/new" element={<AdminRestaurantFormPage />} />
                 <Route path="restaurants/:id/edit" element={<AdminRestaurantFormPage />} />
+                <Route path="transit" element={<AdminTransitPage />} />
               </Route>
+
+              {/* All client/user app feature routes - STRICTLY PROTECTED */}
               <Route
                 path="/*"
                 element={
-                  <SessionModeRoute>
-                    <AppShell />
-                  </SessionModeRoute>
+                  <ProtectedRoute>
+                    <SessionModeRoute>
+                      <AppShell />
+                    </SessionModeRoute>
+                  </ProtectedRoute>
                 }
               />
             </Routes>

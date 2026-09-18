@@ -70,8 +70,8 @@ export default function FaresPage() {
           </div>
           {result.transportType === 'jeepney' && (
             <p className="mt-4 text-xs leading-relaxed text-gray-500">
-              Traditional jeepney fare: ₱14 for the first 4 km, plus ₱2 for every succeeding km.
-              Ask the operator about student, senior, and PWD discounts.
+              Jeepney fares follow fixed trip pricing (Standard Trip and Extended Trip).
+              Discounts apply for students, senior citizens, and PWDs. Extended trip fares are cumulative totals.
             </p>
           )}
         </Card>

@@ -24,7 +24,7 @@ function EateryGridCard({ restaurant, onSelect }: { restaurant: Restaurant; onSe
           alt=""
           className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
         />
-        <div className="absolute left-2 top-2">
+        <div className="absolute left-2 top-2 flex flex-col gap-1 items-start">
           <span
             className={cn(
               'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur shadow-sm',
@@ -36,6 +36,11 @@ function EateryGridCard({ restaurant, onSelect }: { restaurant: Restaurant; onSe
             <span className={cn('h-1.5 w-1.5 rounded-full bg-white', restaurant.isOpen && 'animate-pulse')} />
             {restaurant.isOpen ? 'Open' : 'Closed'}
           </span>
+          {restaurant.isFeatured && (
+            <Badge variant="yellow" className="shadow-sm">
+              ★ Promoted
+            </Badge>
+          )}
         </div>
         {restaurant.priceRange && (
           <div className="absolute bottom-2 right-2 rounded-full bg-white/95 px-2 py-1 text-[11px] font-bold text-lacvay-green shadow-sm">
@@ -60,10 +65,12 @@ function EateryDetailModal({
   restaurant,
   onClose,
   onDelete,
+  onTogglePromote,
 }: {
   restaurant: Restaurant;
   onClose: () => void;
   onDelete: () => void;
+  onTogglePromote: () => void;
 }) {
   const navigate = useNavigate();
 
@@ -94,6 +101,9 @@ function EateryDetailModal({
                   <span className={cn('h-1.5 w-1.5 rounded-full', restaurant.isOpen ? 'bg-emerald-500' : 'bg-rose-500')} />
                   {restaurant.isOpen ? 'Currently Open' : 'Currently Closed'}
                 </span>
+                {restaurant.isFeatured && (
+                  <Badge variant="yellow">★ Promoted Eatery</Badge>
+                )}
                 {restaurant.priceRange && (
                   <Badge variant="lime">{restaurant.priceRange}</Badge>
                 )}
@@ -139,6 +149,19 @@ function EateryDetailModal({
 
             <div className="mt-auto flex flex-wrap gap-2 pt-2">
               <Button
+                variant={restaurant.isFeatured ? 'outline' : 'secondary'}
+                size="sm"
+                className={cn(
+                  'transition-all font-semibold',
+                  restaurant.isFeatured
+                    ? 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100'
+                    : 'border-gray-200 text-gray-700 hover:border-amber-300 hover:bg-amber-50/60'
+                )}
+                onClick={onTogglePromote}
+              >
+                {restaurant.isFeatured ? 'Demote' : '★ Promote eatery'}
+              </Button>
+              <Button
                 variant="primary"
                 size="sm"
                 onClick={() => {
@@ -182,6 +205,19 @@ export default function AdminRestaurantsPage() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const handleTogglePromote = async (restaurant: Restaurant) => {
+    try {
+      const nextFeatured = !restaurant.isFeatured;
+      const updated: Restaurant = { ...restaurant, isFeatured: nextFeatured };
+      await adminService.updateRestaurant(updated);
+      showToast(nextFeatured ? `"${restaurant.name}" is now promoted!` : `"${restaurant.name}" promotion removed`);
+      setSelectedRestaurant(updated);
+      await refresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not update promotion status');
+    }
+  };
 
   const remove = async (restaurant: Restaurant) => {
     if (!window.confirm(`Delete "${restaurant.name}"?`)) return;
@@ -278,6 +314,7 @@ export default function AdminRestaurantsPage() {
           restaurant={selectedRestaurant}
           onClose={() => setSelectedRestaurant(null)}
           onDelete={() => void remove(selectedRestaurant)}
+          onTogglePromote={() => void handleTogglePromote(selectedRestaurant)}
         />
       )}
     </div>
