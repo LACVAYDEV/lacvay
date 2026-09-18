@@ -387,6 +387,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         </button>
       </div>
 
+
       <p className="mt-6 text-center text-[12px] text-gray-500">
         {isSignUp ? 'Already have an account? ' : "Don't have an account yet? "}
         <Link

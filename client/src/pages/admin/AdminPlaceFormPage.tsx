@@ -32,9 +32,9 @@ export default function AdminPlaceFormPage() {
         if (!cancelled && spot) {
           setForm({
             ...spot,
-            openTime: spot.openTime || '08:00',
-            closeTime: spot.closeTime || '17:00',
-            location: 'Batangas City',
+            openTime: spot.openTime || '',
+            closeTime: spot.closeTime || '',
+            location: spot.location || 'Batangas City',
           });
         }
       } catch {
@@ -53,11 +53,15 @@ export default function AdminPlaceFormPage() {
       showToast('Name is required');
       return;
     }
+    if (!form.category) {
+      showToast('Please select a Category');
+      return;
+    }
     setSaving(true);
     const formattedHours = formatOpeningHours(form.openTime, form.closeTime);
     const payload = {
       ...form,
-      location: 'Batangas City',
+      location: form.location || 'Batangas City',
       openingHours: formattedHours,
     };
     try {
@@ -114,10 +118,13 @@ export default function AdminPlaceFormPage() {
           />
         </div>
         <Select
-          label="Category"
+          label="Category *"
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value as TouristCategory })}
-          options={placeCategories.map((c) => ({ value: c, label: c }))}
+          options={[
+            { value: '', label: 'Select category...' },
+            ...placeCategories.map((c) => ({ value: c, label: c })),
+          ]}
         />
         <MediaUploadField
           label="Destination media (image or video)"
@@ -150,18 +157,32 @@ export default function AdminPlaceFormPage() {
             label="Latitude"
             type="number"
             step="any"
-            value={form.coordinates.lat}
+            placeholder="e.g. 13.7565"
+            value={form.coordinates?.lat ? form.coordinates.lat : ''}
             onChange={(e) =>
-              setForm({ ...form, coordinates: { ...form.coordinates, lat: parseFloat(e.target.value) || 0 } })
+              setForm({
+                ...form,
+                coordinates: {
+                  ...form.coordinates,
+                  lat: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0,
+                },
+              })
             }
           />
           <Input
             label="Longitude"
             type="number"
             step="any"
-            value={form.coordinates.lng}
+            placeholder="e.g. 121.0583"
+            value={form.coordinates?.lng ? form.coordinates.lng : ''}
             onChange={(e) =>
-              setForm({ ...form, coordinates: { ...form.coordinates, lng: parseFloat(e.target.value) || 0 } })
+              setForm({
+                ...form,
+                coordinates: {
+                  ...form.coordinates,
+                  lng: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0,
+                },
+              })
             }
           />
         </div>
@@ -174,7 +195,7 @@ export default function AdminPlaceFormPage() {
               <label className="mb-1 block text-xs font-semibold text-gray-500">Opens at</label>
               <input
                 type="time"
-                value={form.openTime || '08:00'}
+                value={form.openTime || ''}
                 onChange={(e) => setForm({ ...form, openTime: e.target.value })}
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-lacvay-green focus:bg-white focus:ring-2 focus:ring-lacvay-green/20"
               />
@@ -183,7 +204,7 @@ export default function AdminPlaceFormPage() {
               <label className="mb-1 block text-xs font-semibold text-gray-500">Closes at</label>
               <input
                 type="time"
-                value={form.closeTime || '17:00'}
+                value={form.closeTime || ''}
                 onChange={(e) => setForm({ ...form, closeTime: e.target.value })}
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-lacvay-green focus:bg-white focus:ring-2 focus:ring-lacvay-green/20"
               />

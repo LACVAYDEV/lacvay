@@ -60,6 +60,7 @@ export function placeToRestaurant(row: PlaceRow): Restaurant {
     closeTime,
     openingHours,
     isOpen,
+    isFeatured: Boolean(row.is_featured ?? meta.is_promoted ?? false),
   };
 }
 
@@ -105,7 +106,7 @@ export function restaurantToPlaceRow(
     image_url: restaurant.imageUrl,
     latitude: restaurant.coordinates.lat,
     longitude: restaurant.coordinates.lng,
-    is_featured: true,
+    is_featured: Boolean(restaurant.isFeatured),
     metadata: {
       place_type: PLACE_TYPE_RESTAURANT,
       location: 'Batangas City',
@@ -113,6 +114,7 @@ export function restaurantToPlaceRow(
       closeTime: restaurant.closeTime,
       openingHours: formattedHours,
       priceRange: restaurant.priceRange,
+      is_promoted: Boolean(restaurant.isFeatured),
     },
   };
 }

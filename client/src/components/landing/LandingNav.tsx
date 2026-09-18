@@ -17,8 +17,8 @@ export function LandingNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-        <Link to="/welcome" className="flex items-center gap-2.5">
-          <LogoMark className="size-12" />
+        <Link to="/" className="flex items-center gap-2.5">
+          <LogoMark className="size-12 shrink-0" />
           <span className="leading-none">
             <span className="block text-[19px] font-extrabold tracking-tight text-lacvay-green">LACVAY</span>
             <span className="mt-1 block text-[10px] text-gray-500">Batangas City Assistant</span>

@@ -61,10 +61,12 @@ function SpotDetailModal({
   spot,
   onClose,
   onDelete,
+  onTogglePromote,
 }: {
   spot: TouristSpot;
   onClose: () => void;
   onDelete: () => void;
+  onTogglePromote: () => void;
 }) {
   const navigate = useNavigate();
 
@@ -124,6 +126,19 @@ function SpotDetailModal({
 
           <div className="mt-auto flex flex-wrap gap-2 pt-2">
             <Button
+              variant={spot.isFeatured ? 'outline' : 'secondary'}
+              size="sm"
+              className={cn(
+                'transition-all font-semibold',
+                spot.isFeatured
+                  ? 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100'
+                  : 'border-gray-200 text-gray-700 hover:border-amber-300 hover:bg-amber-50/60'
+              )}
+              onClick={onTogglePromote}
+            >
+              {spot.isFeatured ? 'Demote' : '★ Promote destination'}
+            </Button>
+            <Button
               variant="primary"
               size="sm"
               onClick={() => {
@@ -167,6 +182,19 @@ export default function AdminPlacesPage() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const handleTogglePromote = async (spot: TouristSpot) => {
+    try {
+      const nextFeatured = !spot.isFeatured;
+      const updated: TouristSpot = { ...spot, isFeatured: nextFeatured };
+      await adminService.updatePlace(updated);
+      showToast(nextFeatured ? `"${spot.name}" is now promoted!` : `"${spot.name}" promotion removed`);
+      setSelectedSpot(updated);
+      await refresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not update promotion status');
+    }
+  };
 
   const remove = async (spot: TouristSpot) => {
     if (!window.confirm(`Delete "${spot.name}"?`)) return;
@@ -259,6 +287,7 @@ export default function AdminPlacesPage() {
           spot={selectedSpot}
           onClose={() => setSelectedSpot(null)}
           onDelete={() => void remove(selectedSpot)}
+          onTogglePromote={() => void handleTogglePromote(selectedSpot)}
         />
       )}
     </div>
