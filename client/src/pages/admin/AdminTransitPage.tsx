@@ -43,16 +43,6 @@ function isWhiteColor(hex: string): boolean {
   return upper === '#FFFFFF' || upper === '#FFF' || upper === 'WHITE';
 }
 
-function deriveRouteCode(name: string): string {
-  const cleaned = name
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9\s-]/g, '')
-    .split(/\s+/)
-    .join('-');
-  return cleaned.substring(0, 30) || 'ROUTE';
-}
-
 export default function AdminTransitPage() {
   const [routes, setRoutes] = useState<TransitRouteRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,8 +83,8 @@ export default function AdminTransitPage() {
       setLoading(true);
       const routeData = await transitAdminService.listRoutes();
       setRoutes(routeData);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to load transit data';
+    } catch (err: any) {
+      const msg = err?.message || (err instanceof Error ? err.message : 'Failed to load transit data');
       showNotification('error', msg);
     } finally {
       setLoading(false);
@@ -255,12 +245,10 @@ export default function AdminTransitPage() {
 
     try {
       setActionLoading(true);
-      const derivedCode = deriveRouteCode(routeName);
 
       if (editingRoute) {
         // Update existing route
         const updated = await transitAdminService.updateRoute(editingRoute.id, {
-          route_code: derivedCode,
           route_name: routeName.trim(),
           vehicle_type: 'Jeepney',
           color_code: colorCode,
@@ -270,7 +258,6 @@ export default function AdminTransitPage() {
       } else {
         // Create new route
         const insertData: TransitRouteInsert = {
-          route_code: derivedCode,
           route_name: routeName.trim(),
           vehicle_type: 'Jeepney',
           color_code: colorCode,
@@ -298,8 +285,8 @@ export default function AdminTransitPage() {
       showNotification('success', `Route "${routeName.trim()}" saved successfully!`);
       setCurrentView('list');
       setEditingRoute(null);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to save route data';
+    } catch (err: any) {
+      const msg = err?.message || (err instanceof Error ? err.message : 'Failed to save route data');
       showNotification('error', msg);
     } finally {
       setActionLoading(false);
@@ -319,8 +306,8 @@ export default function AdminTransitPage() {
         setEditingRoute(null);
       }
       showNotification('success', 'Route deleted successfully');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to delete route';
+    } catch (err: any) {
+      const msg = err?.message || (err instanceof Error ? err.message : 'Failed to delete route');
       showNotification('error', msg);
     } finally {
       setActionLoading(false);
