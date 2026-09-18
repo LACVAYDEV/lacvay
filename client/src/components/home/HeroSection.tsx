@@ -25,7 +25,7 @@ export function HeroSection() {
             Your Batangas City
             <span className="block text-lacvay-yellow">Travel Companion</span>
           </h2>
-          <p className="mt-3 max-w-[17rem] text-[14px] font-semibold leading-[1.55] text-black text-opacity-80 min-[375px]:text-[14px] sm:max-w-[19rem] sm:font-normal">
+          <p className="mt-3 max-w-[17rem] text-[11px] font-semibold leading-[1.55] text-black text-opacity-80 min-[375px]:text-[12px] sm:max-w-[19rem] sm:font-normal">
             Find routes, check fares, learn how to book Angkas and taxis, explore attractions, and get AI travel help — all in one place.
           </p>
           <div className="mt-5 flex flex-col items-start gap-2.5 min-[430px]:flex-row min-[430px]:flex-wrap min-[430px]:items-center sm:gap-3">
