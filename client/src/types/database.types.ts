@@ -251,7 +251,7 @@ export type Database = {
           created_at: string | null
           geojson_path: Json | null
           id: string
-          route_code: string
+          route_code?: string | null
           route_name: string
           vehicle_type: string
         }
@@ -260,7 +260,7 @@ export type Database = {
           created_at?: string | null
           geojson_path?: Json | null
           id?: string
-          route_code: string
+          route_code?: string | null
           route_name: string
           vehicle_type?: string
         }
@@ -269,7 +269,7 @@ export type Database = {
           created_at?: string | null
           geojson_path?: Json | null
           id?: string
-          route_code?: string
+          route_code?: string | null
           route_name?: string
           vehicle_type?: string
         }
