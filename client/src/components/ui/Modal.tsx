@@ -10,6 +10,8 @@ interface ModalProps {
   children: ReactNode;
   className?: string;
   size?: 'md' | 'lg' | 'xl';
+  role?: 'dialog' | 'alertdialog';
+  descriptionId?: string;
 }
 
 const sizeClasses = {
@@ -18,7 +20,16 @@ const sizeClasses = {
   xl: 'max-w-4xl',
 };
 
-export function Modal({ open, onClose, title, children, className, size = 'lg' }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  className,
+  size = 'lg',
+  role = 'dialog',
+  descriptionId,
+}: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
@@ -33,8 +44,13 @@ export function Modal({ open, onClose, title, children, className, size = 'lg' }
     const focusable = () => Array.from(
       dialogRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [],
     );
+    const isTopmostDialog = () => {
+      const dialogs = document.querySelectorAll<HTMLElement>('[aria-modal="true"]');
+      return dialogs[dialogs.length - 1] === dialogRef.current;
+    };
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (!isTopmostDialog()) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
@@ -80,9 +96,10 @@ export function Modal({ open, onClose, title, children, className, size = 'lg' }
       />
       <div
         ref={dialogRef}
-        role="dialog"
+        role={role}
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
+        aria-describedby={descriptionId}
         className={cn(
           'relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-card',
           sizeClasses[size],

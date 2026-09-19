@@ -4,6 +4,7 @@ import { Megaphone, Plus, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState, LoadingState } from '@/components/ui/States';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { PromotionAdMedia } from '@/components/promotions/PromotionAdMedia';
@@ -149,6 +150,7 @@ function PromoDetailModal({
 export default function AdminPromotionsPage() {
   const navigate = useNavigate();
   const { showToast } = useApp();
+  const confirm = useConfirmDialog();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
@@ -167,7 +169,12 @@ export default function AdminPromotionsPage() {
   }, [refresh]);
 
   const remove = async (promotion: Promotion) => {
-    if (!window.confirm(`Delete "${promotion.title}"?`)) return;
+    const confirmed = await confirm({
+      title: 'Delete promotion?',
+      description: `"${promotion.title}" will be permanently deleted.`,
+      confirmLabel: 'Delete promotion',
+    });
+    if (!confirmed) return;
     try {
       await adminService.deletePromotion(promotion.id);
       setSelectedPromotion(null);
@@ -179,13 +186,12 @@ export default function AdminPromotionsPage() {
   };
 
   const handleWipeAll = async () => {
-    if (
-      !window.confirm(
-        `Are you sure you want to permanently delete all ${promotions.length} promotions from the database? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Delete all promotions?',
+      description: `All ${promotions.length} promotions will be permanently deleted from the database. This action cannot be undone.`,
+      confirmLabel: 'Delete all',
+    });
+    if (!confirmed) return;
     setLoading(true);
     try {
       await adminService.clearAllPromotions();

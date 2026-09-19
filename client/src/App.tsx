@@ -5,6 +5,7 @@ import { AppProvider } from '@/context/AppContext';
 import { ProtectedRoute, PublicOnlyRoute, AdminRoute, SessionModeRoute, AppSplash } from '@/components/auth/RouteGuards';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoadingState } from '@/components/ui/States';
+import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
@@ -83,8 +84,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppProvider>
-          <Suspense fallback={<AppSplash />}>
-            <Routes>
+          <ConfirmDialogProvider>
+            <Suspense fallback={<AppSplash />}>
+              <Routes>
               {/* Root URL: LandingPage for visitors; User AppShell for signed-in commuters */}
               <Route path="/" element={<RootRoute />} />
 
@@ -164,8 +166,9 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-            </Routes>
-          </Suspense>
+              </Routes>
+            </Suspense>
+          </ConfirmDialogProvider>
         </AppProvider>
       </AuthProvider>
     </BrowserRouter>

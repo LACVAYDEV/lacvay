@@ -18,6 +18,7 @@ import { PlaceCard } from '@/components/places/PlaceCard';
 import { LoadingState, EmptyState } from '@/components/ui/States';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { UserFavorite, SavedGuide, SavedGuideStep } from '@/types';
 
 interface SavedPageProps {
@@ -27,6 +28,7 @@ interface SavedPageProps {
 export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
   const { user } = useAuth();
   const { showToast } = useApp();
+  const confirm = useConfirmDialog();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -79,7 +81,12 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
   };
 
   const handleDeleteGuide = async (guideId: string) => {
-    if (!confirm('Are you sure you want to remove this saved guide?')) return;
+    const confirmed = await confirm({
+      title: 'Remove saved guide?',
+      description: 'This guide will be removed from your saved trips.',
+      confirmLabel: 'Remove guide',
+    });
+    if (!confirmed) return;
     try {
       await savedGuidesService.deleteSavedGuide(guideId, user?.id);
       setSavedGuides((prev) => prev.filter((g) => g.id !== guideId));

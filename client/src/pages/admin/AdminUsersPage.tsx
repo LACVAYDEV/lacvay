@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LoadingState, EmptyState } from '@/components/ui/States';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { adminService } from '@/services/adminService';
@@ -32,6 +33,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 export default function AdminUsersPage() {
   const { showToast } = useApp();
+  const confirm = useConfirmDialog();
   const { user: currentUser, refreshProfile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,9 +90,13 @@ export default function AdminUsersPage() {
   };
 
   const resetPassword = async (user: UserProfile) => {
-    if (!window.confirm(`Reset password for ${user.email}? They will need the new default password to sign in.`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Reset user password?',
+      description: `${user.email} will need the new default password to sign in.`,
+      confirmLabel: 'Reset password',
+      variant: 'warning',
+    });
+    if (!confirmed) return;
     setResettingId(user.id);
     try {
       const defaultPassword = await adminService.resetUserPassword(user.id);
@@ -103,13 +109,12 @@ export default function AdminUsersPage() {
   };
 
   const removeUser = async (user: UserProfile) => {
-    if (
-      !window.confirm(
-        `Permanently remove ${user.full_name || user.email}? This deletes their account, profile, and saved data. This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Permanently remove account?',
+      description: `This will permanently delete ${user.full_name || user.email}'s account, profile, and saved data. This action cannot be undone.`,
+      confirmLabel: 'Remove account',
+    });
+    if (!confirmed) return;
     setDeletingId(user.id);
     try {
       await adminService.deleteUser(user.id);

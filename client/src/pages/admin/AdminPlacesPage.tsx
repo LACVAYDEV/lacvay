@@ -4,6 +4,7 @@ import { Clock, Plus, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState, LoadingState } from '@/components/ui/States';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { adminService } from '@/services/adminService';
@@ -166,6 +167,7 @@ function SpotDetailModal({
 export default function AdminPlacesPage() {
   const navigate = useNavigate();
   const { showToast } = useApp();
+  const confirm = useConfirmDialog();
   const [places, setPlaces] = useState<TouristSpot[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSpot, setSelectedSpot] = useState<TouristSpot | null>(null);
@@ -197,7 +199,12 @@ export default function AdminPlacesPage() {
   };
 
   const remove = async (spot: TouristSpot) => {
-    if (!window.confirm(`Delete "${spot.name}"?`)) return;
+    const confirmed = await confirm({
+      title: 'Delete destination?',
+      description: `"${spot.name}" will be permanently deleted.`,
+      confirmLabel: 'Delete destination',
+    });
+    if (!confirmed) return;
     try {
       await adminService.deletePlace(spot.id);
       setSelectedSpot(null);
@@ -209,13 +216,12 @@ export default function AdminPlacesPage() {
   };
 
   const handleWipeAll = async () => {
-    if (
-      !window.confirm(
-        `Are you sure you want to permanently delete all ${places.length} destinations from the database? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Delete all destinations?',
+      description: `All ${places.length} destinations will be permanently deleted from the database. This action cannot be undone.`,
+      confirmLabel: 'Delete all',
+    });
+    if (!confirmed) return;
     setLoading(true);
     try {
       await adminService.clearAllPlaces();

@@ -4,6 +4,7 @@ import { Clock, Plus, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState, LoadingState } from '@/components/ui/States';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { adminService } from '@/services/adminService';
@@ -189,6 +190,7 @@ function EateryDetailModal({
 export default function AdminRestaurantsPage() {
   const navigate = useNavigate();
   const { showToast } = useApp();
+  const confirm = useConfirmDialog();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -220,7 +222,12 @@ export default function AdminRestaurantsPage() {
   };
 
   const remove = async (restaurant: Restaurant) => {
-    if (!window.confirm(`Delete "${restaurant.name}"?`)) return;
+    const confirmed = await confirm({
+      title: 'Delete eatery?',
+      description: `"${restaurant.name}" will be permanently deleted.`,
+      confirmLabel: 'Delete eatery',
+    });
+    if (!confirmed) return;
     try {
       await adminService.deleteRestaurant(restaurant.id);
       setSelectedRestaurant(null);
@@ -232,13 +239,12 @@ export default function AdminRestaurantsPage() {
   };
 
   const handleWipeAll = async () => {
-    if (
-      !window.confirm(
-        `Are you sure you want to permanently delete all ${restaurants.length} eateries from the database? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Delete all eateries?',
+      description: `All ${restaurants.length} eateries will be permanently deleted from the database. This action cannot be undone.`,
+      confirmLabel: 'Delete all',
+    });
+    if (!confirmed) return;
     setLoading(true);
     try {
       await adminService.clearAllPlaces();
