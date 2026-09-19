@@ -121,7 +121,7 @@ export default function AdminTransitPage() {
     validateGeoJson(formattedGeo);
 
     try {
-      const fares = await transitAdminService.getFixedFarePricing();
+      const fares = await transitAdminService.getRouteFares(route);
       if (fares) {
         setRegularFare(fares.regular != null ? fares.regular.toString() : '');
         setDiscountedFare(fares.discounted != null ? fares.discounted.toString() : '');
@@ -246,43 +246,72 @@ export default function AdminTransitPage() {
     try {
       setActionLoading(true);
 
+      // Prepare fare payload for this specific route
+      const reg = regularFare.trim() ? parseFloat(regularFare) : null;
+      const disc = discountedFare.trim() ? parseFloat(discountedFare) : null;
+      const extra = extraDistance.trim() ? parseFloat(extraDistance) : null;
+      const extraDisc = extraDistanceDiscounted.trim() ? parseFloat(extraDistanceDiscounted) : null;
+
+      const faresPayload = {
+        regular: reg,
+        discounted: disc,
+        extraDistance: extra,
+        extraDistanceDiscounted: extraDisc,
+      };
+
+      // Embed fares into the route's GeoJSON path so they persist directly with the route
+      let finalGeoJson: any = parsedGeoJson;
+      if (!finalGeoJson) {
+        if (reg !== null || disc !== null || extra !== null || extraDisc !== null) {
+          finalGeoJson = {
+            type: 'FeatureCollection',
+            features: [],
+            fares: faresPayload,
+          };
+        }
+      } else if (typeof finalGeoJson === 'object') {
+        finalGeoJson = {
+          ...finalGeoJson,
+          fares: faresPayload,
+          properties: {
+            ...(finalGeoJson.properties || {}),
+            fares: faresPayload,
+          },
+        };
+      }
+
+      let savedRoute: TransitRouteRow;
       if (editingRoute) {
         // Update existing route
-        const updated = await transitAdminService.updateRoute(editingRoute.id, {
+        savedRoute = await transitAdminService.updateRoute(editingRoute.id, {
           route_name: routeName.trim(),
           vehicle_type: 'Jeepney',
           color_code: colorCode,
-          geojson_path: parsedGeoJson,
+          geojson_path: finalGeoJson,
         });
-        setRoutes((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+        setRoutes((prev) => prev.map((r) => (r.id === savedRoute.id ? savedRoute : r)));
       } else {
         // Create new route
         const insertData: TransitRouteInsert = {
           route_name: routeName.trim(),
           vehicle_type: 'Jeepney',
           color_code: colorCode,
-          geojson_path: parsedGeoJson,
+          geojson_path: finalGeoJson,
         };
-        const created = await transitAdminService.createRoute(insertData);
-        setRoutes((prev) => [created, ...prev]);
+        savedRoute = await transitAdminService.createRoute(insertData);
+        setRoutes((prev) => [savedRoute, ...prev]);
       }
 
-      // Save fixed fare matrix if values are entered
-      const reg = regularFare.trim() ? parseFloat(regularFare) : null;
-      const disc = discountedFare.trim() ? parseFloat(discountedFare) : null;
-      const extra = extraDistance.trim() ? parseFloat(extraDistance) : null;
-      const extraDisc = extraDistanceDiscounted.trim() ? parseFloat(extraDistanceDiscounted) : null;
-
+      // Also save into jeepney_fare_matrix for this specific route
       if (reg !== null || disc !== null || extra !== null || extraDisc !== null) {
-        await transitAdminService.saveFixedFarePricing({
-          regular: reg,
-          discounted: disc,
-          extraDistance: extra,
-          extraDistanceDiscounted: extraDisc,
-        });
+        try {
+          await transitAdminService.saveRouteFares(savedRoute.id, savedRoute.route_name, faresPayload);
+        } catch (fareErr) {
+          console.warn('[AdminTransitPage] Could not update jeepney_fare_matrix rows:', fareErr);
+        }
       }
 
-      showNotification('success', `Route "${routeName.trim()}" saved successfully!`);
+      showNotification('success', `Route "${routeName.trim()}" and its fare matrix saved successfully!`);
       setCurrentView('list');
       setEditingRoute(null);
     } catch (err: any) {
@@ -437,6 +466,26 @@ export default function AdminTransitPage() {
                           </span>
                         </div>
                       )}
+
+                      {/* Individual Route Fare Breakdown */}
+                      {(() => {
+                        const routeFares = transitAdminService.extractRouteFares(route);
+                        if (routeFares && (routeFares.regular != null || routeFares.extraDistance != null)) {
+                          return (
+                            <div className="mt-3 rounded-2xl bg-gray-50/80 p-2.5 text-[11px] border border-gray-100">
+                              <div className="flex items-center justify-between text-gray-700 font-semibold">
+                                <span className="text-gray-500 font-medium">Standard Trip:</span>
+                                <span>₱{routeFares.regular?.toFixed(2) ?? '13.00'} <span className="text-lacvay-green text-[10px] font-normal">(Disc: ₱{routeFares.discounted?.toFixed(2) ?? '11.00'})</span></span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between font-semibold text-amber-800">
+                                <span className="text-amber-700 font-medium">Extended Trip:</span>
+                                <span>₱{routeFares.extraDistance?.toFixed(2) ?? '15.00'} <span className="text-amber-600 text-[10px] font-normal">(Disc: ₱{routeFares.extraDistanceDiscounted?.toFixed(2) ?? '12.00'})</span></span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
 
                     <div className="mt-5 border-t border-gray-100 pt-3">

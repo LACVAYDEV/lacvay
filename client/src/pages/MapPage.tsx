@@ -21,6 +21,7 @@ import {
   transitAdminService,
   type TransitRouteRow,
   type FixedFarePricing,
+  type JeepneyFareRow,
 } from '@/services/transitAdminService';
 import {
   getTransitColorMeta,
@@ -125,7 +126,8 @@ export default function MapPage() {
 
   // Transit Routes & Fixed Fare Pricing
   const [routes, setRoutes] = useState<TransitRouteRow[]>([]);
-  const [pricing, setPricing] = useState<FixedFarePricing | null>(null);
+  const [faresList, setFaresList] = useState<JeepneyFareRow[]>([]);
+  const [globalPricing, setGlobalPricing] = useState<FixedFarePricing | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -147,13 +149,15 @@ export default function MapPage() {
 
     async function fetchTransitData() {
       try {
-        const [loadedRoutes, loadedPricing] = await Promise.all([
+        const [loadedRoutes, loadedFares, loadedPricing] = await Promise.all([
           transitAdminService.listRoutes(),
+          transitAdminService.listFares(),
           transitAdminService.getFixedFarePricing(),
         ]);
         if (isMounted) {
           setRoutes(loadedRoutes);
-          setPricing(loadedPricing);
+          setFaresList(loadedFares);
+          setGlobalPricing(loadedPricing);
         }
       } catch (err) {
         console.error('Failed to load transit data:', err);
@@ -253,11 +257,56 @@ export default function MapPage() {
     [13.755, 121.066],
   ];
 
-  // Effective fare rates
-  const standardRegular = pricing?.regular ?? 13;
-  const standardDiscounted = pricing?.discounted ?? 11;
-  const extendedRegular = pricing?.extraDistance ?? 15;
-  const extendedDiscounted = pricing?.extraDistanceDiscounted ?? 12;
+  // Effective fare rates for the selected route specifically
+  const selectedRouteFares = useMemo<FixedFarePricing | null>(() => {
+    if (!selectedRoute) return globalPricing;
+
+    // 1. Check embedded in route.geojson_path
+    const embedded = transitAdminService.extractRouteFares(selectedRoute);
+    if (
+      embedded &&
+      (embedded.regular != null ||
+        embedded.discounted != null ||
+        embedded.extraDistance != null ||
+        embedded.extraDistanceDiscounted != null)
+    ) {
+      return embedded;
+    }
+
+    // 2. Check in jeepney_fare_matrix for this specific route
+    const routeSpecificFares = faresList.filter(
+      (f) =>
+        f.origin_landmark === selectedRoute.id ||
+        f.origin_landmark === selectedRoute.route_name ||
+        f.origin_landmark?.toLowerCase() === selectedRoute.route_name?.toLowerCase(),
+    );
+
+    if (routeSpecificFares.length > 0) {
+      const standard = routeSpecificFares.find(
+        (f) => f.destination_landmark === 'Standard Trip' || f.destination_landmark === 'Base Fare',
+      );
+      const extended = routeSpecificFares.find(
+        (f) => f.destination_landmark === 'Extended Trip' || f.destination_landmark === 'Extra Distance',
+      );
+
+      if (standard || extended) {
+        return {
+          regular: standard?.regular_fare ?? null,
+          discounted: standard?.discounted_fare ?? null,
+          extraDistance: extended?.regular_fare ?? null,
+          extraDistanceDiscounted: extended?.discounted_fare ?? null,
+        };
+      }
+    }
+
+    // 3. Fallback to global defaults if no route-specific fare is set
+    return globalPricing;
+  }, [selectedRoute, faresList, globalPricing]);
+
+  const standardRegular = selectedRouteFares?.regular ?? 13;
+  const standardDiscounted = selectedRouteFares?.discounted ?? 11;
+  const extendedRegular = selectedRouteFares?.extraDistance ?? 15;
+  const extendedDiscounted = selectedRouteFares?.extraDistanceDiscounted ?? 12;
 
   const isSelectedRouteWhite = selectedRoute ? isWhiteColor(selectedRoute.color_code) : false;
   const selectedRouteColorMeta = selectedRoute ? getTransitColorMeta(selectedRoute.color_code) : null;

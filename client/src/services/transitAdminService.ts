@@ -148,7 +148,139 @@ export const transitAdminService = {
     }
   },
 
-  // --- Fixed Fare Pricing Matrix ---
+  // --- Fixed Fare Pricing Matrix (Per Route / Per Jeep) ---
+  extractRouteFares(route?: TransitRouteRow | null): FixedFarePricing | null {
+    if (!route || !route.geojson_path) return null;
+    const path = route.geojson_path as Record<string, any>;
+    if (path.fares && typeof path.fares === 'object') {
+      return path.fares as FixedFarePricing;
+    }
+    if (path.properties && path.properties.fares && typeof path.properties.fares === 'object') {
+      return path.properties.fares as FixedFarePricing;
+    }
+    return null;
+  },
+
+  async getRouteFares(
+    route: TransitRouteRow,
+    cachedFares?: JeepneyFareRow[],
+  ): Promise<FixedFarePricing> {
+    // 1. Check embedded in route.geojson_path
+    const embedded = this.extractRouteFares(route);
+    if (
+      embedded &&
+      (embedded.regular != null ||
+        embedded.discounted != null ||
+        embedded.extraDistance != null ||
+        embedded.extraDistanceDiscounted != null)
+    ) {
+      return {
+        regular: embedded.regular ?? 13,
+        discounted: embedded.discounted ?? 11,
+        extraDistance: embedded.extraDistance ?? 15,
+        extraDistanceDiscounted: embedded.extraDistanceDiscounted ?? 12,
+      };
+    }
+
+    // 2. Check in jeepney_fare_matrix for this specific route (by route ID or route name)
+    try {
+      const fares = cachedFares || (await this.listFares());
+      const routeSpecificFares = fares.filter(
+        (f) =>
+          f.origin_landmark === route.id ||
+          f.origin_landmark === route.route_name ||
+          f.origin_landmark?.toLowerCase() === route.route_name?.toLowerCase(),
+      );
+
+      if (routeSpecificFares.length > 0) {
+        const standard = routeSpecificFares.find(
+          (f) => f.destination_landmark === 'Standard Trip' || f.destination_landmark === 'Base Fare',
+        );
+        const extended = routeSpecificFares.find(
+          (f) => f.destination_landmark === 'Extended Trip' || f.destination_landmark === 'Extra Distance',
+        );
+
+        if (standard || extended) {
+          return {
+            regular: standard ? standard.regular_fare : 13,
+            discounted: standard ? standard.discounted_fare : 11,
+            extraDistance: extended ? extended.regular_fare : 15,
+            extraDistanceDiscounted: extended ? extended.discounted_fare : 12,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[transitAdminService] Could not load route fare matrix:', err);
+    }
+
+    // 3. Fallback to global defaults if route has no specific fare configured yet
+    const globalPricing = await this.getFixedFarePricing();
+    return {
+      regular: globalPricing?.regular ?? 13,
+      discounted: globalPricing?.discounted ?? 11,
+      extraDistance: globalPricing?.extraDistance ?? 15,
+      extraDistanceDiscounted: globalPricing?.extraDistanceDiscounted ?? 12,
+    };
+  },
+
+  async saveRouteFares(
+    routeId: string,
+    routeName: string,
+    pricing: FixedFarePricing,
+  ): Promise<void> {
+    const fares = await this.listFares();
+
+    // Find any existing row for this route in jeepney_fare_matrix
+    const standard = fares.find(
+      (f) =>
+        (f.origin_landmark === routeId || f.origin_landmark === routeName) &&
+        (f.destination_landmark === 'Standard Trip' || f.destination_landmark === 'Base Fare'),
+    );
+    const extended = fares.find(
+      (f) =>
+        (f.origin_landmark === routeId || f.origin_landmark === routeName) &&
+        (f.destination_landmark === 'Extended Trip' || f.destination_landmark === 'Extra Distance'),
+    );
+
+    const reg = pricing.regular ?? 0;
+    const disc = pricing.discounted ?? 0;
+    const ext = pricing.extraDistance ?? 0;
+    const extDisc = pricing.extraDistanceDiscounted ?? 0;
+
+    if (standard) {
+      await this.updateFare(standard.id, {
+        origin_landmark: routeId,
+        destination_landmark: 'Standard Trip',
+        regular_fare: reg,
+        discounted_fare: disc,
+      });
+    } else if (pricing.regular != null || pricing.discounted != null) {
+      await this.createFare({
+        origin_landmark: routeId,
+        destination_landmark: 'Standard Trip',
+        regular_fare: reg,
+        discounted_fare: disc,
+      });
+    }
+
+    if (extended) {
+      await this.updateFare(extended.id, {
+        origin_landmark: routeId,
+        destination_landmark: 'Extended Trip',
+        regular_fare: ext,
+        discounted_fare: extDisc,
+      });
+    } else if (pricing.extraDistance != null || pricing.extraDistanceDiscounted != null) {
+      await this.createFare({
+        origin_landmark: routeId,
+        destination_landmark: 'Extended Trip',
+        regular_fare: ext,
+        discounted_fare: extDisc,
+      });
+    }
+  },
+
+  // --- Fallback Global Fixed Fare Pricing Matrix ---
   async getFixedFarePricing(): Promise<FixedFarePricing | null> {
     try {
       const fares = await this.listFares();

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Bus, MapPin, ArrowRight, Info, ShieldCheck, Tag } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
@@ -9,6 +9,7 @@ import {
   transitAdminService,
   type TransitRouteRow,
   type FixedFarePricing,
+  type JeepneyFareRow,
 } from '@/services/transitAdminService';
 import {
   getTransitColorMeta,
@@ -20,7 +21,8 @@ export default function FaresPage() {
   const [params, setParams] = useSearchParams();
 
   const [routes, setRoutes] = useState<TransitRouteRow[]>([]);
-  const [pricing, setPricing] = useState<FixedFarePricing | null>(null);
+  const [faresList, setFaresList] = useState<JeepneyFareRow[]>([]);
+  const [globalPricing, setGlobalPricing] = useState<FixedFarePricing | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
 
@@ -28,13 +30,15 @@ export default function FaresPage() {
     let isMounted = true;
     async function loadData() {
       try {
-        const [loadedRoutes, loadedPricing] = await Promise.all([
+        const [loadedRoutes, loadedFares, loadedGlobalPricing] = await Promise.all([
           transitAdminService.listRoutes(),
+          transitAdminService.listFares(),
           transitAdminService.getFixedFarePricing(),
         ]);
         if (isMounted) {
           setRoutes(loadedRoutes);
-          setPricing(loadedPricing);
+          setFaresList(loadedFares);
+          setGlobalPricing(loadedGlobalPricing);
 
           // Select route from query params or first route available
           const paramRouteId = params.get('routeId');
@@ -59,6 +63,52 @@ export default function FaresPage() {
 
   const selectedRoute = routes.find((r) => r.id === selectedRouteId) || routes[0] || null;
 
+  // Compute fares SPECIFICALLY for the selected jeepney/route
+  const selectedRouteFares = useMemo<FixedFarePricing | null>(() => {
+    if (!selectedRoute) return globalPricing;
+
+    // 1. Check embedded in route.geojson_path
+    const embedded = transitAdminService.extractRouteFares(selectedRoute);
+    if (
+      embedded &&
+      (embedded.regular != null ||
+        embedded.discounted != null ||
+        embedded.extraDistance != null ||
+        embedded.extraDistanceDiscounted != null)
+    ) {
+      return embedded;
+    }
+
+    // 2. Check in jeepney_fare_matrix for this specific route
+    const routeSpecificFares = faresList.filter(
+      (f) =>
+        f.origin_landmark === selectedRoute.id ||
+        f.origin_landmark === selectedRoute.route_name ||
+        f.origin_landmark?.toLowerCase() === selectedRoute.route_name?.toLowerCase(),
+    );
+
+    if (routeSpecificFares.length > 0) {
+      const standard = routeSpecificFares.find(
+        (f) => f.destination_landmark === 'Standard Trip' || f.destination_landmark === 'Base Fare',
+      );
+      const extended = routeSpecificFares.find(
+        (f) => f.destination_landmark === 'Extended Trip' || f.destination_landmark === 'Extra Distance',
+      );
+
+      if (standard || extended) {
+        return {
+          regular: standard?.regular_fare ?? null,
+          discounted: standard?.discounted_fare ?? null,
+          extraDistance: extended?.regular_fare ?? null,
+          extraDistanceDiscounted: extended?.discounted_fare ?? null,
+        };
+      }
+    }
+
+    // 3. Fallback to global defaults if no route-specific fare is set
+    return globalPricing;
+  }, [selectedRoute, faresList, globalPricing]);
+
   const handleRouteChange = (routeId: string) => {
     setSelectedRouteId(routeId);
     setParams({ routeId });
@@ -71,11 +121,11 @@ export default function FaresPage() {
 
   if (loading) return <LoadingState message="Loading transit routes and fare matrix..." />;
 
-  // Effective fare rates with default fallbacks
-  const standardRegular = pricing?.regular ?? 13;
-  const standardDiscounted = pricing?.discounted ?? 11;
-  const extendedRegular = pricing?.extraDistance ?? 15;
-  const extendedDiscounted = pricing?.extraDistanceDiscounted ?? 12;
+  // Effective fare rates for the selected jeepney
+  const standardRegular = selectedRouteFares?.regular ?? 13;
+  const standardDiscounted = selectedRouteFares?.discounted ?? 11;
+  const extendedRegular = selectedRouteFares?.extraDistance ?? 15;
+  const extendedDiscounted = selectedRouteFares?.extraDistanceDiscounted ?? 12;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
