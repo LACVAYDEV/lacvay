@@ -252,57 +252,7 @@ export const rides: Ride[] = [
   { id: 'r8', driverName: 'Lito Taxi', vehicleType: 'taxi', rating: 4.5, distanceKm: 2.4, estimatedFare: 180, etaMin: 12, plateNumber: 'XYZ 7788' },
 ];
 
-export const commuteGuides: CommuteGuide[] = [
-  {
-    id: 'sm-batangas',
-    title: 'How to commute to SM City Batangas',
-    destination: 'SM City Batangas',
-    transportTypes: ['jeepney', 'tricycle', 'motorcycle', 'taxi'],
-    estimatedFareMin: 14,
-    estimatedFareMax: 40,
-    estimatedTravelTimeMin: 18,
-    difficulty: 'Easy',
-    steps: [
-      { order: 1, title: 'Start at Batangas City Grand Terminal', description: 'Head to the main jeepney terminal along Diversion Road.' },
-      { order: 2, title: 'Ride jeepney to SM route', description: 'Look for jeepneys with signboards going to SM City / Diversion Road.' },
-      { order: 3, title: 'Alight at SM City Batangas', description: 'Get off at the main entrance along Diversion Road.' },
-      { order: 4, title: 'Alternative: Tricycle', description: 'From nearby barangays, tricycles can take you directly for ₱20–₱40 depending on distance.' },
-      { order: 5, title: 'Alternative: Motorcycle rider', description: 'Motorcycle taxis (habal-habal) skip traffic and cost around ₱40–₱70 for a solo passenger. Bring your own helmet when you can.' },
-      { order: 6, title: 'Alternative: Taxi', description: 'Metered taxis from the city center run about ₱90–₱140 depending on traffic — best if you have luggage or are travelling as a group.' },
-    ],
-  },
-  {
-    id: 'basilica',
-    title: 'How to commute to Basilica of the Immaculate Conception',
-    destination: 'Basilica of the Immaculate Conception',
-    transportTypes: ['jeepney', 'walking'],
-    estimatedFareMin: 18,
-    estimatedFareMax: 18,
-    estimatedTravelTimeMin: 12,
-    difficulty: 'Easy',
-    steps: [
-      { order: 1, title: 'From Grand Terminal', description: 'Take any jeepney route passing through Batangas City Proper / P. Burgos.' },
-      { order: 2, title: 'Alight near Basilica', description: 'Ask the driver to drop you off near the Basilica on C. Pastor Avenue.' },
-      { order: 3, title: 'Walk to entrance', description: 'The Basilica is a short walk from the main road.' },
-    ],
-  },
-  {
-    id: 'port',
-    title: 'How to commute to Batangas Port',
-    destination: 'Batangas International Port',
-    transportTypes: ['jeepney', 'motorcycle', 'taxi'],
-    estimatedFareMin: 14,
-    estimatedFareMax: 120,
-    estimatedTravelTimeMin: 25,
-    difficulty: 'Moderate',
-    steps: [
-      { order: 1, title: 'From city center', description: 'Ride jeepney routes heading to Batangas Port / Sta. Clara.' },
-      { order: 2, title: 'Follow port signs', description: 'Jeepneys will pass through the port access road.' },
-      { order: 3, title: 'Taxi option', description: 'Taxi from city center costs around ₱80–₱120 depending on traffic.' },
-      { order: 4, title: 'Motorcycle rider option', description: 'Motorcycle taxis charge roughly ₱60–₱90 and are the fastest option, but only practical with light hand-carry baggage.' },
-    ],
-  },
-];
+export const commuteGuides: CommuteGuide[] = [];
 
 export const searchIndex: SearchResult[] = [
   ...touristSpots.map((s) => ({ id: s.id, type: 'tourist-spot' as const, title: s.name, subtitle: s.location || 'Batangas City', path: `/tourist-spots/${s.id}` })),

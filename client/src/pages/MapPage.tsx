@@ -6,17 +6,28 @@ import {
   Compass,
   ArrowLeft,
   Sparkles,
+  Bus,
+  Tag,
+  Info,
+  ExternalLink,
 } from 'lucide-react';
-import type { TransportType, SavedGuide, SavedGuideStep, Place } from '@/types';
+import type { SavedGuide, SavedGuideStep, Place } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { isVideoMediaUrl } from '@/lib/mediaUtils';
-import { buildMockRoute } from '@/lib/fareCalculator';
-import { getTransportLabel, getTransportOption } from '@/lib/transport';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { getStepIcon } from '@/components/ui/TransportIcons';
-import { formatFareRange } from '@/lib/utils';
+import {
+  transitAdminService,
+  type TransitRouteRow,
+  type FixedFarePricing,
+} from '@/services/transitAdminService';
+import {
+  getTransitColorMeta,
+  isWhiteColor,
+  extractPolylineCoords,
+  DEFAULT_BATANGAS_ROUTE_PATH,
+} from '@/lib/transitColors';
 import 'leaflet/dist/leaflet.css';
 
 const BATANGAS_CENTER = { lat: 13.7565, lng: 121.0583 };
@@ -61,6 +72,17 @@ function MapController({ center, zoom = 13 }: { center: [number, number]; zoom?:
   return null;
 }
 
+function RouteBoundsController({ coords }: { coords: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (coords && coords.length > 1) {
+      const bounds = L.latLngBounds(coords.map((c) => L.latLng(c[0], c[1])));
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [map, coords]);
+  return null;
+}
+
 // Helper to resolve coordinates for guide stops using live places
 function resolveStopCoordinates(
   step: SavedGuideStep,
@@ -73,7 +95,6 @@ function resolveStopCoordinates(
 
   const query = `${step.title} ${step.description || ''} ${step.location || ''}`.toLowerCase();
 
-  // Try matching against dynamic Supabase places
   for (const p of availablePlaces) {
     if (
       p.name &&
@@ -85,7 +106,6 @@ function resolveStopCoordinates(
     }
   }
 
-  // Fallback: subtle offsets from Batangas center so stops are visible and sequential
   const angle = (index * (Math.PI / 3)) % (Math.PI * 2);
   const distance = 0.007 * (index + 1);
   return [
@@ -95,13 +115,17 @@ function resolveStopCoordinates(
 }
 
 export default function MapPage() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
 
   // Live dynamic places fetched from Supabase
   const [places, setPlaces] = useState<Place[]>([]);
   const [loadingPlaces, setLoadingPlaces] = useState(true);
+
+  // Transit Routes & Fixed Fare Pricing
+  const [routes, setRoutes] = useState<TransitRouteRow[]>([]);
+  const [pricing, setPricing] = useState<FixedFarePricing | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -121,9 +145,25 @@ export default function MapPage() {
       }
     }
 
-    void fetchPlaces();
+    async function fetchTransitData() {
+      try {
+        const [loadedRoutes, loadedPricing] = await Promise.all([
+          transitAdminService.listRoutes(),
+          transitAdminService.getFixedFarePricing(),
+        ]);
+        if (isMounted) {
+          setRoutes(loadedRoutes);
+          setPricing(loadedPricing);
+        }
+      } catch (err) {
+        console.error('Failed to load transit data:', err);
+      }
+    }
 
-    // Realtime channel: instantly update pins when admin creates, updates, or deletes places
+    void fetchPlaces();
+    void fetchTransitData();
+
+    // Realtime channel for places
     const channel = supabase
       .channel('places-realtime-map')
       .on(
@@ -144,13 +184,31 @@ export default function MapPage() {
   // Guide passed from Saved Guides
   const activeGuide: SavedGuide | undefined = location.state?.guide;
 
-  const from = params.get('from') || 'Current Location';
-  const to = params.get('to') || 'SM City Batangas';
-  const transportParam = params.get('transport') as TransportType | null;
-  const transport: TransportType =
-    transportParam && getTransportOption(transportParam) ? transportParam : 'jeepney';
+  // Route selection via query param (?routeId=...)
+  const routeIdParam = params.get('routeId');
+  const selectedRoute = useMemo(() => {
+    if (!routeIdParam) return null;
+    return routes.find((r) => r.id === routeIdParam) || null;
+  }, [routeIdParam, routes]);
 
-  const route = useMemo(() => buildMockRoute(from, to, transport), [from, to, transport]);
+  const handleSelectRoute = (newRouteId: string) => {
+    if (!newRouteId) {
+      params.delete('routeId');
+      setParams(params);
+    } else {
+      params.set('routeId', newRouteId);
+      setParams(params);
+    }
+  };
+
+  // Extract route polyline coordinates
+  const selectedRouteCoords = useMemo<[number, number][]>(() => {
+    if (!selectedRoute) return [];
+    const parsed = extractPolylineCoords(selectedRoute.geojson_path);
+    if (parsed.length > 0) return parsed;
+    // Fallback if no GeoJSON coordinates uploaded yet
+    return DEFAULT_BATANGAS_ROUTE_PATH;
+  }, [selectedRoute]);
 
   // Valid coordinates for map plotting
   const validPlaces = useMemo(() => {
@@ -179,8 +237,11 @@ export default function MapPage() {
     if (guideStopsWithCoords.length > 0) {
       return guideStopsWithCoords[0].coords;
     }
+    if (selectedRouteCoords.length > 0) {
+      return selectedRouteCoords[0];
+    }
     return [BATANGAS_CENTER.lat, BATANGAS_CENTER.lng];
-  }, [guideStopsWithCoords]);
+  }, [guideStopsWithCoords, selectedRouteCoords]);
 
   const guidePolyline: [number, number][] = useMemo(() => {
     return guideStopsWithCoords.map((s) => s.coords);
@@ -192,6 +253,15 @@ export default function MapPage() {
     [13.755, 121.066],
   ];
 
+  // Effective fare rates
+  const standardRegular = pricing?.regular ?? 13;
+  const standardDiscounted = pricing?.discounted ?? 11;
+  const extendedRegular = pricing?.extraDistance ?? 15;
+  const extendedDiscounted = pricing?.extraDistanceDiscounted ?? 12;
+
+  const isSelectedRouteWhite = selectedRoute ? isWhiteColor(selectedRoute.color_code) : false;
+  const selectedRouteColorMeta = selectedRoute ? getTransitColorMeta(selectedRoute.color_code) : null;
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -199,43 +269,78 @@ export default function MapPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-gray-900">
-              {activeGuide ? activeGuide.title : 'Map & Routes'}
+              {activeGuide
+                ? activeGuide.title
+                : selectedRoute
+                  ? `${selectedRoute.route_name} Route`
+                  : 'Map & Routes'}
             </h1>
+            {!activeGuide && selectedRoute && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-xs font-semibold text-lacvay-green">
+                <span className="h-2 w-2 rounded-full bg-lacvay-green animate-pulse" />
+                Active Route
+              </span>
+            )}
             {!activeGuide && !loadingPlaces && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-xs font-semibold text-lacvay-green">
-                <span className="h-1.5 w-1.5 rounded-full bg-lacvay-green animate-pulse" />
-                {validPlaces.length} dynamic pins
+              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                {validPlaces.length} destination pins
               </span>
             )}
           </div>
           <p className="text-sm text-gray-500">
             {activeGuide
               ? 'Projected itinerary stops & route across Batangas City'
-              : 'Interactive map displaying destinations, eateries, and commute lines across Batangas City'}
+              : selectedRoute
+                ? `Viewing official path and fare details for ${selectedRoute.route_name}`
+                : 'Interactive map displaying destinations, eateries, and transit lines across Batangas City'}
           </p>
         </div>
 
-        {activeGuide && (
-          <Link
-            to="/saved?tab=guides"
-            className="inline-flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-soft hover:bg-gray-50"
-          >
-            <ArrowLeft className="h-4 w-4 text-lacvay-green" />
-            Back to Saved Guides
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {activeGuide && (
+            <Link
+              to="/saved?tab=guides"
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-soft hover:bg-gray-50"
+            >
+              <ArrowLeft className="h-4 w-4 text-lacvay-green" />
+              Back to Saved Guides
+            </Link>
+          )}
+
+          {!activeGuide && selectedRoute && (
+            <Link
+              to={`/fares?routeId=${selectedRoute.id}`}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-lacvay-green shadow-soft hover:bg-gray-50"
+            >
+              <Bus className="h-4 w-4" />
+              Open in Transport Checker
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         {/* Map View */}
         <Card padding="sm" className="overflow-hidden p-0 rounded-3xl shadow-card">
-          <div className="h-[420px] w-full md:h-[540px]">
-            <MapContainer center={mapCenter} zoom={activeGuide ? 14 : 13} className="h-full w-full" scrollWheelZoom>
+          <div className="h-[420px] w-full md:h-[560px]">
+            <MapContainer
+              center={mapCenter}
+              zoom={activeGuide ? 14 : 13}
+              className="h-full w-full"
+              scrollWheelZoom
+            >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <MapController center={mapCenter} zoom={activeGuide ? 14 : 13} />
+
+              {/* Dynamic bounds fitting for selected route */}
+              {selectedRouteCoords.length > 1 && (
+                <RouteBoundsController coords={selectedRouteCoords} />
+              )}
+              {selectedRouteCoords.length <= 1 && (
+                <MapController center={mapCenter} zoom={activeGuide ? 14 : 13} />
+              )}
 
               {/* If displaying an active guide */}
               {activeGuide && guideStopsWithCoords.length > 0 ? (
@@ -261,17 +366,8 @@ export default function MapPage() {
                   />
                 </>
               ) : (
-                /* Default transit route with dynamic Supabase pins */
+                /* Dynamic Supabase pins & Route Polyline */
                 <>
-                  {/* Origin Marker */}
-                  <Marker position={mapCenter} icon={defaultIcon}>
-                    <Popup>
-                      <div className="p-1 text-xs font-bold text-gray-800">
-                        📍 {from}
-                      </div>
-                    </Popup>
-                  </Marker>
-
                   {/* Dynamic Supabase Places Pins */}
                   {validPlaces.map((p) => {
                     const isVideo = p.image_url ? isVideoMediaUrl(p.image_url) : false;
@@ -336,7 +432,63 @@ export default function MapPage() {
                     );
                   })}
 
-                  <Polyline positions={defaultRouteLine} pathOptions={{ color: '#159447', weight: 4 }} />
+                  {/* Selected Transit Route Polyline Highlight */}
+                  {selectedRoute && selectedRouteCoords.length > 0 ? (
+                    <>
+                      {/* Origin and Terminus Pin for Route */}
+                      <Marker position={selectedRouteCoords[0]} icon={defaultIcon}>
+                        <Popup>
+                          <div className="p-1 text-xs font-bold text-gray-800">
+                            🚩 Start: {selectedRoute.route_name}
+                          </div>
+                        </Popup>
+                      </Marker>
+
+                      {/* White Route: Black casing border + white core */}
+                      {isSelectedRouteWhite ? (
+                        <>
+                          <Polyline
+                            positions={selectedRouteCoords}
+                            pathOptions={{
+                              color: '#000000',
+                              weight: 8,
+                              opacity: 0.95,
+                              lineCap: 'round',
+                              lineJoin: 'round',
+                            }}
+                          />
+                          <Polyline
+                            positions={selectedRouteCoords}
+                            pathOptions={{
+                              color: '#FFFFFF',
+                              weight: 5,
+                              opacity: 1,
+                              lineCap: 'round',
+                              lineJoin: 'round',
+                            }}
+                          />
+                        </>
+                      ) : (
+                        /* Standard Primary Color Polyline */
+                        <Polyline
+                          positions={selectedRouteCoords}
+                          pathOptions={{
+                            color: selectedRoute.color_code || '#159447',
+                            weight: 6,
+                            opacity: 0.9,
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                          }}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    /* Default baseline polyline */
+                    <Polyline
+                      positions={defaultRouteLine}
+                      pathOptions={{ color: '#159447', weight: 4 }}
+                    />
+                  )}
                 </>
               )}
             </MapContainer>
@@ -396,78 +548,152 @@ export default function MapPage() {
               </div>
             </Card>
           ) : (
-            /* Default Route Details Panel */
+            /* Route Details & Fare Matrix Panel */
             <>
-              <Card>
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900">Route Details</h3>
-                  <Badge variant="lime">Live</Badge>
-                </div>
-                <p className="mt-1 text-sm text-gray-500">{from} → {to}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Badge>{getTransportLabel(transport)}</Badge>
-                  <Badge variant="gray">{route.totalDurationMin} min</Badge>
-                  <Badge variant="gray">{route.totalDistanceKm} km</Badge>
-                </div>
-                <p className="mt-3 text-lg font-bold text-lacvay-green">
-                  {formatFareRange(route.estimatedFareMin, route.estimatedFareMax)}
-                </p>
-                <p className="text-xs text-gray-500">{route.transfers} transfer(s)</p>
-              </Card>
-
-              {/* Dynamic Destinations list */}
-              {validPlaces.length > 0 && (
-                <Card>
-                  <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                      Active Places ({validPlaces.length})
-                    </h3>
-                    <span className="text-[11px] text-gray-400">From Supabase</span>
+              {/* Route Selector & Details Card */}
+              <Card className="space-y-4 shadow-card">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Bus className="h-4 w-4 text-lacvay-green" />
+                    <h3 className="font-bold text-gray-900">Route Details</h3>
                   </div>
-                  <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
-                    {validPlaces.slice(0, 6).map((p) => (
-                      <Link
-                        key={p.id}
-                        to={`/tourist-spots/${p.id}`}
-                        className="flex items-center justify-between p-2 rounded-xl bg-gray-50 hover:bg-emerald-50/60 transition text-xs group"
-                      >
-                        <span className="font-semibold text-gray-800 truncate group-hover:text-lacvay-green">
-                          {p.name}
-                        </span>
-                        {p.is_featured ? (
-                          <span className="shrink-0 text-[10px] font-bold text-amber-600 bg-amber-100/70 px-1.5 py-0.5 rounded-full">
-                            ★ Promoted
-                          </span>
-                        ) : (
-                          <span className="shrink-0 text-[10px] text-gray-400">
-                            {p.category}
+                  {selectedRoute && <Badge variant="green">{selectedRoute.vehicle_type || 'Jeepney'}</Badge>}
+                </div>
+
+                {/* Route Switcher Dropdown */}
+                {routes.length > 0 && (
+                  <div>
+                    <label
+                      htmlFor="map-route-select"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5"
+                    >
+                      Select Transport Route
+                    </label>
+                    <select
+                      id="map-route-select"
+                      value={selectedRoute?.id || ''}
+                      onChange={(e) => handleSelectRoute(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-white p-2.5 text-xs font-semibold text-gray-800 shadow-sm transition focus:border-lacvay-green focus:outline-none focus:ring-2 focus:ring-lacvay-green/20"
+                    >
+                      <option value="">— Show All / Default Map —</option>
+                      {routes.map((r) => {
+                        const colorMeta = getTransitColorMeta(r.color_code);
+                        return (
+                          <option key={r.id} value={r.id}>
+                            {r.route_name} ({colorMeta.label})
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                )}
+
+                {selectedRoute ? (
+                  /* Highlighted Route Details with Fixed Fares */
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-base font-bold text-gray-900">
+                          {selectedRoute.route_name}
+                        </h4>
+                        {selectedRouteColorMeta && (
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                              isSelectedRouteWhite
+                                ? 'border-2 border-black bg-white text-black'
+                                : `${selectedRouteColorMeta.bgClass} ${selectedRouteColorMeta.textClass}`
+                            }`}
+                          >
+                            <span
+                              className={`h-2 w-2 rounded-full ${
+                                isSelectedRouteWhite ? 'bg-white border border-black' : 'bg-white/70'
+                              }`}
+                            />
+                            {selectedRouteColorMeta.label}
                           </span>
                         )}
-                      </Link>
-                    ))}
-                  </div>
-                </Card>
-              )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        Official public transit route across Batangas City
+                      </p>
+                    </div>
 
-              <Card>
-                <h3 className="font-bold text-gray-900">Directions</h3>
-                <ol className="mt-4 space-y-4">
-                  {route.steps.map((step, i) => {
-                    const StepIcon = getStepIcon(step.type);
-                    return (
-                      <li key={i} className="flex gap-3">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lacvay-green/10 text-lacvay-green">
-                          <StepIcon className="h-3.5 w-3.5" />
-                        </span>
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">{getTransportLabel(step.type)}</p>
-                          <p className="text-sm text-gray-500">{step.instruction}</p>
-                          <p className="text-xs text-gray-400">{step.durationMin} min</p>
+                    {/* Fare Section */}
+                    <div className="rounded-2xl bg-emerald-50/50 border border-emerald-100/70 p-3.5 space-y-2.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-lacvay-green">
+                        <Tag className="h-3.5 w-3.5" />
+                        <span>Official Fixed Fare Rates</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-xl bg-white p-2.5 border border-emerald-100/50 shadow-2xs">
+                          <p className="text-[10.5px] font-bold text-gray-500 uppercase">Standard Trip</p>
+                          <p className="mt-1 text-sm font-extrabold text-gray-900">
+                            ₱{standardRegular.toFixed(2)}
+                          </p>
+                          <p className="text-[10px] text-lacvay-green font-semibold">
+                            Disc: ₱{standardDiscounted.toFixed(2)}
+                          </p>
                         </div>
-                      </li>
-                    );
-                  })}
-                </ol>
+
+                        <div className="rounded-xl bg-white p-2.5 border border-emerald-100/50 shadow-2xs">
+                          <p className="text-[10.5px] font-bold text-amber-700 uppercase">Extended Trip</p>
+                          <p className="mt-1 text-sm font-extrabold text-gray-900">
+                            ₱{extendedRegular.toFixed(2)}
+                          </p>
+                          <p className="text-[10px] text-amber-700 font-semibold">
+                            Disc: ₱{extendedDiscounted.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="text-[10.5px] text-gray-500 leading-tight">
+                        Fixed trip pricing applies. Extended trip rates are cumulative totals.
+                      </p>
+                    </div>
+
+                    <div className="pt-2">
+                      <Link
+                        to={`/fares?routeId=${selectedRoute.id}`}
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition shadow-2xs"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 text-lacvay-green" />
+                        View in Transport Checker
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  /* No Route Selected State */
+                  <div className="rounded-2xl bg-gray-50 p-4 text-center border border-gray-100">
+                    <p className="text-xs font-medium text-gray-600">No specific route selected</p>
+                    <p className="mt-1 text-[11px] text-gray-400">
+                      Select a route from the dropdown above or browse Transport Checker to highlight official jeepney paths.
+                    </p>
+                    <Link
+                      to="/fares"
+                      className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-lacvay-green hover:underline"
+                    >
+                      Go to Transport Checker →
+                    </Link>
+                  </div>
+                )}
+              </Card>
+
+              {/* Directions Panel - Blank placeholder state until AI generated */}
+              <Card>
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                  <h3 className="font-bold text-gray-900">Directions</h3>
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10.5px] font-medium text-gray-500">
+                    AI Assistant
+                  </span>
+                </div>
+                <div className="mt-4 rounded-2xl bg-gray-50/80 p-5 text-center border border-gray-100">
+                  <Info className="mx-auto h-5 w-5 text-gray-400 mb-1.5" />
+                  <p className="text-xs font-semibold text-gray-700">No Directions Available Yet</p>
+                  <p className="mt-1 text-[11.5px] text-gray-500 leading-relaxed">
+                    Step-by-step turn directions will be available once generated by our AI travel assistant.
+                  </p>
+                </div>
               </Card>
             </>
           )}

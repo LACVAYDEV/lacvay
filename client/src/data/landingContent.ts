@@ -22,8 +22,8 @@ export const landingFeatures: LandingFeature[] = [
     image: '/images/icon-map.png',
   },
   {
-    title: 'Fare Checker',
-    description: 'Know what a trip should cost before you ride — jeepney, tricycle, motorcycle taxi, or taxi.',
+    title: 'Transport Checker',
+    description: 'Explore available jeepney and transport routes, check fixed fares, and view paths on the map.',
     image: '/images/icon-fare.png',
   },
   {

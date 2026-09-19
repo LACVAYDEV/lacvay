@@ -11,7 +11,7 @@ export default function HomePage() {
         {/* 1. Hero / Home Overview */}
         <HeroSection />
 
-        {/* 2. Commute Navigation Tools (Map & Routes, Commute Guide, Fare Checker, Ride Guide) */}
+        {/* 2. Commute Navigation Tools (Map & Routes, Commute Guide, Transport Checker, Ride Guide) */}
         <FeatureCards />
 
         {/* 3. Nearby Tourist Spots */}

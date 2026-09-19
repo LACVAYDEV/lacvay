@@ -24,7 +24,22 @@ export default function CommutePage() {
   }, []);
 
   if (loading) return <LoadingState />;
-  if (!guides.length) return <EmptyState title="No commute guides yet" />;
+  if (!guides.length) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Commute Guide</h2>
+          <p className="text-sm text-gray-500">Step-by-step guides for getting around Batangas City</p>
+        </div>
+        <Card className="p-8 text-center">
+          <EmptyState
+            title="No Commute Guides Available"
+            description="Community and AI-generated commute guides will appear here once published."
+          />
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

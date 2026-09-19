@@ -15,7 +15,7 @@ const columns = [
     title: 'Travel',
     links: [
       { label: 'Map & Routes', href: '#features' },
-      { label: 'Fare Checker', href: '#features' },
+      { label: 'Transport Checker', href: '#features' },
       { label: 'Commute Guide', href: '#features' },
       { label: 'Ride Guide', href: '#features' },
     ],

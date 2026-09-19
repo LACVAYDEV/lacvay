@@ -16,10 +16,10 @@ const features = [
     path: '/commute',
   },
   {
-    title: 'Fare Checker',
-    description: 'Check exact or estimated fares for your trip.',
+    title: 'Transport Checker',
+    description: 'Check available transport routes, fixed fares, and view on map.',
     image: '/images/icon-fare.png',
-    cta: 'Check Fare',
+    cta: 'Check Transport',
     path: '/fares',
   },
   {

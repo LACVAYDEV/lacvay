@@ -77,7 +77,7 @@ export default function RidesPage() {
             Public jeepneys and tricycles are not booked through apps. Use our{' '}
             <Link to="/commute" className="font-semibold text-lacvay-green hover:underline">Commute Guide</Link>
             {' '}or{' '}
-            <Link to="/fares" className="font-semibold text-lacvay-green hover:underline">Fare Checker</Link>
+            <Link to="/fares" className="font-semibold text-lacvay-green hover:underline">Transport Checker</Link>
             {' '}for routes and estimated fares instead.
           </p>
         </div>
@@ -322,7 +322,7 @@ export default function RidesPage() {
               <Button variant="secondary" className="w-full px-3">Commute Guides</Button>
             </Link>
             <Link to="/fares" className="min-w-0">
-              <Button className="w-full px-3">Fare Checker</Button>
+              <Button className="w-full px-3">Transport Checker</Button>
             </Link>
           </div>
         </div>
