@@ -6,7 +6,6 @@ import {
   Users,
   Shield,
   TrendingUp,
-  Bookmark,
   Activity,
   ArrowUpRight,
   Sparkles,
@@ -19,6 +18,7 @@ import { LoadingState } from '@/components/ui/States';
 import { adminService } from '@/services/adminService';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import { transitAdminService } from '@/services/transitAdminService';
 import type { Promotion, TouristSpot, UserProfile } from '@/types';
 
 interface DashboardData {
@@ -26,6 +26,7 @@ interface DashboardData {
   users: UserProfile[];
   places: TouristSpot[];
   promotions: Promotion[];
+  routeCount: number;
 }
 
 function MetricCard({
@@ -113,13 +114,14 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
 
   const load = async () => {
-    const [stats, users, places, promotions] = await Promise.all([
+    const [stats, users, places, promotions, transitRoutes] = await Promise.all([
       adminService.getStats(),
       adminService.listUsers().catch(() => [] as UserProfile[]),
       adminService.listPlaces(),
       adminService.listPromotions(),
+      transitAdminService.listRoutes().catch(() => []),
     ]);
-    setData({ stats, users, places, promotions });
+    setData({ stats, users, places, promotions, routeCount: transitRoutes.length });
   };
 
   useEffect(() => {
@@ -227,12 +229,12 @@ export default function AdminDashboardPage() {
           to="/admin/users"
         />
         <MetricCard
-          label="Saved places"
-          value="—"
-          sublabel="User favorites across the app"
-          icon={Bookmark}
-          iconClass="bg-gray-100 text-gray-400"
-          placeholder
+          label="Transit Routes"
+          value={data.routeCount}
+          sublabel="Active jeepney & transit lines"
+          icon={Activity}
+          iconClass="bg-lacvay-green/10 text-lacvay-green"
+          to="/admin/transit"
         />
       </div>
 

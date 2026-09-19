@@ -288,6 +288,10 @@ export default function AdminTransitPage() {
           vehicle_type: 'Jeepney',
           color_code: colorCode,
           geojson_path: finalGeoJson,
+          regular_fare: reg,
+          discounted_fare: disc,
+          extended_fare: extra,
+          extended_discounted_fare: extraDisc,
         });
         setRoutes((prev) => prev.map((r) => (r.id === savedRoute.id ? savedRoute : r)));
       } else {
@@ -297,6 +301,10 @@ export default function AdminTransitPage() {
           vehicle_type: 'Jeepney',
           color_code: colorCode,
           geojson_path: finalGeoJson,
+          regular_fare: reg,
+          discounted_fare: disc,
+          extended_fare: extra,
+          extended_discounted_fare: extraDisc,
         };
         savedRoute = await transitAdminService.createRoute(insertData);
         setRoutes((prev) => [savedRoute, ...prev]);

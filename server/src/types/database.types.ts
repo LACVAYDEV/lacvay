@@ -51,6 +51,54 @@ export type Database = {
         }
         Relationships: []
       }
+      commute_guides: {
+        Row: {
+          id: string
+          title: string
+          summary: string | null
+          destination: string | null
+          steps: Json
+          transport_segments: Json
+          difficulty: string | null
+          estimated_travel_time_min: number | null
+          estimated_fare_min: number | null
+          estimated_fare_max: number | null
+          created_by: string | null
+          is_global: boolean
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          summary?: string | null
+          destination?: string | null
+          steps?: Json
+          transport_segments?: Json
+          difficulty?: string | null
+          estimated_travel_time_min?: number | null
+          estimated_fare_min?: number | null
+          estimated_fare_max?: number | null
+          created_by?: string | null
+          is_global?: boolean
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          title?: string
+          summary?: string | null
+          destination?: string | null
+          steps?: Json
+          transport_segments?: Json
+          difficulty?: string | null
+          estimated_travel_time_min?: number | null
+          estimated_fare_min?: number | null
+          estimated_fare_max?: number | null
+          created_by?: string | null
+          is_global?: boolean
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       saved_guides: {
         Row: {
           id: string
@@ -85,6 +133,7 @@ export type Database = {
           id: string
           origin_landmark: string
           regular_fare: number
+          route_id: string | null
         }
         Insert: {
           destination_landmark: string
@@ -92,6 +141,7 @@ export type Database = {
           id?: string
           origin_landmark: string
           regular_fare: number
+          route_id?: string | null
         }
         Update: {
           destination_landmark?: string
@@ -99,8 +149,17 @@ export type Database = {
           id?: string
           origin_landmark?: string
           regular_fare?: number
+          route_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jeepney_fare_matrix_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "transit_routes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       places: {
         Row: {
@@ -249,8 +308,12 @@ export type Database = {
         Row: {
           color_code: string
           created_at: string | null
+          discounted_fare: number | null
+          extended_discounted_fare: number | null
+          extended_fare: number | null
           geojson_path: Json | null
           id: string
+          regular_fare: number | null
           route_code?: string | null
           route_name: string
           vehicle_type: string
@@ -258,8 +321,12 @@ export type Database = {
         Insert: {
           color_code: string
           created_at?: string | null
+          discounted_fare?: number | null
+          extended_discounted_fare?: number | null
+          extended_fare?: number | null
           geojson_path?: Json | null
           id?: string
+          regular_fare?: number | null
           route_code?: string | null
           route_name: string
           vehicle_type?: string
@@ -267,8 +334,12 @@ export type Database = {
         Update: {
           color_code?: string
           created_at?: string | null
+          discounted_fare?: number | null
+          extended_discounted_fare?: number | null
+          extended_fare?: number | null
           geojson_path?: Json | null
           id?: string
+          regular_fare?: number | null
           route_code?: string | null
           route_name?: string
           vehicle_type?: string

@@ -3,15 +3,15 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L from 'leaflet';
 import { useSearchParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import {
-  Compass,
   ArrowLeft,
   Sparkles,
   Bus,
   Tag,
   Info,
   ExternalLink,
+  BookOpen,
 } from 'lucide-react';
-import type { SavedGuide, SavedGuideStep, Place } from '@/types';
+import type { SavedGuide, SavedGuideStep, Place, GlobalCommuteGuide, TransportSegment, CommuteGuideStep } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { isVideoMediaUrl } from '@/lib/mediaUtils';
 import { Card } from '@/components/ui/Card';
@@ -41,13 +41,14 @@ const defaultIcon = L.icon({
   iconAnchor: [12, 41],
 });
 
-// Custom stop marker for itinerary projected stops
-const stopIcon = L.divIcon({
-  className: 'custom-stop-marker',
-  html: `<div style="background-color:#159447;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;box-shadow:0 2px 5px rgba(0,0,0,0.3);border:2px solid #fff;">★</div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-});
+function createStopNumberIcon(num: number) {
+  return L.divIcon({
+    className: 'custom-stop-marker',
+    html: `<div style="background-color:#159447;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;box-shadow:0 2px 5px rgba(0,0,0,0.3);border:2px solid #fff;">${num}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
 
 // Standard destination pin for Supabase places
 const placeIcon = L.divIcon({
@@ -188,6 +189,9 @@ export default function MapPage() {
   // Guide passed from Saved Guides
   const activeGuide: SavedGuide | undefined = location.state?.guide;
 
+  // Commute guide passed from Commute Guide page
+  const activeCommuteGuide: GlobalCommuteGuide | undefined = location.state?.commuteGuide;
+
   // Route selection via query param (?routeId=...)
   const routeIdParam = params.get('routeId');
   const selectedRoute = useMemo(() => {
@@ -225,7 +229,7 @@ export default function MapPage() {
     );
   }, [places]);
 
-  // If viewing a projected guide
+  // If viewing a projected guide (from Saved tab)
   const guideStopsWithCoords = useMemo(() => {
     if (!activeGuide || !Array.isArray(activeGuide.steps) || activeGuide.steps.length === 0) {
       return [];
@@ -237,7 +241,86 @@ export default function MapPage() {
     }));
   }, [activeGuide, places]);
 
+  // Detected transport segments for user saved guide (activeGuide)
+  const activeGuideSegments = useMemo<TransportSegment[]>(() => {
+    if (!activeGuide || !Array.isArray(activeGuide.steps)) return [];
+    const segs: TransportSegment[] = [];
+    for (const step of activeGuide.steps) {
+      const text = `${step.title} ${step.description || ''}`.toLowerCase();
+      const matchedRoute = routes.find(
+        (r) =>
+          text.includes(r.route_name.toLowerCase()) ||
+          (r.route_code && text.includes(r.route_code.toLowerCase())),
+      );
+      if (matchedRoute) {
+        const fares = transitAdminService.extractRouteFares(matchedRoute);
+        segs.push({
+          type: matchedRoute.vehicle_type || 'Jeepney',
+          routeId: matchedRoute.id,
+          routeName: matchedRoute.route_name,
+          color: matchedRoute.color_code || '',
+          fare: fares?.regular ?? null,
+          fareType: 'regular',
+        });
+      } else if (text.includes('jeep') || text.includes('jeepney')) {
+        segs.push({ type: 'Jeepney', routeName: step.title, fare: 13 });
+      } else if (text.includes('tricycle')) {
+        segs.push({ type: 'Tricycle', routeName: step.title, fare: 25 });
+      } else if (text.includes('angkas') || text.includes('habal') || text.includes('motorcycle')) {
+        segs.push({ type: 'Motorcycle', routeName: step.title, fare: null });
+      }
+    }
+    return segs;
+  }, [activeGuide, routes]);
+
+  // Commute guide stops with coords
+  const commuteGuideStopsWithCoords = useMemo(() => {
+    if (!activeCommuteGuide || !Array.isArray(activeCommuteGuide.steps) || activeCommuteGuide.steps.length === 0) {
+      return [];
+    }
+    return activeCommuteGuide.steps.map((step, idx) => ({
+      ...step,
+      order: step.order ?? idx + 1,
+      coords: resolveStopCoordinates(
+        { title: step.title, description: step.description, location: step.title },
+        idx,
+        places,
+      ),
+    }));
+  }, [activeCommuteGuide, places]);
+
+  // Commute guide route segments (matched with transit_routes)
+  const commuteGuideRoutes = useMemo(() => {
+    if (!activeCommuteGuide || !Array.isArray(activeCommuteGuide.transport_segments)) {
+      return [];
+    }
+    return activeCommuteGuide.transport_segments
+      .map((seg) => {
+        const matched = routes.find(
+          (r) =>
+            (seg.routeId && r.id === seg.routeId) ||
+            (seg.routeName && r.route_name.toLowerCase().includes(seg.routeName.toLowerCase())) ||
+            (seg.routeName && seg.routeName.toLowerCase().includes(r.route_name.toLowerCase())),
+        );
+        if (!matched) return null;
+        const coords = extractPolylineCoords(matched.geojson_path);
+        return {
+          segment: seg,
+          route: matched,
+          coords: coords.length > 0 ? coords : DEFAULT_BATANGAS_ROUTE_PATH,
+          isWhite: isWhiteColor(matched.color_code),
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null && item.coords.length > 0);
+  }, [activeCommuteGuide, routes]);
+
   const mapCenter: [number, number] = useMemo(() => {
+    if (commuteGuideRoutes.length > 0 && commuteGuideRoutes[0].coords.length > 0) {
+      return commuteGuideRoutes[0].coords[0];
+    }
+    if (commuteGuideStopsWithCoords.length > 0) {
+      return commuteGuideStopsWithCoords[0].coords;
+    }
     if (guideStopsWithCoords.length > 0) {
       return guideStopsWithCoords[0].coords;
     }
@@ -245,7 +328,7 @@ export default function MapPage() {
       return selectedRouteCoords[0];
     }
     return [BATANGAS_CENTER.lat, BATANGAS_CENTER.lng];
-  }, [guideStopsWithCoords, selectedRouteCoords]);
+  }, [commuteGuideRoutes, commuteGuideStopsWithCoords, guideStopsWithCoords, selectedRouteCoords]);
 
   const guidePolyline: [number, number][] = useMemo(() => {
     return guideStopsWithCoords.map((s) => s.coords);
@@ -318,35 +401,55 @@ export default function MapPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-gray-900">
-              {activeGuide
-                ? activeGuide.title
-                : selectedRoute
-                  ? `${selectedRoute.route_name} Route`
-                  : 'Map & Routes'}
+              {activeCommuteGuide
+                ? activeCommuteGuide.title
+                : activeGuide
+                  ? activeGuide.title
+                  : selectedRoute
+                    ? `${selectedRoute.route_name} Route`
+                    : 'Map & Routes'}
             </h1>
-            {!activeGuide && selectedRoute && (
+            {activeCommuteGuide && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-xs font-semibold text-lacvay-green">
+                <BookOpen className="h-3 w-3" />
+                Commute Guide
+              </span>
+            )}
+            {!activeGuide && !activeCommuteGuide && selectedRoute && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-xs font-semibold text-lacvay-green">
                 <span className="h-2 w-2 rounded-full bg-lacvay-green animate-pulse" />
                 Active Route
               </span>
             )}
-            {!activeGuide && !loadingPlaces && (
+            {!activeGuide && !activeCommuteGuide && !loadingPlaces && (
               <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
                 {validPlaces.length} destination pins
               </span>
             )}
           </div>
           <p className="text-sm text-gray-500">
-            {activeGuide
-              ? 'Projected itinerary stops & route across Batangas City'
-              : selectedRoute
-                ? `Viewing official path and fare details for ${selectedRoute.route_name}`
-                : 'Interactive map displaying destinations, eateries, and transit lines across Batangas City'}
+            {activeCommuteGuide
+              ? `Step-by-step commute guide${activeCommuteGuide.destination ? ` to ${activeCommuteGuide.destination}` : ''}`
+              : activeGuide
+                ? 'Projected itinerary stops & route across Batangas City'
+                : selectedRoute
+                  ? `Viewing official path and fare details for ${selectedRoute.route_name}`
+                  : 'Interactive map displaying destinations, eateries, and transit lines across Batangas City'}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          {activeGuide && (
+          {activeCommuteGuide && (
+            <Link
+              to="/commute"
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-soft hover:bg-gray-50"
+            >
+              <ArrowLeft className="h-4 w-4 text-lacvay-green" />
+              Back to Commute Guides
+            </Link>
+          )}
+
+          {activeGuide && !activeCommuteGuide && (
             <Link
               to="/saved?tab=guides"
               className="inline-flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-soft hover:bg-gray-50"
@@ -356,7 +459,7 @@ export default function MapPage() {
             </Link>
           )}
 
-          {!activeGuide && selectedRoute && (
+          {!activeGuide && !activeCommuteGuide && selectedRoute && (
             <Link
               to={`/fares?routeId=${selectedRoute.id}`}
               className="inline-flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-lacvay-green shadow-soft hover:bg-gray-50"
@@ -388,14 +491,99 @@ export default function MapPage() {
                 <RouteBoundsController coords={selectedRouteCoords} />
               )}
               {selectedRouteCoords.length <= 1 && (
-                <MapController center={mapCenter} zoom={activeGuide ? 14 : 13} />
+                <MapController center={mapCenter} zoom={activeGuide || activeCommuteGuide ? 14 : 13} />
               )}
 
-              {/* If displaying an active guide */}
-              {activeGuide && guideStopsWithCoords.length > 0 ? (
+              {/* If displaying an active commute guide */}
+              {activeCommuteGuide ? (
+                <>
+                  {/* Commute Guide Route Polylines */}
+                  {commuteGuideRoutes.map((item, idx) => (
+                    <div key={`cgr-${idx}`}>
+                      {item.isWhite ? (
+                        <>
+                          <Polyline
+                            positions={item.coords}
+                            pathOptions={{
+                              color: '#000000',
+                              weight: 8,
+                              opacity: 0.95,
+                              lineCap: 'round',
+                              lineJoin: 'round',
+                            }}
+                          />
+                          <Polyline
+                            positions={item.coords}
+                            pathOptions={{
+                              color: '#FFFFFF',
+                              weight: 5,
+                              opacity: 1,
+                              lineCap: 'round',
+                              lineJoin: 'round',
+                            }}
+                          />
+                        </>
+                      ) : (
+                        <Polyline
+                          positions={item.coords}
+                          pathOptions={{
+                            color: item.segment.color || item.route.color_code || '#159447',
+                            weight: 6,
+                            opacity: 0.9,
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                          }}
+                        />
+                      )}
+                      {/* Origin marker for this transit segment */}
+                      <Marker position={item.coords[0]} icon={defaultIcon}>
+                        <Popup>
+                          <div className="p-1 text-xs">
+                            <p className="font-bold text-gray-900">
+                              {item.segment.routeName || item.route.route_name}
+                            </p>
+                            <p className="text-[11px] text-gray-500">{item.segment.type}</p>
+                            {item.segment.fare != null && (
+                              <p className="font-bold text-lacvay-green mt-1">₱{item.segment.fare}</p>
+                            )}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    </div>
+                  ))}
+
+                  {/* Fallback dashed polyline between stops if no geojson routes */}
+                  {commuteGuideRoutes.length === 0 && commuteGuideStopsWithCoords.length > 1 && (
+                    <Polyline
+                      positions={commuteGuideStopsWithCoords.map((s) => s.coords)}
+                      pathOptions={{ color: '#159447', weight: 4, dashArray: '6, 8' }}
+                    />
+                  )}
+
+                  {/* Commute Guide Step Markers */}
+                  {commuteGuideStopsWithCoords.map((stop) => (
+                    <Marker key={stop.order} position={stop.coords} icon={createStopNumberIcon(stop.order)}>
+                      <Popup>
+                        <div className="p-1 max-w-[200px]">
+                          <span className="inline-block rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold mb-1">
+                            Step #{stop.order}
+                          </span>
+                          <h4 className="font-bold text-sm text-gray-900">{stop.title}</h4>
+                          {stop.description && (
+                            <p className="text-xs text-gray-600 mt-1">{stop.description}</p>
+                          )}
+                          {stop.tip && (
+                            <p className="text-[11px] text-lacvay-green font-medium mt-1">💡 {stop.tip}</p>
+                          )}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))}
+                </>
+              ) : activeGuide && guideStopsWithCoords.length > 0 ? (
                 <>
                   {guideStopsWithCoords.map((stop) => (
-                    <Marker key={stop.order} position={stop.coords} icon={stopIcon}>
+                    <Marker key={stop.order} position={stop.coords} icon={createStopNumberIcon(stop.order)}>
                       <Popup>
                         <div className="p-1 max-w-[200px]">
                           <span className="inline-block rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold mb-1">
@@ -546,56 +734,231 @@ export default function MapPage() {
 
         {/* Sidebar Info Panel */}
         <div className="space-y-4">
-          {activeGuide ? (
-            /* Active Guide Details Panel */
-            <Card className="space-y-4">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                <div className="flex items-center gap-2 text-lacvay-green">
-                  <Compass className="h-5 w-5" />
-                  <h3 className="font-bold text-gray-900">Itinerary Stops</h3>
+          {activeCommuteGuide ? (
+            /* Commute Guide Details Panel — Route Details + Directions */
+            <>
+              {/* Route Details: Transport Segments */}
+              <Card className="space-y-4 shadow-card">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Bus className="h-4 w-4 text-lacvay-green" />
+                    <h3 className="font-bold text-gray-900">Route Details</h3>
+                  </div>
+                  <Badge variant="green">
+                    {(activeCommuteGuide.transport_segments as TransportSegment[])?.length || 0} segments
+                  </Badge>
                 </div>
-                <Badge variant="green">
-                  {guideStopsWithCoords.length} {guideStopsWithCoords.length === 1 ? 'Stop' : 'Stops'}
-                </Badge>
-              </div>
 
-              {activeGuide.summary && (
-                <p className="text-xs leading-relaxed text-gray-600 bg-emerald-50/60 border border-emerald-100/60 p-3 rounded-xl">
-                  {activeGuide.summary}
-                </p>
-              )}
+                {activeCommuteGuide.summary && (
+                  <p className="text-xs leading-relaxed text-gray-600 bg-emerald-50/60 border border-emerald-100/60 p-3 rounded-xl">
+                    {activeCommuteGuide.summary}
+                  </p>
+                )}
 
-              <ol className="space-y-3 pt-1 max-h-[380px] overflow-y-auto pr-1">
-                {guideStopsWithCoords.map((stop) => (
-                  <li
-                    key={stop.order}
-                    className="flex items-start gap-3 rounded-xl bg-gray-50/80 p-3 border border-gray-100 transition hover:bg-white hover:shadow-soft"
-                  >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-lacvay-green text-[11px] font-bold text-white">
-                      {stop.order}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-gray-900">{stop.title}</p>
-                      {stop.description && (
-                        <p className="text-[11.5px] text-gray-500 mt-0.5 leading-relaxed">
-                          {stop.description}
+                {/* Transport segment list with fares */}
+                {Array.isArray(activeCommuteGuide.transport_segments) && activeCommuteGuide.transport_segments.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Transportation Needed</p>
+                    {(activeCommuteGuide.transport_segments as TransportSegment[]).map((seg, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between rounded-xl bg-gray-50 p-3 border border-gray-100 transition hover:bg-white hover:shadow-soft"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          {seg.color && (
+                            <span
+                              className="h-3.5 w-3.5 rounded-full border border-gray-200"
+                              style={{ backgroundColor: seg.color }}
+                            />
+                          )}
+                          <div>
+                            <p className="text-xs font-bold text-gray-900">
+                              {seg.routeName || seg.type}
+                            </p>
+                            <p className="text-[10.5px] text-gray-500">{seg.type}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-extrabold text-gray-900">
+                          {seg.fare != null ? `₱${Number(seg.fare).toFixed(2)}` : <span className="text-gray-400 font-medium text-xs">Varies</span>}
+                        </span>
+                      </div>
+                    ))}
+
+                    {/* Estimated total fare */}
+                    {(activeCommuteGuide.estimated_fare_min != null || activeCommuteGuide.estimated_fare_max != null) && (
+                      <div className="rounded-xl bg-emerald-50/60 border border-emerald-100/60 p-3 flex items-center justify-between">
+                        <p className="text-xs font-bold text-lacvay-green">Estimated Total Fare</p>
+                        <p className="text-sm font-extrabold text-lacvay-green-dark">
+                          ₱{activeCommuteGuide.estimated_fare_min ?? '—'}–₱{activeCommuteGuide.estimated_fare_max ?? '—'}
                         </p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-gray-50 p-4 text-center border border-gray-100">
+                    <p className="text-xs text-gray-500">No transport segments defined for this guide.</p>
+                  </div>
+                )}
+              </Card>
 
-              <div className="pt-2 border-t border-gray-100">
-                <Button
-                  variant="secondary"
-                  className="w-full text-xs"
-                  onClick={() => navigate('/map', { replace: true, state: {} })}
-                >
-                  Clear Itinerary & Plan Normal Route
-                </Button>
-              </div>
-            </Card>
+              {/* Directions: Step-by-step */}
+              <Card className="space-y-3">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                  <h3 className="font-bold text-gray-900">Directions</h3>
+                  <Badge variant="lime">
+                    {(activeCommuteGuide.steps as CommuteGuideStep[])?.length || 0} steps
+                  </Badge>
+                </div>
+
+                {Array.isArray(activeCommuteGuide.steps) && activeCommuteGuide.steps.length > 0 ? (
+                  <ol className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                    {(activeCommuteGuide.steps as CommuteGuideStep[]).map((step) => (
+                      <li
+                        key={step.order}
+                        className="flex gap-3 rounded-xl bg-gray-50/80 p-3 border border-gray-100 transition hover:bg-white hover:shadow-soft"
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lacvay-green text-xs font-bold text-white">
+                          {step.order}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-gray-900">{step.title}</p>
+                          {step.description && (
+                            <p className="text-[11.5px] text-gray-500 mt-0.5 leading-relaxed">
+                              {step.description}
+                            </p>
+                          )}
+                          {step.tip && (
+                            <p className="mt-1 text-[11px] text-lacvay-green font-medium">
+                              💡 {step.tip}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <div className="rounded-2xl bg-gray-50/80 p-5 text-center border border-gray-100">
+                    <Info className="mx-auto h-5 w-5 text-gray-400 mb-1.5" />
+                    <p className="text-xs font-semibold text-gray-700">No step-by-step directions</p>
+                    <p className="mt-1 text-[11.5px] text-gray-500">This guide has no directions defined yet.</p>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-gray-100">
+                  <Button
+                    variant="secondary"
+                    className="w-full text-xs"
+                    onClick={() => navigate('/map', { replace: true, state: {} })}
+                  >
+                    Clear Guide & Return to Map
+                  </Button>
+                </div>
+              </Card>
+            </>
+          ) : activeGuide ? (
+            /* Active Guide Details Panel (from Saved Guides) — Route Details + Directions */
+            <>
+              {/* Route Details: Transport Segments */}
+              <Card className="space-y-4 shadow-card">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Bus className="h-4 w-4 text-lacvay-green" />
+                    <h3 className="font-bold text-gray-900">Route Details</h3>
+                  </div>
+                  <Badge variant="green">
+                    {activeGuideSegments.length > 0 ? `${activeGuideSegments.length} legs` : 'Itinerary'}
+                  </Badge>
+                </div>
+
+                {activeGuide.summary && (
+                  <p className="text-xs leading-relaxed text-gray-600 bg-emerald-50/60 border border-emerald-100/60 p-3 rounded-xl">
+                    {activeGuide.summary}
+                  </p>
+                )}
+
+                {/* Detected Transport Segments */}
+                {activeGuideSegments.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                      Transportation Needed
+                    </p>
+                    {activeGuideSegments.map((seg, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between rounded-xl bg-gray-50 p-3 border border-gray-100 transition hover:bg-white hover:shadow-soft"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          {seg.color && (
+                            <span
+                              className="h-3.5 w-3.5 rounded-full border border-gray-200"
+                              style={{ backgroundColor: seg.color }}
+                            />
+                          )}
+                          <div>
+                            <p className="text-xs font-bold text-gray-900">
+                              {seg.routeName || seg.type}
+                            </p>
+                            <p className="text-[10.5px] text-gray-500">{seg.type}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-extrabold text-gray-900">
+                          {seg.fare != null ? `₱${Number(seg.fare).toFixed(2)}` : (
+                            <span className="text-gray-400 font-medium text-xs">Varies</span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-gray-50 p-3 text-center border border-gray-100">
+                    <p className="text-xs text-gray-500">
+                      Refer to the step-by-step directions below for specific transit directions.
+                    </p>
+                  </div>
+                )}
+              </Card>
+
+              {/* Directions: Step-by-step Stops */}
+              <Card className="space-y-3">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                  <h3 className="font-bold text-gray-900">Directions & Stops</h3>
+                  <Badge variant="lime">
+                    {guideStopsWithCoords.length} {guideStopsWithCoords.length === 1 ? 'Stop' : 'Stops'}
+                  </Badge>
+                </div>
+
+                <ol className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                  {guideStopsWithCoords.map((stop) => (
+                    <li
+                      key={stop.order}
+                      className="flex items-start gap-3 rounded-xl bg-gray-50/80 p-3 border border-gray-100 transition hover:bg-white hover:shadow-soft"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lacvay-green text-xs font-bold text-white">
+                        {stop.order}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-gray-900">{stop.title}</p>
+                        {stop.description && (
+                          <p className="text-[11.5px] text-gray-500 mt-0.5 leading-relaxed">
+                            {stop.description}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+
+                <div className="pt-2 border-t border-gray-100">
+                  <Button
+                    variant="secondary"
+                    className="w-full text-xs"
+                    onClick={() => navigate('/map', { replace: true, state: {} })}
+                  >
+                    Clear Itinerary & Plan Normal Route
+                  </Button>
+                </div>
+              </Card>
+            </>
           ) : (
             /* Route Details & Fare Matrix Panel */
             <>
@@ -728,7 +1091,7 @@ export default function MapPage() {
                 )}
               </Card>
 
-              {/* Directions Panel - Blank placeholder state until AI generated */}
+              {/* Directions Panel - Blank placeholder state until guide provides them */}
               <Card>
                 <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
                   <h3 className="font-bold text-gray-900">Directions</h3>
@@ -740,7 +1103,7 @@ export default function MapPage() {
                   <Info className="mx-auto h-5 w-5 text-gray-400 mb-1.5" />
                   <p className="text-xs font-semibold text-gray-700">No Directions Available Yet</p>
                   <p className="mt-1 text-[11.5px] text-gray-500 leading-relaxed">
-                    Step-by-step turn directions will be available once generated by our AI travel assistant.
+                    Step-by-step turn directions will be available once generated by our AI travel assistant or from a commute guide.
                   </p>
                 </div>
               </Card>

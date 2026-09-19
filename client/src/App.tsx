@@ -29,6 +29,7 @@ const AdminPlaceFormPage = lazy(() => import('@/pages/admin/AdminPlaceFormPage')
 const AdminRestaurantsPage = lazy(() => import('@/pages/admin/AdminRestaurantsPage'));
 const AdminRestaurantFormPage = lazy(() => import('@/pages/admin/AdminRestaurantFormPage'));
 const AdminTransitPage = lazy(() => import('@/pages/admin/AdminTransitPage'));
+const AdminGuidesPage = lazy(() => import('@/pages/admin/AdminGuidesPage'));
 const AdminPromotionsPage = lazy(() => import('@/pages/admin/AdminPromotionsPage'));
 const AdminPromotionFormPage = lazy(() => import('@/pages/admin/AdminPromotionFormPage'));
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'));
@@ -149,6 +150,7 @@ export default function App() {
                 <Route path="restaurants/new" element={<AdminRestaurantFormPage />} />
                 <Route path="restaurants/:id/edit" element={<AdminRestaurantFormPage />} />
                 <Route path="transit" element={<AdminTransitPage />} />
+                <Route path="guides" element={<AdminGuidesPage />} />
               </Route>
 
               {/* All client/user app feature routes - STRICTLY PROTECTED */}

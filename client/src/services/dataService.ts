@@ -1,5 +1,6 @@
-import { commuteGuides, externalProviders } from '@/data/mockData';
-import type { TouristSpot, Restaurant, CommuteGuide, ExternalProvider, Promotion, SearchResult, TouristCategory } from '@/types';
+import { externalProviders } from '@/data/mockData';
+import { commuteGuidesService } from '@/services/commuteGuidesService';
+import type { TouristSpot, Restaurant, ExternalProvider, Promotion, SearchResult, TouristCategory, GlobalCommuteGuide } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { contentRepository } from '@/services/contentRepository';
 
@@ -21,12 +22,13 @@ export const dataService = {
     return contentRepository.getRestaurant(id);
   },
 
-  getCommuteGuides(): Promise<CommuteGuide[]> {
-    return Promise.resolve(commuteGuides);
+  getCommuteGuides(): Promise<GlobalCommuteGuide[]> {
+    return commuteGuidesService.listGlobalGuides();
   },
 
-  getCommuteGuide(id: string): Promise<CommuteGuide | undefined> {
-    return Promise.resolve(commuteGuides.find((g) => g.id === id));
+  async getCommuteGuide(id: string): Promise<GlobalCommuteGuide | undefined> {
+    const guides = await commuteGuidesService.listGlobalGuides();
+    return guides.find((g) => g.id === id);
   },
 
   async getExternalProviders(): Promise<ExternalProvider[]> {

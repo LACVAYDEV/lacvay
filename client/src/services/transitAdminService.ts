@@ -46,45 +46,83 @@ export const transitAdminService = {
   },
 
   async createRoute(route: TransitRouteInsert): Promise<TransitRouteRow> {
-    // Only send valid DB columns (route_code does not exist in transit_routes table)
-    const payload: TransitRouteInsert = {
+    const payload: Record<string, any> = {
       route_name: route.route_name,
       vehicle_type: route.vehicle_type || 'Jeepney',
       color_code: route.color_code,
       geojson_path: route.geojson_path ?? null,
     };
     if (route.id) payload.id = route.id;
+    if (route.regular_fare !== undefined) payload.regular_fare = route.regular_fare;
+    if (route.discounted_fare !== undefined) payload.discounted_fare = route.discounted_fare;
+    if (route.extended_fare !== undefined) payload.extended_fare = route.extended_fare;
+    if (route.extended_discounted_fare !== undefined) payload.extended_discounted_fare = route.extended_discounted_fare;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('transit_routes')
-      .insert(payload)
+      .insert(payload as TransitRouteInsert)
       .select('*')
       .single();
 
-    if (error) {
+    // Fallback if the database migration hasn't been executed yet in Supabase
+    if (error && (error.code === '42703' || error.message?.includes('does not exist'))) {
+      delete payload.regular_fare;
+      delete payload.discounted_fare;
+      delete payload.extended_fare;
+      delete payload.extended_discounted_fare;
+      const retry = await supabase
+        .from('transit_routes')
+        .insert(payload as TransitRouteInsert)
+        .select('*')
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
+    if (error || !data) {
       console.error('[transitAdminService] Error creating route:', error);
-      throw new Error(error.message || 'Failed to create route in database');
+      throw new Error(error?.message || 'Failed to create route in database');
     }
     return data;
   },
 
   async updateRoute(id: string, updates: TransitRouteUpdate): Promise<TransitRouteRow> {
-    const payload: TransitRouteUpdate = {};
+    const payload: Record<string, any> = {};
     if (updates.route_name !== undefined) payload.route_name = updates.route_name;
     if (updates.vehicle_type !== undefined) payload.vehicle_type = updates.vehicle_type;
     if (updates.color_code !== undefined) payload.color_code = updates.color_code;
     if (updates.geojson_path !== undefined) payload.geojson_path = updates.geojson_path;
+    if (updates.regular_fare !== undefined) payload.regular_fare = updates.regular_fare;
+    if (updates.discounted_fare !== undefined) payload.discounted_fare = updates.discounted_fare;
+    if (updates.extended_fare !== undefined) payload.extended_fare = updates.extended_fare;
+    if (updates.extended_discounted_fare !== undefined) payload.extended_discounted_fare = updates.extended_discounted_fare;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('transit_routes')
-      .update(payload)
+      .update(payload as TransitRouteUpdate)
       .eq('id', id)
       .select('*')
       .single();
 
-    if (error) {
+    // Fallback if the database migration hasn't been executed yet in Supabase
+    if (error && (error.code === '42703' || error.message?.includes('does not exist'))) {
+      delete payload.regular_fare;
+      delete payload.discounted_fare;
+      delete payload.extended_fare;
+      delete payload.extended_discounted_fare;
+      const retry = await supabase
+        .from('transit_routes')
+        .update(payload as TransitRouteUpdate)
+        .eq('id', id)
+        .select('*')
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
+    if (error || !data) {
       console.error('[transitAdminService] Error updating route:', error);
-      throw new Error(error.message || 'Failed to update route in database');
+      throw new Error(error?.message || 'Failed to update route in database');
     }
     return data;
   },
@@ -150,13 +188,32 @@ export const transitAdminService = {
 
   // --- Fixed Fare Pricing Matrix (Per Route / Per Jeep) ---
   extractRouteFares(route?: TransitRouteRow | null): FixedFarePricing | null {
-    if (!route || !route.geojson_path) return null;
-    const path = route.geojson_path as Record<string, any>;
-    if (path.fares && typeof path.fares === 'object') {
-      return path.fares as FixedFarePricing;
+    if (!route) return null;
+
+    // 1. First Priority: Native database table columns on transit_routes
+    if (
+      route.regular_fare != null ||
+      route.discounted_fare != null ||
+      route.extended_fare != null ||
+      route.extended_discounted_fare != null
+    ) {
+      return {
+        regular: route.regular_fare,
+        discounted: route.discounted_fare,
+        extraDistance: route.extended_fare,
+        extraDistanceDiscounted: route.extended_discounted_fare,
+      };
     }
-    if (path.properties && path.properties.fares && typeof path.properties.fares === 'object') {
-      return path.properties.fares as FixedFarePricing;
+
+    // 2. Second Priority: Embedded in route.geojson_path
+    if (route.geojson_path) {
+      const path = route.geojson_path as Record<string, any>;
+      if (path.fares && typeof path.fares === 'object') {
+        return path.fares as FixedFarePricing;
+      }
+      if (path.properties && path.properties.fares && typeof path.properties.fares === 'object') {
+        return path.properties.fares as FixedFarePricing;
+      }
     }
     return null;
   },
@@ -165,7 +222,7 @@ export const transitAdminService = {
     route: TransitRouteRow,
     cachedFares?: JeepneyFareRow[],
   ): Promise<FixedFarePricing> {
-    // 1. Check embedded in route.geojson_path
+    // Check extracted fares from native columns or embedded path
     const embedded = this.extractRouteFares(route);
     if (
       embedded &&
@@ -182,11 +239,12 @@ export const transitAdminService = {
       };
     }
 
-    // 2. Check in jeepney_fare_matrix for this specific route (by route ID or route name)
+    // Check in jeepney_fare_matrix for this specific route (by route_id, route ID landmark, or route name)
     try {
       const fares = cachedFares || (await this.listFares());
       const routeSpecificFares = fares.filter(
         (f) =>
+          f.route_id === route.id ||
           f.origin_landmark === route.id ||
           f.origin_landmark === route.route_name ||
           f.origin_landmark?.toLowerCase() === route.route_name?.toLowerCase(),
@@ -213,7 +271,7 @@ export const transitAdminService = {
       console.warn('[transitAdminService] Could not load route fare matrix:', err);
     }
 
-    // 3. Fallback to global defaults if route has no specific fare configured yet
+    // Fallback to global defaults if route has no specific fare configured yet
     const globalPricing = await this.getFixedFarePricing();
     return {
       regular: globalPricing?.regular ?? 13,
@@ -233,12 +291,12 @@ export const transitAdminService = {
     // Find any existing row for this route in jeepney_fare_matrix
     const standard = fares.find(
       (f) =>
-        (f.origin_landmark === routeId || f.origin_landmark === routeName) &&
+        (f.route_id === routeId || f.origin_landmark === routeId || f.origin_landmark === routeName) &&
         (f.destination_landmark === 'Standard Trip' || f.destination_landmark === 'Base Fare'),
     );
     const extended = fares.find(
       (f) =>
-        (f.origin_landmark === routeId || f.origin_landmark === routeName) &&
+        (f.route_id === routeId || f.origin_landmark === routeId || f.origin_landmark === routeName) &&
         (f.destination_landmark === 'Extended Trip' || f.destination_landmark === 'Extra Distance'),
     );
 
@@ -247,36 +305,66 @@ export const transitAdminService = {
     const ext = pricing.extraDistance ?? 0;
     const extDisc = pricing.extraDistanceDiscounted ?? 0;
 
+    // Save standard trip row with route_id if supported
     if (standard) {
-      await this.updateFare(standard.id, {
+      const updateData: Record<string, any> = {
         origin_landmark: routeId,
         destination_landmark: 'Standard Trip',
         regular_fare: reg,
         discounted_fare: disc,
-      });
+        route_id: routeId,
+      };
+      try {
+        await this.updateFare(standard.id, updateData as JeepneyFareUpdate);
+      } catch {
+        delete updateData.route_id;
+        await this.updateFare(standard.id, updateData as JeepneyFareUpdate);
+      }
     } else if (pricing.regular != null || pricing.discounted != null) {
-      await this.createFare({
+      const insertData: Record<string, any> = {
         origin_landmark: routeId,
         destination_landmark: 'Standard Trip',
         regular_fare: reg,
         discounted_fare: disc,
-      });
+        route_id: routeId,
+      };
+      try {
+        await this.createFare(insertData as JeepneyFareInsert);
+      } catch {
+        delete insertData.route_id;
+        await this.createFare(insertData as JeepneyFareInsert);
+      }
     }
 
+    // Save extended trip row with route_id if supported
     if (extended) {
-      await this.updateFare(extended.id, {
+      const updateData: Record<string, any> = {
         origin_landmark: routeId,
         destination_landmark: 'Extended Trip',
         regular_fare: ext,
         discounted_fare: extDisc,
-      });
+        route_id: routeId,
+      };
+      try {
+        await this.updateFare(extended.id, updateData as JeepneyFareUpdate);
+      } catch {
+        delete updateData.route_id;
+        await this.updateFare(extended.id, updateData as JeepneyFareUpdate);
+      }
     } else if (pricing.extraDistance != null || pricing.extraDistanceDiscounted != null) {
-      await this.createFare({
+      const insertData: Record<string, any> = {
         origin_landmark: routeId,
         destination_landmark: 'Extended Trip',
         regular_fare: ext,
         discounted_fare: extDisc,
-      });
+        route_id: routeId,
+      };
+      try {
+        await this.createFare(insertData as JeepneyFareInsert);
+      } catch {
+        delete insertData.route_id;
+        await this.createFare(insertData as JeepneyFareInsert);
+      }
     }
   },
 

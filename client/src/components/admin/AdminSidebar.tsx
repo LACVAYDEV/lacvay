@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, MapPin, Route, Tag, Users, UtensilsCrossed } from 'lucide-react';
+import { LayoutDashboard, MapPin, Route, Tag, Users, UtensilsCrossed, BookOpen } from 'lucide-react';
 import { LogoMark, SidebarWaveArt } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
@@ -9,6 +9,7 @@ export const adminNavItems = [
   { to: '/admin/places', label: 'Tourist Spots', icon: MapPin, end: false as const },
   { to: '/admin/restaurants', label: 'Eateries', icon: UtensilsCrossed, end: false as const },
   { to: '/admin/transit', label: 'Transit Routes', icon: Route, end: false as const },
+  { to: '/admin/guides', label: 'Commute Guides', icon: BookOpen, end: false as const },
   { to: '/admin/promotions', label: 'Promotions', icon: Tag, end: false as const },
 ];
 
