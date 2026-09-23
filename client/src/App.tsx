@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
@@ -6,6 +6,7 @@ import { ProtectedRoute, PublicOnlyRoute, AppSplash } from '@/components/auth/Ro
 import { PartnerOnly, TravelerOnly } from '@/components/auth/RoleRoutes';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoadingState } from '@/components/ui/States';
+import { requestUserLocation } from '@/lib/userLocation';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
@@ -27,6 +28,13 @@ const PromotionsPage = lazy(() => import('@/pages/PromotionsPage'));
 const SavedPage = lazy(() => import('@/pages/SavedPage'));
 const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+
+function LocationBootstrap() {
+  useEffect(() => {
+    void requestUserLocation();
+  }, []);
+  return null;
+}
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -181,6 +189,7 @@ function AppShell() {
 export default function App() {
   return (
     <BrowserRouter>
+      <LocationBootstrap />
       <AuthProvider>
         <AppProvider>
           <Suspense fallback={<AppSplash />}>

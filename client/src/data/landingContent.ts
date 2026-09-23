@@ -18,17 +18,17 @@ export interface LandingBenefit {
 export const landingFeatures: LandingFeature[] = [
   {
     title: 'Map & Routes',
-    description: 'See jeepney routes, tricycle and motorcycle coverage, stops, and landmarks across Batangas City.',
+    description: 'See jeepney routes, stops, and landmarks across Batangas City.',
     image: '/images/icon-map.png',
   },
   {
-    title: 'Fare Checker',
-    description: 'Know what a trip should cost before you ride — jeepney, tricycle, motorcycle taxi, or taxi.',
+    title: 'Transport Checker',
+    description: 'Explore available jeepney and transport routes, check fixed fares, and view paths on the map.',
     image: '/images/icon-fare.png',
   },
   {
-    title: 'Book a Ride',
-    description: 'Book a taxi or habal-habal rider available near your location.',
+    title: 'Ride Guide',
+    description: 'Learn how to book Angkas motorcycle taxis and metered taxis through provider apps.',
     image: '/images/icon-ride.png',
   },
   {
@@ -47,12 +47,12 @@ export const landingSteps: LandingStep[] = [
   {
     order: 2,
     title: 'Compare routes and fares',
-    description: 'See jeepney, tricycle TODA zones, habal-habal, and taxi options with travel time and estimated fare.',
+    description: 'See jeepney routes and fares, then use Angkas, Grab, or iDOL Taxi for places off the jeepney line.',
   },
   {
     order: 3,
     title: 'Ride with confidence',
-    description: 'Follow the commute guide step by step, book a taxi or habal-habal, or find your tricycle TODA area.',
+    description: 'Follow the commute guide step by step, or use the ride guide to book Angkas and taxis.',
   },
 ];
 
@@ -91,6 +91,6 @@ export const aiSampleChat = [
   { role: 'user' as const, text: 'How do I get to SM Batangas from the port?' },
   {
     role: 'assistant' as const,
-    text: 'Ride a jeepney from the port heading to Diversion Road and get off at SM City Batangas. It takes about 20 minutes and costs around ₱13–₱15.',
+    text: 'Ride a jeepney from the port heading to Diversion Road and get off at SM City Batangas. It takes about 20 minutes and the regular fare is ₱14.',
   },
 ];

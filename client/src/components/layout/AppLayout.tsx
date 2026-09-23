@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Sidebar, mobileNavItems } from './Sidebar';
 import { PartnerSidebar, partnerMobileNavItems } from './PartnerSidebar';
 import { Header } from './Header';
+import { LocationPermissionBar } from './LocationPermissionBar';
 import { LogoMark } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +64,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
         </div>
 
         <Header />
+        <LocationPermissionBar />
         <main className="flex-1 px-4 pb-6 md:px-6 lg:px-7">{children}</main>
 
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-100 bg-white px-2 py-1.5 lg:hidden">

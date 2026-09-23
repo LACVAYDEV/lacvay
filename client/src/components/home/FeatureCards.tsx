@@ -9,32 +9,25 @@ const features = [
     path: '/map',
   },
   {
-    title: 'Fare Checker',
-    description: 'Check exact or estimated fares for your trip.',
-    image: '/images/icon-fare.png',
-    cta: 'Check Fare',
-    path: '/fares',
-  },
-  {
-    title: 'Book a Ride',
-    description: 'See transport partners on the map with base fare and per-km rates.',
-    image: '/images/icon-ride.png',
-    cta: 'Book Now',
-    path: '/rides',
-  },
-  {
-    title: 'Tricycle TODA',
-    description: 'See which TODA covers your barangay — tricycles are not bookable in-app.',
-    image: '/images/promo-tricycle.png',
-    cta: 'View Areas',
-    path: '/toda',
-  },
-  {
     title: 'Commute Guide',
-    description: 'Learn how to commute by jeepney, tricycle, taxi, or motorcycle rider.',
+    description: 'Learn how to commute by jeepney, then use Angkas, Grab, or iDOL Taxi off-route.',
     image: '/images/icon-commute.png',
     cta: 'View Guide',
     path: '/commute',
+  },
+  {
+    title: 'Transport Checker',
+    description: 'Check available transport routes, fixed fares, and view on map.',
+    image: '/images/icon-fare.png',
+    cta: 'Check Transport',
+    path: '/fares',
+  },
+  {
+    title: 'Ride Guide',
+    description: 'Step-by-step instructions for booking Angkas, Grab, and local taxis.',
+    image: '/images/icon-ride.png',
+    cta: 'View Guide',
+    path: '/rides',
   },
 ];
 
@@ -50,7 +43,7 @@ export function FeatureCards() {
           onClick={() => navigate(f.path)}
           className="group flex flex-col rounded-[22px] bg-white p-4 text-left shadow-card transition hover:-translate-y-0.5 hover:shadow-lg"
         >
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-lacvay-lime/25 to-lacvay-green/5">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-lacvay-blush">
             <img src={f.image} alt="" className="h-9 w-9 object-contain mix-blend-multiply" />
           </div>
           <h3 className="text-[14px] font-bold text-gray-900">{f.title}</h3>

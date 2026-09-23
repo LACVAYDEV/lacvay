@@ -13,7 +13,7 @@ interface AppContextValue {
   removeSaved: (id: string) => void;
   isSaved: (itemId: string) => boolean;
   addHistory: (item: Omit<SearchHistoryItem, 'id' | 'timestamp'>) => void;
-  sendAI: (message: string) => Promise<void>;
+  sendAI: (message: string, origin?: string) => Promise<void>;
   showToast: (message: string) => void;
   aiSuggestions: string[];
 }
@@ -86,7 +86,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const sendAI = useCallback(async (message: string) => {
+  const sendAI = useCallback(async (message: string, origin?: string) => {
     const userMsg: AIMessage = {
       id: generateId(),
       role: 'user',
@@ -96,7 +96,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAiMessages((prev) => [...prev, userMsg]);
     setAiLoading(true);
     try {
-      const reply = await sendAIMessage(message);
+      const reply = await sendAIMessage(message, origin);
       setAiMessages((prev) => [...prev, reply]);
       addHistory({ query: message, type: 'search', meta: 'AI Assistant' });
     } finally {
