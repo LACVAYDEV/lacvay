@@ -1,4 +1,6 @@
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { normalizeAiMarkdown } from '@/lib/normalizeAiMarkdown';
 import { cn } from '@/lib/utils';
 
 interface MarkdownContentProps {
@@ -12,20 +14,12 @@ export function MarkdownContent({ content, className, isUser = false }: Markdown
     return <p className={cn('whitespace-pre-wrap leading-relaxed text-sm', className)}>{content}</p>;
   }
 
-  // Clean leading/trailing quotes if the model wrapped the entire response in quotes
-  let cleaned = content.trim();
-  if (cleaned.startsWith('"{') || cleaned.startsWith('"[')) {
-    // leave json alone
-  } else if (
-    (cleaned.startsWith('"') && cleaned.endsWith('"') && cleaned.length > 2) ||
-    (cleaned.startsWith('\'') && cleaned.endsWith('\'') && cleaned.length > 2)
-  ) {
-    cleaned = cleaned.slice(1, -1).trim();
-  }
+  const cleaned = normalizeAiMarkdown(content);
 
   return (
     <div className={cn('text-[13.5px] leading-relaxed text-gray-700', className)}>
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
         components={{
           p: ({ children }) => <p className="mb-2.5 last:mb-0 leading-relaxed">{children}</p>,
           strong: ({ children }) => <strong className="font-bold text-gray-900">{children}</strong>,
@@ -70,6 +64,19 @@ export function MarkdownContent({ content, className, isUser = false }: Markdown
               {children}
             </a>
           ),
+          table: ({ children }) => (
+            <div className="my-2.5 overflow-x-auto rounded-xl border border-gray-200">
+              <table className="w-full min-w-[280px] border-collapse text-[13px]">{children}</table>
+            </div>
+          ),
+          thead: ({ children }) => <thead className="bg-gray-50 text-left">{children}</thead>,
+          th: ({ children }) => (
+            <th className="border-b border-gray-200 px-3 py-2 font-bold text-gray-900">{children}</th>
+          ),
+          td: ({ children }) => (
+            <td className="border-b border-gray-100 px-3 py-2 align-top leading-relaxed">{children}</td>
+          ),
+          tr: ({ children }) => <tr className="last:[&>td]:border-b-0">{children}</tr>,
         }}
       >
         {cleaned}

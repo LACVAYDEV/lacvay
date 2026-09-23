@@ -10,7 +10,7 @@ const features = [
   },
   {
     title: 'Commute Guide',
-    description: 'Learn how to commute by jeepney, tricycle, taxi, or motorcycle rider.',
+    description: 'Learn how to commute by jeepney, then use Angkas, Grab, or iDOL Taxi off-route.',
     image: '/images/icon-commute.png',
     cta: 'View Guide',
     path: '/commute',

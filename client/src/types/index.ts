@@ -294,6 +294,35 @@ export interface AIMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  /** Structured commute plan for map/guide view (when AI resolved an OD). */
+  plan?: CommuteGuidePlan | null;
+}
+
+export type GuideLegMode = 'walk' | 'jeepney' | 'tnvs';
+
+export interface CommuteGuideLeg {
+  order: number;
+  mode: GuideLegMode;
+  title: string;
+  description: string;
+  minutes?: number;
+  fareRegular?: number;
+  fareDiscounted?: number;
+  routeName?: string;
+  /** [lat, lng] polyline for this leg */
+  path: [number, number][];
+}
+
+export interface CommuteGuidePlan {
+  title: string;
+  origin: { label: string; lat: number; lng: number };
+  destination: { label: string; lat: number; lng: number };
+  planType: string;
+  legs: CommuteGuideLeg[];
+  totalMinutes: number | null;
+  totalFareRegular: number | null;
+  totalFareDiscounted: number | null;
+  sourceReply?: string;
 }
 
 export interface AIConversation {

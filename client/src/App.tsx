@@ -1,10 +1,11 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
 import { ProtectedRoute, PublicOnlyRoute, AdminRoute, SessionModeRoute, AppSplash } from '@/components/auth/RouteGuards';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoadingState } from '@/components/ui/States';
+import { requestUserLocation } from '@/lib/userLocation';
 import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
@@ -35,6 +36,13 @@ const AdminPromotionsPage = lazy(() => import('@/pages/admin/AdminPromotionsPage
 const AdminPromotionFormPage = lazy(() => import('@/pages/admin/AdminPromotionFormPage'));
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'));
 const ChooseModePage = lazy(() => import('@/pages/ChooseModePage'));
+
+function LocationBootstrap() {
+  useEffect(() => {
+    void requestUserLocation();
+  }, []);
+  return null;
+}
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -82,6 +90,7 @@ function RootRoute() {
 export default function App() {
   return (
     <BrowserRouter>
+      <LocationBootstrap />
       <AuthProvider>
         <AppProvider>
           <ConfirmDialogProvider>

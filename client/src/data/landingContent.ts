@@ -18,7 +18,7 @@ export interface LandingBenefit {
 export const landingFeatures: LandingFeature[] = [
   {
     title: 'Map & Routes',
-    description: 'See jeepney routes, tricycle and motorcycle coverage, stops, and landmarks across Batangas City.',
+    description: 'See jeepney routes, stops, and landmarks across Batangas City.',
     image: '/images/icon-map.png',
   },
   {
@@ -47,7 +47,7 @@ export const landingSteps: LandingStep[] = [
   {
     order: 2,
     title: 'Compare routes and fares',
-    description: 'See jeepney, tricycle TODA zones, habal-habal, and taxi options with travel time and estimated fare.',
+    description: 'See jeepney routes and fares, then use Angkas, Grab, or iDOL Taxi for places off the jeepney line.',
   },
   {
     order: 3,

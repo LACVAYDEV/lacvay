@@ -8,12 +8,24 @@ import {
   Check,
   RotateCcw,
   Compass,
+  LocateFixed,
+  Map,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { savedGuidesService } from '@/services/savedGuidesService';
+import {
+  getStoredAiOrigin,
+  setStoredAiOrigin,
+  markManualAiOrigin,
+  clearManualAiOrigin,
+  storeActiveCommutePlan,
+} from '@/services/aiService';
+import { GEO_EVENT, GEO_ORIGIN_MANUAL_KEY, getStoredGeo, requestUserLocation, type UserGeo } from '@/lib/userLocation';
 import { MarkdownContent } from '@/components/ui/MarkdownContent';
 import { cn } from '@/lib/utils';
+import { buildFallbackCommutePlan, looksLikeCommuteReply } from '@/lib/commutePlanFromReply';
+import { rebuildPlanPaths } from '@/lib/mapCoordinates';
 import type { AIMessage, SavedGuideStep } from '@/types';
 
 function parseGuideFromMessage(content: string): {
@@ -26,18 +38,26 @@ function parseGuideFromMessage(content: string): {
     .map((l) => l.trim())
     .filter(Boolean);
 
-  // Try to find a heading
+  // Prefer OD title: "CLB ΓåÆ Sto. Ni├▒o" / **A ΓåÆ B**
   let title = 'Batangas City Trip Itinerary';
-  for (const line of lines) {
-    const clean = line.replace(/^[#* \t-]+/, '').replace(/[*#]/g, '').trim();
-    if (
-      clean.length > 5 &&
-      clean.length < 65 &&
-      !clean.toLowerCase().startsWith('here') &&
-      !clean.toLowerCase().startsWith('magandang')
-    ) {
-      title = clean;
-      break;
+  const arrowTitle =
+    content.match(/\*\*([^*]+?ΓåÆ[^*]+?)\*\*/) ||
+    content.match(/^([^\n]{3,80}?ΓåÆ[^\n]{3,80})$/m);
+  if (arrowTitle?.[1]) {
+    title = arrowTitle[1].replace(/[*#]/g, '').trim();
+  } else {
+    for (const line of lines) {
+      const clean = line.replace(/^[#* \t-]+/, '').replace(/[*#]/g, '').trim();
+      if (
+        clean.length > 5 &&
+        clean.length < 80 &&
+        !clean.toLowerCase().startsWith('here') &&
+        !clean.toLowerCase().startsWith('magandang') &&
+        !/^\d+[.)]/.test(clean)
+      ) {
+        title = clean;
+        break;
+      }
     }
   }
 
@@ -60,7 +80,7 @@ function parseGuideFromMessage(content: string): {
   let order = 1;
   for (const line of lines) {
     const numMatch = line.match(/^(\d+)[.)]\s+(.+)/);
-    const bulletMatch = line.match(/^[*•-]\s+\*\*(.+?)\*\*:?\s*(.*)/);
+    const bulletMatch = line.match(/^[*ΓÇó-]\s+\*\*(.+?)\*\*:?\s*(.*)/);
 
     if (numMatch) {
       const stepText = numMatch[2].replace(/[*_]/g, '').trim();
@@ -108,11 +128,45 @@ export default function AIAssistantPage() {
   const navigate = useNavigate();
 
   const [input, setInput] = useState('');
+  const [origin, setOrigin] = useState('');
+  const [locatingOrigin, setLocatingOrigin] = useState(false);
   const [savingGuideId, setSavingGuideId] = useState<string | null>(null);
   const [savedGuideIds, setSavedGuideIds] = useState<Set<string>>(new Set());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const applyGeo = (geo: UserGeo | null) => {
+      try {
+        // Manual From (user typed CLB, SM, etc.) always wins ΓÇö never overwrite with GPS
+        if (sessionStorage.getItem(GEO_ORIGIN_MANUAL_KEY) === '1') {
+          const stored = getStoredAiOrigin();
+          if (stored) {
+            setOrigin(stored);
+            return;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      if (geo?.label) {
+        setOrigin(geo.label);
+        setStoredAiOrigin(geo.label);
+      } else {
+        setOrigin(getStoredAiOrigin() || 'SM Batangas');
+      }
+    };
+    applyGeo(getStoredGeo());
+    void requestUserLocation().then(applyGeo);
+
+    const onGeo = (event: Event) => {
+      const next = (event as CustomEvent<UserGeo>).detail;
+      applyGeo(next ?? null);
+    };
+    window.addEventListener(GEO_EVENT, onGeo);
+    return () => window.removeEventListener(GEO_EVENT, onGeo);
+  }, []);
 
   // Auto-scroll to bottom of chat when new messages appear or while loading
   useEffect(() => {
@@ -123,8 +177,24 @@ export default function AIAssistantPage() {
     const msg = (text ?? input).trim();
     if (!msg || aiLoading) return;
     setInput('');
-    await sendAI(msg);
+    await sendAI(msg, origin.trim() || undefined);
     inputRef.current?.focus();
+  };
+
+  const handleUseGpsOrigin = async () => {
+    setLocatingOrigin(true);
+    try {
+      const geo = await requestUserLocation();
+      if (!geo) {
+        showToast('Could not get your location. Allow location access in your browser.');
+        return;
+      }
+      clearManualAiOrigin();
+      setOrigin(geo.label);
+      setStoredAiOrigin(geo.label);
+    } finally {
+      setLocatingOrigin(false);
+    }
   };
 
   const handleSaveGuide = async (msg: AIMessage) => {
@@ -137,8 +207,11 @@ export default function AIAssistantPage() {
     setSavingGuideId(msg.id);
     try {
       const parsed = parseGuideFromMessage(msg.content);
+      const title =
+        msg.plan?.title?.trim() ||
+        parsed.title;
       await savedGuidesService.saveGuide(user.id, {
-        title: parsed.title,
+        title,
         summary: parsed.summary,
         steps: parsed.steps,
       });
@@ -153,6 +226,24 @@ export default function AIAssistantPage() {
     }
   };
 
+  const handleViewOnCommuteGuide = (msg: AIMessage) => {
+    const raw =
+      msg.plan && msg.plan.legs?.length
+        ? msg.plan
+        : buildFallbackCommutePlan(msg.content, origin.trim() || getStoredAiOrigin() || undefined);
+
+    if (!raw || !raw.legs?.length) {
+      showToast('No map route for this reply yet ΓÇö ask for a place-to-place commute.');
+      return;
+    }
+    const plan = rebuildPlanPaths(raw);
+    storeActiveCommutePlan(plan);
+    navigate('/commute', { state: { plan } });
+  };
+
+  const canViewOnGuide = (msg: AIMessage) =>
+    Boolean(msg.plan?.legs?.length) || looksLikeCommuteReply(msg.content);
+
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-white">
       {/* Sleek Top Header Bar */}
@@ -165,7 +256,7 @@ export default function AIAssistantPage() {
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-bold text-gray-900">AI Travel Assistant</h1>
               <span className="hidden rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-lacvay-green sm:inline-block">
-                Gemini 2.5 Flash
+                Groq
               </span>
             </div>
             <p className="text-[11px] text-gray-400">Batangas City Route & Itinerary Companion</p>
@@ -231,6 +322,17 @@ export default function AIAssistantPage() {
                   {/* Clean, borderless Action Row for AI Responses */}
                   {msg.id !== 'welcome' && (
                     <div className="mt-3.5 flex flex-wrap items-center gap-3 pt-2">
+                      {canViewOnGuide(msg) && (
+                        <button
+                          type="button"
+                          onClick={() => handleViewOnCommuteGuide(msg)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-lacvay-green/30 bg-emerald-50 px-3 py-1 text-xs font-semibold text-lacvay-green shadow-sm transition hover:bg-emerald-100"
+                        >
+                          <Map className="h-3 w-3" />
+                          <span>View on Commute Guide</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => void handleSaveGuide(msg)}
@@ -293,8 +395,43 @@ export default function AIAssistantPage() {
       {/* Sticky Bottom Input Area */}
       <footer className="shrink-0 border-t border-gray-100 bg-white/95 px-4 py-3.5 backdrop-blur pb-20 lg:pb-3.5 sm:px-6 md:px-8 lg:px-12">
         <div className="w-full space-y-2.5">
-          {/* Quick Suggestion Chips */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {/* Starting point + quick chips */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-gray-200 bg-white py-1.5 pl-3.5 pr-1.5 shadow-sm">
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-gray-400">From</span>
+              <input
+                type="text"
+                value={origin}
+                onChange={(e) => {
+                  setOrigin(e.target.value);
+                  setStoredAiOrigin(e.target.value);
+                  markManualAiOrigin();
+                }}
+                placeholder="Your current location"
+                className="min-w-0 flex-1 bg-transparent text-[12.5px] text-gray-800 outline-none placeholder:text-gray-400"
+              />
+              <button
+                type="button"
+                onClick={() => void handleUseGpsOrigin()}
+                disabled={locatingOrigin || aiLoading}
+                title="Use my current GPS location"
+                aria-label="Use my current GPS location"
+                className={cn(
+                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition',
+                  locatingOrigin
+                    ? 'bg-blue-50 text-blue-400'
+                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700',
+                  'disabled:opacity-50',
+                )}
+              >
+                {locatingOrigin ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <LocateFixed className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </label>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar sm:max-w-[55%]">
             {aiSuggestions.map((s) => (
               <button
                 key={s}
@@ -306,6 +443,7 @@ export default function AIAssistantPage() {
                 {s}
               </button>
             ))}
+            </div>
           </div>
 
           {/* Sleek, Pill-Shaped Input Box with subtle shadow */}
@@ -321,7 +459,7 @@ export default function AIAssistantPage() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about jeepneys, tricycle fares, top lomi houses, or full itineraries..."
+              placeholder="Ask how to get there ΓÇö e.g. Monte Maria"
               disabled={aiLoading}
               className="w-full rounded-full bg-transparent px-6 py-3.5 pr-14 text-[14px] text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-50"
             />

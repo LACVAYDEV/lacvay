@@ -25,7 +25,7 @@ const privacySections = [
   {
     title: 'Location and device permissions',
     paragraphs: [
-      'Location access is requested only when a feature needs it and your browser or device controls the permission. LACVAY does not claim to continuously track your device location.',
+      'Location access is requested so commute directions can start from where you are, instead of asking you to type a starting point. Your browser or device controls the permission. LACVAY does not continuously track your device location.',
     ],
   },
   {
@@ -59,7 +59,7 @@ const termsSections = [
   {
     title: 'Third-party services',
     paragraphs: [
-      'Links to maps, ride providers, restaurants, promotions, and other services are provided for convenience. Your use of a third-party service is governed by that provider’s terms, fees, availability, and policies.',
+      'Links to maps, ride providers, restaurants, promotions, and other services are provided for convenience. Your use of a third-party service is governed by that providerΓÇÖs terms, fees, availability, and policies.',
     ],
   },
   {

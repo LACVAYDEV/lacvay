@@ -19,7 +19,7 @@ interface AppContextValue {
   clearHistory: () => void;
   historySyncEnabled: boolean;
   setHistorySyncEnabled: (enabled: boolean) => Promise<void>;
-  sendAI: (message: string) => Promise<void>;
+  sendAI: (message: string, origin?: string) => Promise<void>;
   clearAIMessages: () => void;
   showToast: (message: string) => void;
   aiSuggestions: string[];
@@ -36,7 +36,7 @@ const WELCOME_MESSAGE: AIMessage = {
   id: 'welcome',
   role: 'assistant',
   content:
-    "Magandang araw! I'm **LACVAY AI**, your friendly Batangas City travel buddy 👋\n\nI can help you with:\n* **Jeepney, tricycle, & taxi routes**\n* **Accurate local fare estimates**\n* **Top beaches, mountains, & historical spots**\n* **Lomi houses & authentic Batangas dining**\n\nWhere would you like to explore today?",
+    "Magandang araw! I'm **LACVAY AI**, your friendly Batangas City travel buddy 🌿\n\nI can help you with:\n* **Jeepney, tricycle, & taxi routes**\n* **Accurate local fare estimates**\n* **Top beaches, mountains, & historical spots**\n* **Lomi houses & authentic Batangas dining**\n\nWhere would you like to explore today?",
   timestamp: new Date().toISOString(),
 };
 
@@ -95,9 +95,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [savedPlaces],
   );
 
-  // Ephemeral in-memory AI chat handler
   const sendAI = useCallback(
-    async (message: string) => {
+    async (message: string, origin?: string) => {
       const userMsg: AIMessage = {
         id: generateId(),
         role: 'user',
@@ -109,7 +108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAiLoading(true);
 
       try {
-        const reply = await sendAIMessage(message);
+        const reply = await sendAIMessage(message, origin);
         setAiMessages((prev) => [...prev, reply]);
       } catch (err) {
         console.error('Failed to get AI reply:', err);
@@ -131,13 +130,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Safe stubs for deprecated history and sessions
-  const addHistory = useCallback(() => {}, []);
-  const removeHistory = useCallback(() => {}, []);
+  const addHistory = useCallback((_item?: Omit<SearchHistoryItem, 'id' | 'timestamp'>) => {}, []);
+  const removeHistory = useCallback((_id?: string) => {}, []);
   const clearHistory = useCallback(() => {}, []);
-  const setHistorySyncEnabled = useCallback(async () => {}, []);
-  const selectSession = useCallback(async () => {}, []);
-  const createSession = useCallback(async () => generateId(), []);
-  const deleteSession = useCallback(async () => {}, []);
+  const setHistorySyncEnabled = useCallback(async (_enabled?: boolean) => {}, []);
+  const selectSession = useCallback(async (_sessionId?: string) => {}, []);
+  const createSession = useCallback(async (_title?: string) => generateId(), []);
+  const deleteSession = useCallback(async (_sessionId?: string) => {}, []);
 
   return (
     <AppContext.Provider

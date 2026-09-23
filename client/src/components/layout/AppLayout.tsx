@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Sidebar, mobileNavItems } from './Sidebar';
 import { Header } from './Header';
+import { LocationPermissionBar } from './LocationPermissionBar';
 import { LogoMark } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
@@ -115,6 +116,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
         </div>
 
         <Header />
+        <LocationPermissionBar />
         <main
           className={cn(
             'flex-1 min-h-0',

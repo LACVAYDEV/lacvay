@@ -72,10 +72,16 @@ export function extractPolylineCoords(geojson: unknown): [number, number][] {
     if (isNaN(a) || isNaN(b)) return null;
 
     // In GeoJSON: [longitude, latitude]. Batangas lat is ~13.7, lng is ~121.0
+    let lat = a;
+    let lng = b;
     if (a > 50 && b < 50) {
-      return [b, a]; // standard GeoJSON [lng, lat] -> leaflet [lat, lng]
+      lat = b;
+      lng = a;
     }
-    return [a, b];
+
+    // Drop points outside Batangas City (often ferry / open-water geometry)
+    if (lat < 13.58 || lat > 13.92 || lng < 120.98 || lng > 121.22) return null;
+    return [lat, lng];
   };
 
   const obj = geojson as Record<string, any>;

@@ -22,8 +22,8 @@ export const transportOptions: TransportOption[] = [
   {
     type: 'tricycle',
     label: 'Tricycle',
-    description: 'Operates within registered TODA territories — view coverage areas on the map.',
-    hasFareEstimate: true,
+    description: 'Short hops in barangays. LACVAY has no current TODA list — look for the nearest terminal and ask locals, or book TNVS.',
+    hasFareEstimate: false,
     isBookable: false,
   },
   {
