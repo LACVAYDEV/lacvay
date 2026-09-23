@@ -54,7 +54,7 @@ function createStopNumberIcon(num: number) {
 // Standard destination pin for Supabase places
 const placeIcon = L.divIcon({
   className: 'custom-place-marker',
-  html: `<div style="background-color:#159447;color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 8px rgba(21,148,71,0.4);border:2px solid #fff;">ðŸ“</div>`,
+  html: `<div style="background-color:#159447;color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;box-shadow:0 3px 8px rgba(21,148,71,0.4);border:2px solid #fff;">P</div>`,
   iconSize: [30, 30],
   iconAnchor: [15, 15],
 });
@@ -62,7 +62,7 @@ const placeIcon = L.divIcon({
 // Featured / Promoted destination pin (gold star badge)
 const promotedPlaceIcon = L.divIcon({
   className: 'custom-promoted-marker',
-  html: `<div style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:15px;box-shadow:0 4px 12px rgba(217,119,6,0.5);border:2.5px solid #fff;transform:translateY(-2px);">â˜…</div>`,
+  html: `<div style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:15px;box-shadow:0 4px 12px rgba(217,119,6,0.5);border:2.5px solid #fff;transform:translateY(-2px);">★</div>`,
   iconSize: [34, 34],
   iconAnchor: [17, 17],
 });
@@ -545,7 +545,7 @@ export default function MapPage() {
                             </p>
                             <p className="text-[11px] text-gray-500">{item.segment.type}</p>
                             {item.segment.fare != null && (
-                              <p className="font-bold text-lacvay-green mt-1">â‚±{item.segment.fare}</p>
+                              <p className="font-bold text-lacvay-green mt-1">₱{item.segment.fare}</p>
                             )}
                           </div>
                         </Popup>
@@ -574,7 +574,7 @@ export default function MapPage() {
                             <p className="text-xs text-gray-600 mt-1">{stop.description}</p>
                           )}
                           {stop.tip && (
-                            <p className="text-[11px] text-lacvay-green font-medium mt-1">ðŸ’¡ {stop.tip}</p>
+                            <p className="text-[11px] text-lacvay-green font-medium mt-1">Tip: {stop.tip}</p>
                           )}
                         </div>
                       </Popup>
@@ -661,7 +661,7 @@ export default function MapPage() {
                                 to={`/tourist-spots/${p.id}`}
                                 className="font-bold text-lacvay-green hover:underline"
                               >
-                                View details â†’
+                                View details →
                               </Link>
                             </div>
                           </div>
@@ -677,7 +677,7 @@ export default function MapPage() {
                       <Marker position={selectedRouteCoords[0]} icon={defaultIcon}>
                         <Popup>
                           <div className="p-1 text-xs font-bold text-gray-800">
-                            ðŸš© Start: {selectedRoute.route_name}
+                            Start: {selectedRoute.route_name}
                           </div>
                         </Popup>
                       </Marker>
@@ -737,7 +737,7 @@ export default function MapPage() {
         {/* Sidebar Info Panel */}
         <div className="space-y-4">
           {activeCommuteGuide ? (
-            /* Commute Guide Details Panel â€” Route Details + Directions */
+            /* Commute Guide Details Panel — Route Details + Directions */
             <>
               {/* Route Details: Transport Segments */}
               <Card className="space-y-4 shadow-card">
@@ -781,7 +781,7 @@ export default function MapPage() {
                           </div>
                         </div>
                         <span className="text-sm font-extrabold text-gray-900">
-                          {seg.fare != null ? `â‚±${Number(seg.fare).toFixed(2)}` : <span className="text-gray-400 font-medium text-xs">Varies</span>}
+                          {seg.fare != null ? `₱${Number(seg.fare).toFixed(2)}` : <span className="text-gray-400 font-medium text-xs">Varies</span>}
                         </span>
                       </div>
                     ))}
@@ -791,7 +791,7 @@ export default function MapPage() {
                       <div className="rounded-xl bg-emerald-50/60 border border-emerald-100/60 p-3 flex items-center justify-between">
                         <p className="text-xs font-bold text-lacvay-green">Estimated Total Fare</p>
                         <p className="text-sm font-extrabold text-lacvay-green-dark">
-                          â‚±{activeCommuteGuide.estimated_fare_min ?? 'â€”'}â€“â‚±{activeCommuteGuide.estimated_fare_max ?? 'â€”'}
+                          ₱{activeCommuteGuide.estimated_fare_min ?? '—'}–₱{activeCommuteGuide.estimated_fare_max ?? '—'}
                         </p>
                       </div>
                     )}
@@ -831,7 +831,7 @@ export default function MapPage() {
                           )}
                           {step.tip && (
                             <p className="mt-1 text-[11px] text-lacvay-green font-medium">
-                              ðŸ’¡ {step.tip}
+                              Tip: {step.tip}
                             </p>
                           )}
                         </div>
@@ -858,7 +858,7 @@ export default function MapPage() {
               </Card>
             </>
           ) : activeGuide ? (
-            /* Active Guide Details Panel (from Saved Guides) â€” Route Details + Directions */
+            /* Active Guide Details Panel (from Saved Guides) — Route Details + Directions */
             <>
               {/* Route Details: Transport Segments */}
               <Card className="space-y-4 shadow-card">
@@ -904,7 +904,7 @@ export default function MapPage() {
                           </div>
                         </div>
                         <span className="text-sm font-extrabold text-gray-900">
-                          {seg.fare != null ? `â‚±${Number(seg.fare).toFixed(2)}` : (
+                          {seg.fare != null ? `₱${Number(seg.fare).toFixed(2)}` : (
                             <span className="text-gray-400 font-medium text-xs">Varies</span>
                           )}
                         </span>
@@ -989,7 +989,7 @@ export default function MapPage() {
                       onChange={(e) => handleSelectRoute(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-white p-2.5 text-xs font-semibold text-gray-800 shadow-sm transition focus:border-lacvay-green focus:outline-none focus:ring-2 focus:ring-lacvay-green/20"
                     >
-                      <option value="">â€” Show All / Default Map â€”</option>
+                      <option value="">— Show All / Default Map —</option>
                       {routes.map((r) => {
                         const colorMeta = getTransitColorMeta(r.color_code);
                         return (
@@ -1043,20 +1043,20 @@ export default function MapPage() {
                         <div className="rounded-xl bg-white p-2.5 border border-emerald-100/50 shadow-2xs">
                           <p className="text-[10.5px] font-bold text-gray-500 uppercase">Standard Trip</p>
                           <p className="mt-1 text-sm font-extrabold text-gray-900">
-                            â‚±{standardRegular.toFixed(2)}
+                            ₱{standardRegular.toFixed(2)}
                           </p>
                           <p className="text-[10px] text-lacvay-green font-semibold">
-                            Disc: â‚±{standardDiscounted.toFixed(2)}
+                            Disc: ₱{standardDiscounted.toFixed(2)}
                           </p>
                         </div>
 
                         <div className="rounded-xl bg-white p-2.5 border border-emerald-100/50 shadow-2xs">
                           <p className="text-[10.5px] font-bold text-amber-700 uppercase">Extended Trip</p>
                           <p className="mt-1 text-sm font-extrabold text-gray-900">
-                            â‚±{extendedRegular.toFixed(2)}
+                            ₱{extendedRegular.toFixed(2)}
                           </p>
                           <p className="text-[10px] text-amber-700 font-semibold">
-                            Disc: â‚±{extendedDiscounted.toFixed(2)}
+                            Disc: ₱{extendedDiscounted.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -1087,7 +1087,7 @@ export default function MapPage() {
                       to="/fares"
                       className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-lacvay-green hover:underline"
                     >
-                      Go to Transport Checker â†’
+                      Go to Transport Checker →
                     </Link>
                   </div>
                 )}
