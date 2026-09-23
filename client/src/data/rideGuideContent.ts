@@ -36,7 +36,7 @@ export const rideGuides: Record<string, RideGuide> = {
     ],
     tips: [
       'Best for last-mile trips to barangays and spots jeepneys do not reach.',
-      'Keep your phone charged — the app tracks your ride in real time.',
+      'Keep your phone charged ΓÇö the app tracks your ride in real time.',
       'Avoid booking if you have heavy luggage; use Grab or iDOL Taxi instead.',
     ],
   },
@@ -53,7 +53,7 @@ export const rideGuides: Record<string, RideGuide> = {
       },
       {
         title: 'Enter pickup and destination',
-        description: 'Pin your location on the map or type an address — e.g. SM Batangas, Grand Terminal, or Batangas Port.',
+        description: 'Pin your location on the map or type an address ΓÇö e.g. SM Batangas, Grand Terminal, or Batangas Port.',
       },
       {
         title: 'Review fare and confirm',
@@ -79,7 +79,7 @@ export const rideGuides: Record<string, RideGuide> = {
       },
       {
         title: 'Give your pickup location clearly',
-        description: 'Share a landmark — e.g. Batangas Grand Terminal, SM City, Port of Batangas, or your barangay and street.',
+        description: 'Share a landmark ΓÇö e.g. Batangas Grand Terminal, SM City, Port of Batangas, or your barangay and street.',
       },
       {
         title: 'Confirm metered fare or estimate',
@@ -97,7 +97,7 @@ export const rideGuides: Record<string, RideGuide> = {
     tips: [
       'Useful for groups heading to remote barangays or shrine access roads.',
       'Book ahead for early-morning or late-night trips.',
-      'Keep small bills ready — drivers may not have change for large notes.',
+      'Keep small bills ready ΓÇö drivers may not have change for large notes.',
     ],
   },
 };

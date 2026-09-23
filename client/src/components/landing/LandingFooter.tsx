@@ -15,9 +15,9 @@ const columns = [
     title: 'Travel',
     links: [
       { label: 'Map & Routes', href: '#features' },
-      { label: 'Fare Checker', href: '#features' },
+      { label: 'Transport Checker', href: '#features' },
       { label: 'Commute Guide', href: '#features' },
-      { label: 'Book a Ride', href: '#features' },
+      { label: 'Ride Guide', href: '#features' },
     ],
   },
 ];
@@ -29,7 +29,7 @@ export function LandingFooter() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2.5">
-              <LogoMark className="h-9 w-7" />
+              <LogoMark className="size-12" />
               <span className="text-[19px] font-extrabold tracking-tight text-lacvay-green">LACVAY</span>
             </div>
             <p className="mt-3 max-w-xs text-[12.5px] leading-relaxed text-gray-600">
@@ -59,6 +59,12 @@ export function LandingFooter() {
             © {new Date().getFullYear()} LACVAY. Built for Batangas City.
           </p>
           <div className="flex gap-4">
+            <Link to="/privacy" className="text-[11.5px] font-semibold text-gray-600 hover:underline">
+              Privacy
+            </Link>
+            <Link to="/terms" className="text-[11.5px] font-semibold text-gray-600 hover:underline">
+              Terms
+            </Link>
             <Link to="/login" className="text-[11.5px] font-semibold text-lacvay-green hover:underline">
               Sign In
             </Link>

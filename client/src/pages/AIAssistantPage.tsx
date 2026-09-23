@@ -38,11 +38,11 @@ function parseGuideFromMessage(content: string): {
     .map((l) => l.trim())
     .filter(Boolean);
 
-  // Prefer OD title: "CLB → Sto. Niño" / **A → B**
+  // Prefer OD title: "CLB ΓåÆ Sto. Ni├▒o" / **A ΓåÆ B**
   let title = 'Batangas City Trip Itinerary';
   const arrowTitle =
-    content.match(/\*\*([^*]+?→[^*]+?)\*\*/) ||
-    content.match(/^([^\n]{3,80}?→[^\n]{3,80})$/m);
+    content.match(/\*\*([^*]+?ΓåÆ[^*]+?)\*\*/) ||
+    content.match(/^([^\n]{3,80}?ΓåÆ[^\n]{3,80})$/m);
   if (arrowTitle?.[1]) {
     title = arrowTitle[1].replace(/[*#]/g, '').trim();
   } else {
@@ -80,7 +80,7 @@ function parseGuideFromMessage(content: string): {
   let order = 1;
   for (const line of lines) {
     const numMatch = line.match(/^(\d+)[.)]\s+(.+)/);
-    const bulletMatch = line.match(/^[*•-]\s+\*\*(.+?)\*\*:?\s*(.*)/);
+    const bulletMatch = line.match(/^[*ΓÇó-]\s+\*\*(.+?)\*\*:?\s*(.*)/);
 
     if (numMatch) {
       const stepText = numMatch[2].replace(/[*_]/g, '').trim();
@@ -139,7 +139,7 @@ export default function AIAssistantPage() {
   useEffect(() => {
     const applyGeo = (geo: UserGeo | null) => {
       try {
-        // Manual From (user typed CLB, SM, etc.) always wins — never overwrite with GPS
+        // Manual From (user typed CLB, SM, etc.) always wins ΓÇö never overwrite with GPS
         if (sessionStorage.getItem(GEO_ORIGIN_MANUAL_KEY) === '1') {
           const stored = getStoredAiOrigin();
           if (stored) {
@@ -233,7 +233,7 @@ export default function AIAssistantPage() {
         : buildFallbackCommutePlan(msg.content, origin.trim() || getStoredAiOrigin() || undefined);
 
     if (!raw || !raw.legs?.length) {
-      showToast('No map route for this reply yet — ask for a place-to-place commute.');
+      showToast('No map route for this reply yet ΓÇö ask for a place-to-place commute.');
       return;
     }
     const plan = rebuildPlanPaths(raw);
@@ -459,7 +459,7 @@ export default function AIAssistantPage() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask how to get there — e.g. Monte Maria"
+              placeholder="Ask how to get there ΓÇö e.g. Monte Maria"
               disabled={aiLoading}
               className="w-full rounded-full bg-transparent px-6 py-3.5 pr-14 text-[14px] text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-50"
             />

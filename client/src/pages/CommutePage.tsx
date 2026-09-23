@@ -10,16 +10,16 @@ import {
   MapPin,
   Sparkles,
   Loader2,
+  ArrowRight,
 } from 'lucide-react';
-import type { CommuteGuide, CommuteGuidePlan, GuideLegMode } from '@/types';
+import type { GlobalCommuteGuide, TransportSegment, CommuteGuidePlan, GuideLegMode } from '@/types';
 import { dataService } from '@/services/dataService';
 import { loadActiveCommutePlan, clearActiveCommutePlan } from '@/services/aiService';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { LoadingState, EmptyState } from '@/components/ui/States';
-import { transportIcons, MotorcycleIcon } from '@/components/ui/TransportIcons';
-import { getTransportLabel } from '@/lib/transport';
-import { formatFareRange } from '@/lib/utils';
+import { MotorcycleIcon } from '@/components/ui/TransportIcons';
 import { launchTransportApp, type TransportAppKey } from '@/lib/transportApps';
 import { CurrentLocationMarker } from '@/components/map/CurrentLocationMarker';
 import { rebuildPlanPaths, sanitizePath } from '@/lib/mapCoordinates';
@@ -163,8 +163,8 @@ function PlanGuideView({
 
   const fareLabel =
     plan.totalFareRegular != null
-      ? `₱${plan.totalFareRegular}${
-          plan.totalFareDiscounted != null ? ` (disc. ₱${plan.totalFareDiscounted})` : ''
+      ? `â‚±${plan.totalFareRegular}${
+          plan.totalFareDiscounted != null ? ` (disc. â‚±${plan.totalFareDiscounted})` : ''
         }${plan.legs.some((l) => l.mode === 'tnvs') ? ' + TNVS in app' : ''}`
       : plan.legs.some((l) => l.mode === 'tnvs')
         ? 'TNVS fare in app'
@@ -189,7 +189,7 @@ function PlanGuideView({
           <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-600">
             <span className="flex items-center gap-1">
               <MapPin className="h-4 w-4 text-lacvay-green" />
-              {plan.origin.label} → {plan.destination.label}
+              {plan.origin.label} â†’ {plan.destination.label}
             </span>
             {plan.totalMinutes != null && (
               <span className="flex items-center gap-1">
@@ -252,7 +252,7 @@ function PlanGuideView({
                           )}
                           {leg.fareRegular != null && (
                             <span className="text-[11px] font-semibold text-lacvay-green">
-                              ₱{leg.fareRegular}
+                              â‚±{leg.fareRegular}
                             </span>
                           )}
                         </div>
@@ -321,7 +321,7 @@ function PlanGuideView({
               <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex justify-center p-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-gray-600 shadow">
                   <Loader2 className="h-3 w-3 animate-spin text-lacvay-green" />
-                  Tracing roads…
+                  Tracing roadsâ€¦
                 </span>
               </div>
             )}
@@ -373,7 +373,7 @@ function PlanGuideView({
                 if (positions.length < 2) return null;
                 const km = pathLengthKm(positions);
                 const isLast = leg.order === displayLegs[displayLegs.length - 1]?.order;
-                // Last-mile to shrine: keep walk dash so Pagkilatan → Monte Maria spur shows
+                // Last-mile to shrine: keep walk dash so Pagkilatan â†’ Monte Maria spur shows
                 const styleMode: GuideLegMode =
                   leg.mode === 'walk' && (km <= MAX_WALK_KM || isLast)
                     ? 'walk'
@@ -409,9 +409,9 @@ function PlanGuideView({
 
 export default function CommutePage() {
   const location = useLocation();
-  const [guides, setGuides] = useState<CommuteGuide[]>([]);
+  const [guides, setGuides] = useState<GlobalCommuteGuide[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<CommuteGuide | null>(null);
+  const [selected, setSelected] = useState<GlobalCommuteGuide | null>(null);
   const [activePlan, setActivePlan] = useState<CommuteGuidePlan | null>(() => {
     const fromState = (location.state as { plan?: CommuteGuidePlan } | null)?.plan;
     const loaded = fromState ?? loadActiveCommutePlan();
@@ -439,11 +439,30 @@ export default function CommutePage() {
     navigate('/commute', { replace: true, state: {} });
   };
 
+  const handleViewRoute = (guide: GlobalCommuteGuide) => {
+    navigate('/map', {
+      state: {
+        commuteGuide: {
+          id: guide.id,
+          title: guide.title,
+          summary: guide.summary,
+          destination: guide.destination,
+          steps: Array.isArray(guide.steps) ? guide.steps : [],
+          transport_segments: Array.isArray(guide.transport_segments) ? guide.transport_segments : [],
+          estimated_fare_min: guide.estimated_fare_min,
+          estimated_fare_max: guide.estimated_fare_max,
+          estimated_travel_time_min: guide.estimated_travel_time_min,
+        },
+      },
+    });
+  };
+
   if (activePlan) {
     return <PlanGuideView plan={activePlan} onClear={clearPlan} />;
   }
 
   if (loading) return <LoadingState />;
+
   if (!guides.length) {
     return (
       <div className="space-y-6">
@@ -456,7 +475,7 @@ export default function CommutePage() {
         <Card className="p-8 text-center">
           <EmptyState
             title="No Commute Guides Available"
-            description="Ask the AI Travel Assistant for a route, then tap “View on Commute Guide” to see the map and walk / jeepney / TNVS steps here."
+            description="Ask the AI Travel Assistant for a route, then tap View on Commute Guide to see the map and walk / jeepney / TNVS steps here. Official guides will also appear once published by the LACVAY team."
           />
           <button
             type="button"
@@ -480,74 +499,156 @@ export default function CommutePage() {
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <div className="space-y-3">
-          {guides.map((g) => (
-            <Card
-              key={g.id}
-              className={`cursor-pointer transition ${selected?.id === g.id ? 'ring-2 ring-lacvay-green' : 'hover:shadow-lg'}`}
-              onClick={() => setSelected(g)}
-            >
-              <h3 className="font-bold text-gray-900">{g.title}</h3>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Badge variant="gray">{g.difficulty}</Badge>
-                <Badge>{g.estimatedTravelTimeMin} min</Badge>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                {g.transportTypes.map((type) => {
-                  const Icon = transportIcons[type];
-                  return (
-                    <span
-                      key={type}
-                      title={getTransportLabel(type)}
-                      className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[10.5px] font-semibold text-gray-600"
-                    >
-                      <Icon className="h-3 w-3" />
-                      {getTransportLabel(type)}
-                    </span>
-                  );
-                })}
-              </div>
-            </Card>
-          ))}
+          {guides.map((g) => {
+            const segments: TransportSegment[] = Array.isArray(g.transport_segments)
+              ? g.transport_segments
+              : [];
+
+            return (
+              <Card
+                key={g.id}
+                className={`cursor-pointer transition ${selected?.id === g.id ? 'ring-2 ring-lacvay-green' : 'hover:shadow-lg'}`}
+                onClick={() => setSelected(g)}
+              >
+                <h3 className="font-bold text-gray-900">{g.title}</h3>
+                {g.destination && (
+                  <p className="text-xs text-gray-500 mt-0.5">→ {g.destination}</p>
+                )}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Badge variant="gray">{g.difficulty || 'Easy'}</Badge>
+                  {g.estimated_travel_time_min && (
+                    <Badge>~{g.estimated_travel_time_min} min</Badge>
+                  )}
+                  {g.estimated_fare_min != null && g.estimated_fare_max != null && (
+                    <Badge variant="lime">
+                      ₱{g.estimated_fare_min}–₱{g.estimated_fare_max}
+                    </Badge>
+                  )}
+                </div>
+
+                {segments.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    {segments.map((seg, i) => (
+                      <span
+                        key={i}
+                        className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[10.5px] font-semibold text-gray-600"
+                      >
+                        {seg.color && (
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: seg.color }}
+                          />
+                        )}
+                        <Bus className="h-3 w-3" />
+                        {seg.routeName || seg.type}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
 
         {selected ? (
-          <Card>
-            <h3 className="text-xl font-bold text-gray-900">{selected.title}</h3>
-            <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
-              <span className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" /> {selected.destination}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4" /> {selected.estimatedTravelTimeMin} min
-              </span>
-              <span>{formatFareRange(selected.estimatedFareMin, selected.estimatedFareMax)}</span>
-            </div>
-            <ol className="mt-6 space-y-4">
-              {selected.steps.map((step) => (
-                <li key={step.order} className="flex gap-4 rounded-2xl bg-gray-50 p-4">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lacvay-green text-sm font-bold text-white">
-                    {step.order}
+          <Card className="space-y-5">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">{selected.title}</h3>
+              <div className="mt-2 flex flex-wrap gap-4 text-sm text-gray-600">
+                {selected.destination && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" /> {selected.destination}
                   </span>
-                  <div>
-                    <p className="font-semibold text-gray-900">{step.title}</p>
-                    <p className="mt-1 text-sm text-gray-500">{step.description}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            <button
-              type="button"
-              onClick={() => navigate(`/map?to=${encodeURIComponent(selected.destination)}`)}
-              className="mt-6 text-sm font-semibold text-lacvay-green hover:underline"
-            >
-              View on map →
-            </button>
+                )}
+                {selected.estimated_travel_time_min && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" /> ~{selected.estimated_travel_time_min} min
+                  </span>
+                )}
+                {selected.estimated_fare_min != null && selected.estimated_fare_max != null && (
+                  <span>
+                    ₱{selected.estimated_fare_min}–₱{selected.estimated_fare_max}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {selected.summary && (
+              <p className="text-sm text-gray-600 leading-relaxed bg-emerald-50/50 border border-emerald-100/60 p-3 rounded-xl">
+                {selected.summary}
+              </p>
+            )}
+
+            {Array.isArray(selected.transport_segments) && selected.transport_segments.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                  Transport Needed
+                </h4>
+                <div className="space-y-2">
+                  {(selected.transport_segments as TransportSegment[]).map((seg, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between rounded-xl bg-gray-50 p-3 border border-gray-100"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        {seg.color && (
+                          <span
+                            className="h-3 w-3 rounded-full border border-gray-200"
+                            style={{ backgroundColor: seg.color }}
+                          />
+                        )}
+                        <div>
+                          <p className="text-xs font-bold text-gray-900">
+                            {seg.routeName || seg.type}
+                          </p>
+                          <p className="text-[10.5px] text-gray-500">{seg.type}</p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-900">
+                        {seg.fare != null ? `₱${seg.fare}` : 'Varies'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(selected.steps) && selected.steps.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                  Step-by-Step Directions
+                </h4>
+                <ol className="space-y-3">
+                  {selected.steps.map((step) => (
+                    <li key={step.order} className="flex gap-3 rounded-2xl bg-gray-50 p-4">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lacvay-green text-sm font-bold text-white">
+                        {step.order}
+                      </span>
+                      <div>
+                        <p className="font-semibold text-gray-900">{step.title}</p>
+                        <p className="mt-1 text-sm text-gray-500">{step.description}</p>
+                        {step.tip && (
+                          <p className="mt-1.5 text-xs text-lacvay-green font-medium">
+                            Tip: {step.tip}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            <Button onClick={() => handleViewRoute(selected)} className="w-full gap-2">
+              <ArrowRight className="h-4 w-4" />
+              View on Map & Routes
+            </Button>
           </Card>
         ) : (
           <Card>
             <EmptyState
               title="Select a guide"
-              description="Choose a commute guide from the list to see step-by-step directions."
+              description="Choose a commute guide from the list to see step-by-step directions and transport details."
             />
           </Card>
         )}

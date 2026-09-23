@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import type { SavedPlace, SearchHistoryItem, SavedItemType, AIMessage } from '@/types';
+import type { SavedPlace, SearchHistoryItem, AIMessage, ChatSession } from '@/types';
 import { generateId } from '@/lib/utils';
 import { sendAIMessage, AI_SUGGESTIONS } from '@/services/aiService';
 
@@ -8,39 +8,48 @@ interface AppContextValue {
   history: SearchHistoryItem[];
   aiMessages: AIMessage[];
   aiLoading: boolean;
+  chatSessions: ChatSession[];
+  activeSessionId: string | null;
   toast: string | null;
   saveItem: (item: Omit<SavedPlace, 'id' | 'savedAt'>) => void;
   removeSaved: (id: string) => void;
   isSaved: (itemId: string) => boolean;
   addHistory: (item: Omit<SearchHistoryItem, 'id' | 'timestamp'>) => void;
+  removeHistory: (id: string) => void;
+  clearHistory: () => void;
+  historySyncEnabled: boolean;
+  setHistorySyncEnabled: (enabled: boolean) => Promise<void>;
   sendAI: (message: string, origin?: string) => Promise<void>;
+  clearAIMessages: () => void;
   showToast: (message: string) => void;
   aiSuggestions: string[];
+  selectSession: (sessionId: string) => Promise<void>;
+  createSession: (title?: string) => Promise<string>;
+  deleteSession: (sessionId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 const SAVED_KEY = 'lacvay-saved';
-const HISTORY_KEY = 'lacvay-history';
+
+const WELCOME_MESSAGE: AIMessage = {
+  id: 'welcome',
+  role: 'assistant',
+  content:
+    "Magandang araw! I'm **LACVAY AI**, your friendly Batangas City travel buddy 🌿\n\nI can help you with:\n* **Jeepney, tricycle, & taxi routes**\n* **Accurate local fare estimates**\n* **Top beaches, mountains, & historical spots**\n* **Lomi houses & authentic Batangas dining**\n\nWhere would you like to explore today?",
+  timestamp: new Date().toISOString(),
+};
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
-  const [history, setHistory] = useState<SearchHistoryItem[]>([]);
-  const [aiMessages, setAiMessages] = useState<AIMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: "Hi! I'm LACVAY AI 👋\n\nI can help you find routes, check fares, recommend places, and more!",
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+  const [aiMessages, setAiMessages] = useState<AIMessage[]>([WELCOME_MESSAGE]);
   const [aiLoading, setAiLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Load saved places from localStorage.
   useEffect(() => {
     try {
       setSavedPlaces(JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'));
-      setHistory(JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'));
     } catch {
       /* ignore */
     }
@@ -51,82 +60,112 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const saveItem = useCallback((item: Omit<SavedPlace, 'id' | 'savedAt'>) => {
-    setSavedPlaces((prev) => {
-      if (prev.some((p) => p.itemId === item.itemId)) {
-        showToast('Already saved');
-        return prev;
+  const saveItem = useCallback(
+    (item: Omit<SavedPlace, 'id' | 'savedAt'>) => {
+      const exists = savedPlaces.some((p) => p.itemId === item.itemId);
+      if (exists) {
+        showToast('Already in saved');
+        return;
       }
-      const next = [{ ...item, id: generateId(), savedAt: new Date().toISOString() }, ...prev];
-      localStorage.setItem(SAVED_KEY, JSON.stringify(next));
-      showToast('Saved successfully');
-      return next;
-    });
-  }, [showToast]);
+      const newItem: SavedPlace = {
+        ...item,
+        id: generateId(),
+        savedAt: new Date().toISOString(),
+      };
+      const updated = [newItem, ...savedPlaces];
+      setSavedPlaces(updated);
+      localStorage.setItem(SAVED_KEY, JSON.stringify(updated));
+      showToast('Saved to your collection');
+    },
+    [savedPlaces, showToast],
+  );
 
-  const removeSaved = useCallback((id: string) => {
-    setSavedPlaces((prev) => {
-      const next = prev.filter((p) => p.id !== id);
-      localStorage.setItem(SAVED_KEY, JSON.stringify(next));
+  const removeSaved = useCallback(
+    (id: string) => {
+      const updated = savedPlaces.filter((p) => p.id !== id);
+      setSavedPlaces(updated);
+      localStorage.setItem(SAVED_KEY, JSON.stringify(updated));
       showToast('Removed from saved');
-      return next;
-    });
-  }, [showToast]);
+    },
+    [savedPlaces, showToast],
+  );
 
   const isSaved = useCallback(
     (itemId: string) => savedPlaces.some((p) => p.itemId === itemId),
     [savedPlaces],
   );
 
-  const addHistory = useCallback((item: Omit<SearchHistoryItem, 'id' | 'timestamp'>) => {
-    setHistory((prev) => {
-      const next = [{ ...item, id: generateId(), timestamp: new Date().toISOString() }, ...prev].slice(0, 50);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
-      return next;
-    });
+  const sendAI = useCallback(
+    async (message: string, origin?: string) => {
+      const userMsg: AIMessage = {
+        id: generateId(),
+        role: 'user',
+        content: message,
+        timestamp: new Date().toISOString(),
+      };
+
+      setAiMessages((prev) => [...prev, userMsg]);
+      setAiLoading(true);
+
+      try {
+        const reply = await sendAIMessage(message, origin);
+        setAiMessages((prev) => [...prev, reply]);
+      } catch (err) {
+        console.error('Failed to get AI reply:', err);
+        showToast('Could not reach LACVAY AI. Please try again.');
+      } finally {
+        setAiLoading(false);
+      }
+    },
+    [showToast],
+  );
+
+  const clearAIMessages = useCallback(() => {
+    setAiMessages([
+      {
+        ...WELCOME_MESSAGE,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
   }, []);
 
-  const sendAI = useCallback(async (message: string, origin?: string) => {
-    const userMsg: AIMessage = {
-      id: generateId(),
-      role: 'user',
-      content: message,
-      timestamp: new Date().toISOString(),
-    };
-    setAiMessages((prev) => [...prev, userMsg]);
-    setAiLoading(true);
-    try {
-      const reply = await sendAIMessage(message, origin);
-      setAiMessages((prev) => [...prev, reply]);
-      addHistory({ query: message, type: 'search', meta: 'AI Assistant' });
-    } finally {
-      setAiLoading(false);
-    }
-  }, [addHistory]);
+  // Safe stubs for deprecated history and sessions
+  const addHistory = useCallback((_item?: Omit<SearchHistoryItem, 'id' | 'timestamp'>) => {}, []);
+  const removeHistory = useCallback((_id?: string) => {}, []);
+  const clearHistory = useCallback(() => {}, []);
+  const setHistorySyncEnabled = useCallback(async (_enabled?: boolean) => {}, []);
+  const selectSession = useCallback(async (_sessionId?: string) => {}, []);
+  const createSession = useCallback(async (_title?: string) => generateId(), []);
+  const deleteSession = useCallback(async (_sessionId?: string) => {}, []);
 
   return (
     <AppContext.Provider
       value={{
         savedPlaces,
-        history,
+        history: [],
         aiMessages,
         aiLoading,
+        chatSessions: [],
+        activeSessionId: null,
         toast,
         saveItem,
         removeSaved,
         isSaved,
         addHistory,
+        removeHistory,
+        clearHistory,
+        historySyncEnabled: false,
+        setHistorySyncEnabled,
         sendAI,
+        clearAIMessages,
         showToast,
         aiSuggestions: AI_SUGGESTIONS,
+        selectSession,
+        createSession,
+        deleteSession,
       }}
     >
       {children}
-      {toast && (
-        <div className="fixed bottom-24 left-1/2 z-[100] -translate-x-1/2 rounded-full bg-lacvay-green-dark px-5 py-2.5 text-sm font-medium text-white shadow-lg md:bottom-8">
-          {toast}
-        </div>
-      )}
     </AppContext.Provider>
   );
 }
@@ -136,5 +175,3 @@ export function useApp() {
   if (!ctx) throw new Error('useApp must be used within AppProvider');
   return ctx;
 }
-
-export type { SavedItemType };

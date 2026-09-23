@@ -1,8 +1,7 @@
-import { NavLink } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 import { Sidebar, mobileNavItems } from './Sidebar';
-import { PartnerSidebar, partnerMobileNavItems } from './PartnerSidebar';
 import { Header } from './Header';
 import { LocationPermissionBar } from './LocationPermissionBar';
 import { LogoMark } from '@/components/ui/Logo';
@@ -15,13 +14,57 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutProps) {
-  const { isTranspoPartner } = useAuth();
-  const bottomNav = isTranspoPartner ? partnerMobileNavItems : mobileNavItems;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const location = useLocation();
+  const isAssistant = location.pathname.startsWith('/ai-assistant');
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const dialog = dialogRef.current;
+    const focusableSelector =
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>(focusableSelector) ?? []);
+    focusable()[0]?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setSidebarOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const elements = focusable();
+      if (elements.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      menuButtonRef.current?.focus();
+    };
+  }, [setSidebarOpen, sidebarOpen]);
 
   return (
     <div className="flex min-h-screen bg-lacvay-cream">
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:border-r lg:border-gray-100">
-        {isTranspoPartner ? <PartnerSidebar /> : <Sidebar />}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex">
+        <Sidebar />
       </div>
 
       {sidebarOpen && (
@@ -29,29 +72,38 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setSidebarOpen(false)}
-            role="presentation"
+            aria-hidden="true"
           />
-          <div className="absolute inset-y-0 left-0 shadow-xl">
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Main navigation"
+            className="absolute inset-y-0 left-0 shadow-xl"
+          >
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              className="absolute right-2 top-3 z-10 rounded-full p-2 hover:bg-gray-100"
+              className="absolute right-2 top-3 z-10 rounded-full p-2 text-white hover:bg-white/10"
               aria-label="Close menu"
             >
               <X className="h-5 w-5" />
             </button>
-            {isTranspoPartner ? (
-              <PartnerSidebar onNavigate={() => setSidebarOpen(false)} />
-            ) : (
-              <Sidebar onNavigate={() => setSidebarOpen(false)} />
-            )}
+            <Sidebar onNavigate={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-[248px]">
-        <div className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 lg:hidden">
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 flex-col lg:pl-[248px]',
+          isAssistant && 'h-screen overflow-hidden',
+        )}
+        inert={sidebarOpen ? true : undefined}
+      >
+        <div className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 lg:hidden shrink-0">
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={() => setSidebarOpen(true)}
             className="rounded-xl p-1.5 hover:bg-gray-100"
@@ -59,17 +111,26 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
           >
             <Menu className="h-6 w-6" />
           </button>
-          <LogoMark className="h-7 w-5" />
+          <LogoMark className="size-10" />
           <span className="text-[17px] font-extrabold text-lacvay-green">LACVAY</span>
         </div>
 
         <Header />
         <LocationPermissionBar />
-        <main className="flex-1 px-4 pb-6 md:px-6 lg:px-7">{children}</main>
+        <main
+          className={cn(
+            'flex-1 min-h-0',
+            isAssistant
+              ? 'flex flex-col overflow-hidden p-0'
+              : 'px-4 pb-6 md:px-6 lg:px-7',
+          )}
+        >
+          {children}
+        </main>
 
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-100 bg-white px-2 py-1.5 lg:hidden">
           <div className="flex justify-around">
-            {bottomNav.map(({ to, label, icon: Icon, end }) => (
+            {mobileNavItems.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -87,7 +148,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
             ))}
           </div>
         </nav>
-        <div className="h-16 lg:hidden" />
+        {!isAssistant && <div className="h-16 lg:hidden" />}
       </div>
     </div>
   );

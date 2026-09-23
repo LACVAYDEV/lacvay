@@ -3,33 +3,27 @@ import {
   Home,
   Map,
   BookOpen,
-  Coins,
+  Bus,
   Car,
-  Bike,
   Camera,
   Sparkles,
   UtensilsCrossed,
-  Tag,
   Bookmark,
-  History,
   Settings,
 } from 'lucide-react';
-import { LogoMark, PalmDecor } from '@/components/ui/Logo';
+import { LogoMark, SidebarWaveArt } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/map', label: 'Map & Routes', icon: Map },
   { to: '/commute', label: 'Commute Guide', icon: BookOpen },
-  { to: '/fares', label: 'Fare Checker', icon: Coins },
-  { to: '/toda', label: 'Tricycle TODA', icon: Bike },
-  { to: '/rides', label: 'Book a Ride', icon: Car },
-  { to: '/tourist-spots', label: 'Tourist Spots', icon: Camera },
-  { to: '/ai-assistant', label: 'AI Travel Assistant', icon: Sparkles },
+  { to: '/fares', label: 'Transport Checker', icon: Bus },
+  { to: '/rides', label: 'Ride Guide', icon: Car },
+  { to: '/tourist-spots', label: 'Nearby Tourist Spots', icon: Camera },
   { to: '/restaurants', label: 'Nearby Restaurants', icon: UtensilsCrossed },
-  { to: '/promotions', label: 'Promotions', icon: Tag },
+  { to: '/ai-assistant', label: 'AI Travel Assistant', icon: Sparkles },
   { to: '/saved', label: 'Saved', icon: Bookmark },
-  { to: '/history', label: 'History', icon: History },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -42,23 +36,21 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'relative flex h-full w-[248px] shrink-0 flex-col overflow-hidden bg-white px-3.5 py-5',
+        'relative flex h-full w-[248px] shrink-0 flex-col overflow-hidden bg-lacvay-green px-3.5 py-5',
         className,
       )}
     >
-      <PalmDecor className="pointer-events-none absolute -bottom-4 left-0 w-full" />
-
-      <div className="relative mb-7 flex items-center gap-2.5 px-1.5">
-        <LogoMark className="h-9 w-7 shrink-0" />
+      <div className="relative mb-6 flex items-center gap-3 px-0.5">
+        <LogoMark className="size-20" />
         <div className="min-w-0">
-          <h1 className="text-[19px] font-extrabold leading-none tracking-tight text-lacvay-green">
+          <h1 className="text-[19px] font-extrabold leading-none tracking-tight text-white">
             LACVAY
           </h1>
-          <p className="mt-1 truncate text-[10px] text-gray-500">Batangas City Assistant</p>
+          <p className="mt-1 truncate text-[10px] text-white/60">Batangas City Assistant</p>
         </div>
       </div>
 
-      <nav className="relative flex-1 space-y-0.5 overflow-y-auto">
+      <nav className="relative min-h-0 flex-1 space-y-0.5 overflow-y-auto">
         {navItems.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -69,8 +61,8 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
               cn(
                 'flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12.5px] font-medium transition',
                 isActive
-                  ? 'bg-gradient-to-r from-lacvay-green to-lacvay-lime text-white shadow-soft'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-lacvay-green-dark',
+                  ? 'bg-lacvay-blush text-lacvay-green shadow-soft'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white',
               )
             }
           >
@@ -79,14 +71,29 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
           </NavLink>
         ))}
       </nav>
+
+      <div className="relative -mx-3.5 -mb-5 mt-2 h-[92px] shrink-0">
+        <SidebarWaveArt className="pointer-events-none absolute inset-0 h-full w-full" />
+        <div className="absolute left-5 top-2.5">
+          <p className="font-script text-[18px] leading-none text-white/90">More places,</p>
+          <svg
+            viewBox="0 0 90 10"
+            className="-mt-0.5 ml-1 h-1.5 w-[56px] text-white/70"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M2 5c10-6 18 6 28 0s18-6 28 0 18 6 28 0"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+          <p className="-mt-0.5 font-script text-[18px] leading-none text-white/90">More stories.</p>
+        </div>
+      </div>
     </aside>
   );
 }
 
-export const mobileNavItems = [
-  navItems[0],
-  navItems[1],
-  navItems[4],
-  navItems[3],
-  navItems[5],
-];
+export const mobileNavItems = navItems.slice(0, 5);

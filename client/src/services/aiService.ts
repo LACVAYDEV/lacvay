@@ -7,10 +7,10 @@ export const AI_ORIGIN_STORAGE_KEY = 'lacvay-ai-origin';
 export const ACTIVE_COMMUTE_PLAN_KEY = 'lacvay-active-commute-plan';
 
 const MOCK_RESPONSES: Record<string, string> = {
-  'monte maria': 'Take the Dela Paz/Ilijan - Batangas jeepney. From San Isidro, wait at the road-side stop — the route passes the church and serves Monte Maria. Extended fare about ₱23, roughly 30–45 min. Alight at Monte Maria; a short walk to the shrine is usually enough. Do NOT board Libjo/San Isidro (goes to Batangas City). TNVS is optional.',
-  'sm batangas': 'From Batangas City Grand Terminal to SM City Batangas, the documented regular fare is ₱32 across two jeepney legs. From Batangas Pier to SM City Batangas, the regular fare is ₱14.',
+  'monte maria': 'Take the Dela Paz/Ilijan - Batangas jeepney. From San Isidro, wait at the road-side stop ΓÇö the route passes the church and serves Monte Maria. Extended fare about Γé▒23, roughly 30ΓÇô45 min. Alight at Monte Maria; a short walk to the shrine is usually enough. Do NOT board Libjo/San Isidro (goes to Batangas City). TNVS is optional.',
+  'sm batangas': 'From Batangas City Grand Terminal to SM City Batangas, the documented regular fare is Γé▒32 across two jeepney legs. From Batangas Pier to SM City Batangas, the regular fare is Γé▒14.',
   'tourist': 'Top spots near Batangas City include Taal Volcano, Basilica of the Immaculate Conception, Anilao for diving, and Laiya Beach for a weekend getaway.',
-  'fare': 'Jeepney fares use LACVAY’s documented matrix. For places off the jeepney line, book Angkas, Grab, or iDOL Taxi and check the fare in the app. Tricycle TODA fares are not listed — look for the nearest TODA and ask locals.',
+  'fare': 'Jeepney fares use LACVAYΓÇÖs documented matrix. For places off the jeepney line, book Angkas, Grab, or iDOL Taxi and check the fare in the app. Tricycle TODA fares are not listed ΓÇö look for the nearest TODA and ask locals.',
   'habal': 'For solo trips off the jeepney line, book Angkas in the app so the fare is shown before you ride.',
   'taxi': 'For door-to-door trips with luggage or at night, book Grab or iDOL Taxi. Check the fare in the app or on the meter.',
   'tricycle': 'LACVAY does not currently list tricycle TODA terminals or fares. For remote spots, book Angkas, Grab, or iDOL Taxi. You can also look for the nearest tricycle TODA and ask locals for directions.',
@@ -101,7 +101,7 @@ export async function sendAIMessage(
   const typed = (originOverride ?? getStoredAiOrigin()).trim();
   const manual = isManualAiOrigin() || Boolean(originOverride?.trim());
 
-  // If From is a known landmark different from GPS (e.g. typed "CLB" while GPS is Sto. Niño), keep From
+  // If From is a known landmark different from GPS (e.g. typed "CLB" while GPS is Sto. Ni├▒o), keep From
   const typedIsExplicitPlace =
     Boolean(typed) &&
     /^(clb|colegio|sm\b|pier|grand terminal|monte maria|pablo borbon|basilica|alangilan|sto\.?\s*nino|santo nino)/i.test(
@@ -130,7 +130,7 @@ export async function sendAIMessage(
       body: JSON.stringify({
         message,
         origin,
-        // Only attach GPS when From matches current location — otherwise named place (CLB) wins
+        // Only attach GPS when From matches current location ΓÇö otherwise named place (CLB) wins
         originLat: usingGps ? geo!.lat : undefined,
         originLng: usingGps ? geo!.lng : undefined,
       }),

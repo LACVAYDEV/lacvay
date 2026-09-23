@@ -1,12 +1,25 @@
+# Dependencies
 node_modules/
+
+# Production builds
 dist/
 build/
-.env
-.env.local
-*.log
-.DS_Store
-.tools/
 client/dist/
 server/dist/
 .vite/
 *.tsbuildinfo
+
+# Environment & Secrets (Root, Client, Server)
+.env
+.env.*
+*.env
+*.env.*
+!.env.example
+!client/.env.example
+!server/.env.example
+!*.env.example
+
+# Logs & System
+*.log
+.DS_Store
+.tools/

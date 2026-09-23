@@ -4,7 +4,7 @@ import { ArrowUpDown, MapPin } from 'lucide-react';
 import type { TransportType } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { transportIcons } from '@/components/ui/TransportIcons';
-import { tripPlannerOptions, isOnDemandVehicle, isTricycleMode } from '@/lib/transport';
+import { tripPlannerOptions } from '@/lib/transport';
 import { cn } from '@/lib/utils';
 
 interface PlanTripCardProps {
@@ -29,18 +29,7 @@ export function PlanTripCard({
   };
 
   const findRoutes = () => {
-    const dest = to || 'SM City Batangas';
-    if (isOnDemandVehicle(transport)) {
-      const params = new URLSearchParams({ type: transport, from, to: dest });
-      navigate(`/rides?${params.toString()}`);
-      return;
-    }
-    if (transport === 'tricycle') {
-      const params = new URLSearchParams({ from, to: dest });
-      navigate(`/toda?${params.toString()}`);
-      return;
-    }
-    const params = new URLSearchParams({ from, to: dest, transport });
+    const params = new URLSearchParams({ from, to: to || 'SM City Batangas', transport });
     navigate(`/map?${params.toString()}`);
   };
 
@@ -121,13 +110,9 @@ export function PlanTripCard({
       <button
         type="button"
         onClick={findRoutes}
-        className="mt-4 w-full rounded-xl bg-gradient-to-r from-lacvay-green via-lacvay-lime to-lacvay-yellow py-2.5 text-[13px] font-bold text-white shadow-soft transition hover:opacity-95"
+        className="mt-4 w-full rounded-xl bg-lacvay-green py-2.5 text-[13px] font-bold text-white shadow-soft transition hover:bg-lacvay-green-dark"
       >
-        {isOnDemandVehicle(transport)
-          ? 'Book Ride'
-          : isTricycleMode(transport)
-            ? 'View TODA Areas'
-            : 'Find Routes'}
+        Find Routes
       </button>
     </Card>
   );

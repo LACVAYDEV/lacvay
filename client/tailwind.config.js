@@ -5,16 +5,18 @@ export default {
     extend: {
       colors: {
         lacvay: {
-          green: '#159447',
-          'green-dark': '#08783D',
-          lime: '#C8E82A',
-          yellow: '#FFC400',
-          cream: '#F8FAF5',
+          green: '#6B1B2E',
+          'green-dark': '#4A0F1F',
+          lime: '#123A5C',
+          yellow: '#F2A93D',
+          cream: '#F7F3EA',
+          blush: '#F8E7D7',
           muted: '#6B7280',
         },
       },
       fontFamily: {
         sans: ['Poppins', 'Inter', 'system-ui', 'sans-serif'],
+        script: ['Caveat', 'cursive'],
       },
       boxShadow: {
         card: '0 4px 24px rgba(0, 0, 0, 0.06)',

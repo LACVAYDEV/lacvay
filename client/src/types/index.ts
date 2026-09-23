@@ -257,6 +257,38 @@ export interface CommuteGuide {
   difficulty: 'Easy' | 'Moderate';
 }
 
+export interface TransportSegment {
+  type: string;
+  routeId?: string;
+  routeName?: string;
+  fare?: number | null;
+  fareType?: string;
+  color?: string;
+}
+
+export interface CommuteGuideStep {
+  order: number;
+  title: string;
+  description: string;
+  tip?: string;
+}
+
+export interface GlobalCommuteGuide {
+  id: string;
+  title: string;
+  summary?: string | null;
+  destination?: string | null;
+  steps: CommuteGuideStep[];
+  transport_segments: TransportSegment[];
+  difficulty?: string;
+  estimated_travel_time_min?: number | null;
+  estimated_fare_min?: number | null;
+  estimated_fare_max?: number | null;
+  created_by?: string | null;
+  is_global: boolean;
+  created_at?: string | null;
+}
+
 export interface AIMessage {
   id: string;
   role: 'user' | 'assistant';

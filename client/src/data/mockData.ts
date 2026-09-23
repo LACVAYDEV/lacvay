@@ -1,11 +1,10 @@
-import type { TouristSpot, Restaurant, Promotion, Ride, CommuteGuide, SearchResult, User } from '@/types';
+import type { TouristSpot, Restaurant, Promotion, Ride, CommuteGuide, SearchResult, User, ExternalProvider } from '@/types';
 
 export const mockUser: User = {
   id: 'user-1',
   name: 'Juan',
   email: 'juan@example.com',
   avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Juan',
-  role: 'traveler',
 };
 
 export const touristSpots: TouristSpot[] = [
@@ -169,7 +168,7 @@ export const promotions: Promotion[] = [
   {
     id: 'summer-promo',
     title: 'Summer Promo!',
-    description: '10% OFF on habal-habal rides this week!',
+    description: '10% OFF on tricycle rides this week!',
     promoCode: 'LACVAY10',
     discount: '10% OFF',
     validUntil: '2026-09-30',
@@ -184,71 +183,80 @@ export const promotions: Promotion[] = [
   },
 ];
 
-export const rides: Ride[] = [
-  { id: 'r2', driverName: 'Maria Taxi', vehicleType: 'taxi', rating: 4.7, distanceKm: 1.2, baseFare: 40, perKmFee: 14, coordinates: { lat: 13.7582, lng: 121.0612 }, isOnline: true, estimatedFare: 150, etaMin: 8, plateNumber: 'ABC 1234', tripsCompleted: 890, vehicleLabel: 'White sedan · AC' },
-  { id: 'r5', driverName: 'Ramon Rider', vehicleType: 'motorcycle', rating: 4.8, distanceKm: 0.4, baseFare: 25, perKmFee: 8, coordinates: { lat: 13.7558, lng: 121.0565 }, isOnline: true, estimatedFare: 45, etaMin: 3, plateNumber: 'MC 8821', tripsCompleted: 530, vehicleLabel: '125cc · helmet provided' },
-  { id: 'r6', driverName: 'Habal Batangas', vehicleType: 'motorcycle', rating: 4.6, distanceKm: 1.1, baseFare: 20, perKmFee: 9, coordinates: { lat: 13.7541, lng: 121.0598 }, isOnline: true, estimatedFare: 65, etaMin: 5, plateNumber: 'MC 4417', tripsCompleted: 318, vehicleLabel: 'Motorcycle taxi' },
-  { id: 'r7', driverName: 'Kuya Ben Moto', vehicleType: 'motorcycle', rating: 4.9, distanceKm: 1.6, baseFare: 30, perKmFee: 7, coordinates: { lat: 13.7595, lng: 121.0542 }, isOnline: true, estimatedFare: 85, etaMin: 6, plateNumber: 'MC 2093', tripsCompleted: 672, vehicleLabel: 'Habal-habal rider' },
-  { id: 'r8', driverName: 'Lito Taxi', vehicleType: 'taxi', rating: 4.5, distanceKm: 2.4, baseFare: 45, perKmFee: 16, coordinates: { lat: 13.7528, lng: 121.0625 }, isOnline: false, estimatedFare: 180, etaMin: 12, plateNumber: 'XYZ 7788', tripsCompleted: 445, vehicleLabel: 'Metered taxi' },
-  { id: 'r10', driverName: 'Mang Tony Taxi', vehicleType: 'taxi', rating: 4.8, distanceKm: 0.9, baseFare: 40, perKmFee: 15, coordinates: { lat: 13.7572, lng: 121.0551 }, isOnline: true, estimatedFare: 120, etaMin: 6, plateNumber: 'TAX 3341', tripsCompleted: 760, vehicleLabel: 'Toyota Vios · AC' },
-  { id: 'r11', driverName: 'Jepoy Rider', vehicleType: 'motorcycle', rating: 4.5, distanceKm: 0.7, baseFare: 22, perKmFee: 8, coordinates: { lat: 13.7561, lng: 121.0601 }, isOnline: true, estimatedFare: 50, etaMin: 4, plateNumber: 'MC 7720', tripsCompleted: 290, vehicleLabel: 'Quick city runs' },
+export const externalProviders: ExternalProvider[] = [
+  {
+    id: 'grab',
+    provider_name: 'Grab',
+    service_type: 'Car & Taxi Hailing',
+    tag: 'Most Popular',
+    description: "Southeast Asia's leading on-demand ride-hailing service. Book 4-wheel rides, GrabCar, and metered taxis with upfront pricing and live tracking across Batangas City and CALABARZON.",
+    logo_url: '/images/Grab.jpg',
+    coverageArea: 'Batangas City, Lipa & CALABARZON',
+    highlight: 'Point-to-point comfort with fixed upfront fares',
+    features: [
+      'On-Demand 4-Wheel Sedans & 6-Seaters',
+      'Upfront Fares & Cashless E-Wallet Payments',
+      'Real-Time GPS Tracking & Verified Drivers',
+      'Ideal for luggage, families & group travel',
+    ],
+    ctaText: 'Book via Grab',
+    is_active: true,
+  },
+  {
+    id: 'angkas',
+    provider_name: 'Angkas',
+    service_type: 'Motorcycle Taxi',
+    tag: 'Fastest Solo Commute',
+    description: 'Beat Batangas City traffic with app-based motorcycle riders. Verify the rider and vehicle details in the provider app before every trip.',
+    logo_url: '/images/Angkas.jpg',
+    coverageArea: 'Batangas City Proper & Diversion Corridor',
+    highlight: 'Verify your rider, plate number, and booking details before boarding',
+    features: [
+      'Fastest transit during peak city traffic hours',
+      'Rider details shown in the provider app',
+      'Sanitized passenger helmets & disposable hairnets',
+      'Affordable point-to-point solo commuter fares',
+    ],
+    ctaText: 'Book via Angkas',
+    is_active: true,
+  },
+  {
+    id: 'idol-taxi',
+    provider_name: 'Idol Taxi',
+    service_type: 'City Taxi & Metered Fleet',
+    tag: 'Batangas Local Fleet',
+    description: 'Batangas & Southern Luzon’s premier metered taxi hailing fleet. Providing clean, air-conditioned sedans for city transit, Grand Terminal pickups, and Batangas Port transfers.',
+    logo_url: '/images/IdolTaxi.jpeg',
+    coverageArea: 'Batangas City, Grand Terminal, Port & Bauan',
+    highlight: 'Dedicated local fleet with metered & scheduled service',
+    features: [
+      'Air-conditioned metered sedans',
+      'Terminal and seaport transfer specialists',
+      'Local Batangueño drivers who know every shortcut',
+      'Convenient booking for scheduled & airport trips',
+    ],
+    ctaText: 'Book via Idol Taxi',
+    is_active: true,
+  },
 ];
 
-export const commuteGuides: CommuteGuide[] = [
-  {
-    id: 'sm-batangas',
-    title: 'How to commute to SM City Batangas',
-    destination: 'SM City Batangas',
-    transportTypes: ['jeepney', 'tricycle', 'motorcycle', 'taxi'],
-    estimatedFareMin: 13,
-    estimatedFareMax: 25,
-    estimatedTravelTimeMin: 18,
-    difficulty: 'Easy',
-    steps: [
-      { order: 1, title: 'Start at Batangas City Grand Terminal', description: 'Head to the main jeepney terminal along Diversion Road.' },
-      { order: 2, title: 'Ride jeepney to SM route', description: 'Look for jeepneys with signboards going to SM City / Diversion Road.' },
-      { order: 3, title: 'Alight at SM City Batangas', description: 'Get off at the main entrance along Diversion Road.' },
-      { order: 4, title: 'Alternative: Tricycle', description: 'From nearby barangays, tricycles can take you directly for ₱20–₱40 depending on distance.' },
-      { order: 5, title: 'Alternative: Motorcycle rider', description: 'Motorcycle taxis (habal-habal) skip traffic and cost around ₱40–₱70 for a solo passenger. Bring your own helmet when you can.' },
-      { order: 6, title: 'Alternative: Taxi', description: 'Metered taxis from the city center run about ₱90–₱140 depending on traffic — best if you have luggage or are travelling as a group.' },
-    ],
-  },
-  {
-    id: 'basilica',
-    title: 'How to commute to Basilica of the Immaculate Conception',
-    destination: 'Basilica of the Immaculate Conception',
-    transportTypes: ['jeepney', 'walking'],
-    estimatedFareMin: 13,
-    estimatedFareMax: 15,
-    estimatedTravelTimeMin: 12,
-    difficulty: 'Easy',
-    steps: [
-      { order: 1, title: 'From Grand Terminal', description: 'Take any jeepney route passing through Batangas City Proper / P. Burgos.' },
-      { order: 2, title: 'Alight near Basilica', description: 'Ask the driver to drop you off near the Basilica on C. Pastor Avenue.' },
-      { order: 3, title: 'Walk to entrance', description: 'The Basilica is a short walk from the main road.' },
-    ],
-  },
-  {
-    id: 'port',
-    title: 'How to commute to Batangas Port',
-    destination: 'Batangas International Port',
-    transportTypes: ['jeepney', 'motorcycle', 'taxi'],
-    estimatedFareMin: 15,
-    estimatedFareMax: 120,
-    estimatedTravelTimeMin: 25,
-    difficulty: 'Moderate',
-    steps: [
-      { order: 1, title: 'From city center', description: 'Ride jeepney routes heading to Batangas Port / Sta. Clara.' },
-      { order: 2, title: 'Follow port signs', description: 'Jeepneys will pass through the port access road.' },
-      { order: 3, title: 'Taxi option', description: 'Taxi from city center costs around ₱80–₱120 depending on traffic.' },
-      { order: 4, title: 'Motorcycle rider option', description: 'Motorcycle taxis charge roughly ₱60–₱90 and are the fastest option, but only practical with light hand-carry baggage.' },
-    ],
-  },
+/** @deprecated Legacy mock driver rides - replaced by partner external providers */
+export const rides: Ride[] = [
+  { id: 'r1', driverName: "Juan's Tricycle", vehicleType: 'tricycle', rating: 4.9, distanceKm: 0.8, estimatedFare: 80, etaMin: 5 },
+  { id: 'r2', driverName: 'Maria Taxi', vehicleType: 'taxi', rating: 4.7, distanceKm: 1.2, estimatedFare: 150, etaMin: 8, plateNumber: 'ABC 1234' },
+  { id: 'r3', driverName: 'Pedro Trike', vehicleType: 'tricycle', rating: 4.8, distanceKm: 0.5, estimatedFare: 60, etaMin: 3 },
+  { id: 'r4', driverName: 'Batangas Express', vehicleType: 'private', rating: 4.9, distanceKm: 2.1, estimatedFare: 250, etaMin: 10 },
+  { id: 'r5', driverName: 'Ramon Rider', vehicleType: 'motorcycle', rating: 4.8, distanceKm: 0.4, estimatedFare: 45, etaMin: 3, plateNumber: 'MC 8821' },
+  { id: 'r6', driverName: 'Habal Batangas', vehicleType: 'motorcycle', rating: 4.6, distanceKm: 1.1, estimatedFare: 65, etaMin: 5, plateNumber: 'MC 4417' },
+  { id: 'r7', driverName: 'Kuya Ben Moto', vehicleType: 'motorcycle', rating: 4.9, distanceKm: 1.6, estimatedFare: 85, etaMin: 6, plateNumber: 'MC 2093' },
+  { id: 'r8', driverName: 'Lito Taxi', vehicleType: 'taxi', rating: 4.5, distanceKm: 2.4, estimatedFare: 180, etaMin: 12, plateNumber: 'XYZ 7788' },
 ];
+
+export const commuteGuides: CommuteGuide[] = [];
 
 export const searchIndex: SearchResult[] = [
-  ...touristSpots.map((s) => ({ id: s.id, type: 'tourist-spot' as const, title: s.name, subtitle: s.location, path: `/tourist-spots/${s.id}` })),
-  ...restaurants.map((r) => ({ id: r.id, type: 'restaurant' as const, title: r.name, subtitle: r.location, path: `/restaurants/${r.id}` })),
+  ...touristSpots.map((s) => ({ id: s.id, type: 'tourist-spot' as const, title: s.name, subtitle: s.location || 'Batangas City', path: `/tourist-spots/${s.id}` })),
+  ...restaurants.map((r) => ({ id: r.id, type: 'restaurant' as const, title: r.name, subtitle: r.location || 'Batangas City', path: `/restaurants/${r.id}` })),
   { id: 'sm-batangas', type: 'landmark', title: 'SM City Batangas', subtitle: 'Diversion Road, Batangas City', path: '/map?to=SM City Batangas' },
   { id: 'grand-terminal', type: 'landmark', title: 'Batangas City Grand Terminal', subtitle: 'Diversion Road', path: '/map?to=Batangas City Grand Terminal' },
   { id: 'pallocan', type: 'barangay', title: 'Pallocan West', subtitle: 'Batangas City', path: '/map?to=Pallocan West' },
