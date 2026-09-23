@@ -1148,7 +1148,7 @@ function inferCityHallHubTransfer(
 
   if (!leg1) return null;
 
-  const known = findKnownTransfer(origin, { label: destination.label, lat: destination.lat, lng: destination.lng });
+  const known = findKnownTransfer(origin, { label: destination.label });
   if (known) return null;
 
   return [
@@ -1249,7 +1249,21 @@ function formatJeepneyRecommendations(
   origin: { lat?: number; lng?: number; label: string } | null,
   destination: { lat?: number; lng?: number; label: string } | null,
 ): string[] {
-  if (!origin?.lat || !destination?.lat) return [];
+  if (
+    origin?.lat == null ||
+    origin.lng == null ||
+    destination?.lat == null ||
+    destination.lng == null
+  ) {
+    return [];
+  }
+
+  const originPoint = { label: origin.label, lat: origin.lat, lng: origin.lng };
+  const destinationPoint = {
+    label: destination.label,
+    lat: destination.lat,
+    lng: destination.lng,
+  };
 
   const direct = matches
     .filter((m) => m.direct)
@@ -1286,12 +1300,7 @@ function formatJeepneyRecommendations(
       suggestTwoJeepneyTransfer(nearOrigin, nearDest, destination, origin, matches);
   }
 
-  const verdict = buildBestPlanVerdict(
-    matches,
-    { label: origin.label, lat: origin.lat, lng: origin.lng },
-    { label: destination.label, lat: destination.lat, lng: destination.lng },
-    transferBlock,
-  );
+  const verdict = buildBestPlanVerdict(matches, originPoint, destinationPoint, transferBlock);
 
   const lines: string[] = [
     'JEEPNEY ROUTING FOR THIS TRIP (from ALL live routes — routes are LOOPS; board at the nearest stop on the route line, NOT necessarily Grand Terminal):',
