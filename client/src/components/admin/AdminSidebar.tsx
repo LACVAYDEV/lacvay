@@ -9,7 +9,6 @@ export const adminNavItems = [
   { to: '/admin/places', label: 'Tourist Spots', icon: MapPin, end: false as const },
   { to: '/admin/restaurants', label: 'Eateries', icon: UtensilsCrossed, end: false as const },
   { to: '/admin/transit', label: 'Transit Routes', icon: Route, end: false as const },
-  { to: '/admin/guides', label: 'Commute Guides', icon: BookOpen, end: false as const },
   { to: '/admin/promotions', label: 'Promotions', icon: Tag, end: false as const },
 ];
 
