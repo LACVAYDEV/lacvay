@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, MapPin, Route, Tag, Users, UtensilsCrossed, BookOpen } from 'lucide-react';
+import { LayoutDashboard, MapPin, Route, Tag, Users, UtensilsCrossed } from 'lucide-react';
 import { LogoMark, SidebarWaveArt } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
