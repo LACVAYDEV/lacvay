@@ -1,7 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
-import { getAdminEmails, isEnvAdmin } from '@/lib/adminAccess';
 import { contentRepository } from '@/services/contentRepository';
 import type { Promotion, Restaurant, TouristSpot, UserProfile, UserRole } from '@/types';
 
@@ -46,14 +45,10 @@ export const adminService = {
   },
 
   isUserAdmin(user: UserProfile): boolean {
-    if (user.role === 'admin') return true;
-    return getAdminEmails().includes(user.email.toLowerCase());
+    return user.role === 'admin';
   },
 
-  async setUserAdmin(userId: string, email: string, isAdmin: boolean): Promise<void> {
-    if (isEnvAdmin(email) && !isAdmin) {
-      throw new Error('Cannot remove admin role from env-configured admin accounts.');
-    }
+  async setUserAdmin(userId: string, _email: string, isAdmin: boolean): Promise<void> {
     await this.updateUserProfile(userId, { role: isAdmin ? 'admin' : 'user' });
   },
 
@@ -81,7 +76,15 @@ export const adminService = {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
 
-    const body = (await res.json()) as { error?: string };
+    let body: { error?: string } = {};
+    const text = await res.text();
+    if (text) {
+      try {
+        body = JSON.parse(text) as { error?: string };
+      } catch {
+        body = { error: text };
+      }
+    }
     if (!res.ok) throw new Error(body.error ?? 'Could not delete user');
   },
 };

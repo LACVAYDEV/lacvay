@@ -8,6 +8,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { LoadingState } from '@/components/ui/States';
 import { requestUserLocation } from '@/lib/userLocation';
 import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog';
+import { ToastHost } from '@/components/ui/ToastHost';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
@@ -106,6 +107,7 @@ export default function App() {
       <AuthProvider>
         <AppProvider>
           <ConfirmDialogProvider>
+            <ToastHost />
             <Suspense fallback={<AppSplash />}>
               <Routes>
               {/* Root URL: LandingPage for visitors; User AppShell for signed-in commuters */}

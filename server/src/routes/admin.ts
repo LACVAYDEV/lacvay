@@ -10,13 +10,6 @@ function parseUserId(raw: string | string[] | undefined): string | null {
   return raw;
 }
 
-function parseAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS ?? process.env.VITE_ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-}
-
 adminRouter.post('/users/:userId/reset-password', requireAdmin, async (req, res) => {
   if (!supabaseAdmin) {
     res.status(503).json({
@@ -67,7 +60,7 @@ adminRouter.delete('/users/:userId', requireAdmin, async (req, res) => {
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .select('email')
+    .select('email, role')
     .eq('id', userId)
     .maybeSingle();
 
@@ -81,9 +74,8 @@ adminRouter.delete('/users/:userId', requireAdmin, async (req, res) => {
     return;
   }
 
-  const envAdmins = parseAdminEmails();
-  if (envAdmins.includes(profile.email.toLowerCase())) {
-    res.status(400).json({ error: 'Env-configured admin accounts cannot be deleted here.' });
+  if (profile.role === 'admin') {
+    res.status(400).json({ error: 'Remove admin role before deleting this account.' });
     return;
   }
 

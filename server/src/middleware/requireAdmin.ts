@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database.types.js';
+import { supabaseAdmin } from '../services/supabaseAdmin.js';
 import '../config/env.js';
 
 declare global {
@@ -14,16 +15,16 @@ declare global {
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-function parseAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS ?? process.env.VITE_ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-}
-
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!supabaseUrl || !supabaseAnonKey) {
     res.status(500).json({ error: 'Server Supabase configuration is missing.' });
+    return;
+  }
+
+  if (!supabaseAdmin) {
+    res.status(503).json({
+      error: 'Admin API requires SUPABASE_SERVICE_ROLE_KEY in server/.env.',
+    });
     return;
   }
 
@@ -43,16 +44,19 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
   }
 
   const email = user.email?.toLowerCase() ?? '';
-  const envAdmins = parseAdminEmails();
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .maybeSingle();
 
-  const isAdmin = profile?.role === 'admin' || envAdmins.includes(email);
-  if (!isAdmin) {
+  if (profileError) {
+    res.status(500).json({ error: 'Could not verify admin role.' });
+    return;
+  }
+
+  if (profile?.role !== 'admin') {
     res.status(403).json({ error: 'Admin access required.' });
     return;
   }
