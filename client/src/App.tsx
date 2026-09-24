@@ -19,6 +19,7 @@ const TouristSpotsPage = lazy(() => import('@/pages/TouristSpotsPage'));
 const TouristSpotDetailPage = lazy(() => import('@/pages/TouristSpotDetailPage'));
 const AIAssistantPage = lazy(() => import('@/pages/AIAssistantPage'));
 const RestaurantsPage = lazy(() => import('@/pages/RestaurantsPage'));
+const RestaurantDetailPage = lazy(() => import('@/pages/RestaurantDetailPage'));
 const PromotionsPage = lazy(() => import('@/pages/PromotionsPage'));
 const SavedPage = lazy(() => import('@/pages/SavedPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
@@ -59,6 +60,7 @@ function AppShell() {
           <Route path="/ai-assistant" element={<AIAssistantPage />} />
           <Route path="/assistant" element={<AIAssistantPage />} />
           <Route path="/restaurants" element={<RestaurantsPage />} />
+          <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
           <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/saved" element={<SavedPage />} />
           <Route path="/saved-places" element={<SavedPage defaultTab="places" />} />

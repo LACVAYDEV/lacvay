@@ -87,9 +87,7 @@ export function PlaceCard({
     place.category === 'Restaurant';
 
   const handleCardClick = () => {
-    if (!isRestaurant) {
-      navigate(`/tourist-spots/${place.id}`);
-    }
+    navigate(`/${isRestaurant ? 'restaurants' : 'tourist-spots'}/${place.id}`);
   };
 
   const imageUrl =

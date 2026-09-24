@@ -678,7 +678,7 @@ export default function MapPage() {
                           {p.latitude.toFixed(4)}, {p.longitude.toFixed(4)}
                         </span>
                         <Link
-                          to={`/tourist-spots/${p.id}`}
+                          to={`/${isRestaurant ? 'restaurants' : 'tourist-spots'}/${p.id}`}
                           className="font-bold text-lacvay-green hover:underline"
                         >
                           View details →
