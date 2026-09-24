@@ -13,7 +13,10 @@ function isMissingTableError(error: PostgrestErrorLike): boolean {
   );
 }
 
-async function deleteByUserId(table: string, userId: string): Promise<string | null> {
+async function deleteByUserId(
+  table: 'saved_guides' | 'user_favorites',
+  userId: string,
+): Promise<string | null> {
   if (!supabaseAdmin) return 'Supabase admin client is not configured.';
 
   const { error } = await supabaseAdmin.from(table).delete().eq('user_id', userId);
