@@ -335,12 +335,6 @@ export default function MapPage() {
     return guideStopsWithCoords.map((s) => s.coords);
   }, [guideStopsWithCoords]);
 
-  const defaultRouteLine: [number, number][] = [
-    [13.756, 121.058],
-    [13.754, 121.062],
-    [13.755, 121.066],
-  ];
-
   // Effective fare rates for the selected route specifically
   const selectedRouteFares = useMemo<FixedFarePricing | null>(() => {
     if (!selectedRoute) return globalPricing;
@@ -671,7 +665,7 @@ export default function MapPage() {
                   })}
 
                   {/* Selected Transit Route Polyline Highlight */}
-                  {selectedRoute && selectedRouteCoords.length > 0 ? (
+                  {selectedRoute && selectedRouteCoords.length > 0 && (
                     <>
                       {/* Origin and Terminus Pin for Route */}
                       <Marker position={selectedRouteCoords[0]} icon={defaultIcon}>
@@ -720,12 +714,6 @@ export default function MapPage() {
                         />
                       )}
                     </>
-                  ) : (
-                    /* Default baseline polyline */
-                    <Polyline
-                      positions={defaultRouteLine}
-                      pathOptions={{ color: '#159447', weight: 4 }}
-                    />
                   )}
                 </>
               )}
