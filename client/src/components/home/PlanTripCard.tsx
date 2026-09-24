@@ -29,8 +29,16 @@ export function PlanTripCard({
   };
 
   const findRoutes = () => {
-    const params = new URLSearchParams({ from, to: to || 'SM City Batangas', transport });
-    navigate(`/map?${params.toString()}`);
+    const dest = to || 'SM City Batangas';
+    const prompt =
+      from && from !== 'Current Location'
+        ? `How do I get from ${from} to ${dest}?`
+        : `How do I get to ${dest}?`;
+    const search = new URLSearchParams({ prompt });
+    if (from && from !== 'Current Location') {
+      search.set('from', from);
+    }
+    navigate(`/assistant?${search.toString()}`);
   };
 
   return (

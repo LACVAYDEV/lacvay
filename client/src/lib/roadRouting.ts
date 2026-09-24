@@ -143,6 +143,17 @@ export async function fetchRoadPathsForLegs(
 
   for (let i = 0; i < legs.length; i++) {
     const leg = legs[i];
+
+    // If leg already contains a polyline from transit_routes.geojson_path, preserve it directly
+    if (leg.path.length > 2 || leg.mode === 'jeepney') {
+      results.push({
+        order: leg.order,
+        mode: leg.mode as 'walk' | 'jeepney' | 'tnvs',
+        path: leg.path,
+      });
+      continue;
+    }
+
     const ends =
       leg.path.length >= 2
         ? ([leg.path[0], leg.path[leg.path.length - 1]] as LatLngTuple[])

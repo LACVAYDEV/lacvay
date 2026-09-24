@@ -122,7 +122,7 @@ export function sanitizePath(path: [number, number][]): [number, number][] {
   for (const pt of path) {
     if (!Array.isArray(pt) || pt.length < 2) continue;
     const fixed = sanitizeLatLng(Number(pt[0]), Number(pt[1]));
-    if (fixed && fixed[1] >= BAY_WEST_LNG - 0.002) out.push(fixed);
+    if (fixed && fixed[1] >= BATANGAS_BOUNDS.minLng) out.push(fixed);
   }
   return out;
 }
@@ -211,20 +211,35 @@ export function rebuildPlanPaths<
     }>;
   },
 >(plan: T): T {
+  // If the plan already contains valid polyline coordinates from transit_routes.geojson_path,
+  // bypass hardcoded southCoastCorridor and HUBS snapping and strictly render the actual path.
+  const hasRouteGeoJson = plan.legs.some(
+    (l) => Array.isArray(l.path) && l.path.length >= 2 && (l.mode === 'jeepney' || l.path.length > 2),
+  );
+  if (hasRouteGeoJson) {
+    return {
+      ...plan,
+      origin:
+        plan.origin.lat && plan.origin.lng
+          ? plan.origin
+          : resolveMapPoint(plan.origin.label, plan.origin.lat, plan.origin.lng),
+      destination:
+        plan.destination.lat && plan.destination.lng
+          ? plan.destination
+          : resolveMapPoint(plan.destination.label, plan.destination.lat, plan.destination.lng),
+      legs: plan.legs.map((leg) => ({
+        ...leg,
+        path: sanitizePath(leg.path),
+      })),
+    };
+  }
+
   const origin = resolveMapPoint(plan.origin.label, plan.origin.lat, plan.origin.lng);
-  let destination = resolveMapPoint(
+  const destination = resolveMapPoint(
     plan.destination.label,
     plan.destination.lat,
     plan.destination.lng,
   );
-  // Shrine trips: keep B at Monte Maria inland (not the coastal Pagkilatan jeepney stop)
-  if (/monte maria|montemaria/i.test(destination.label + ' ' + plan.destination.label)) {
-    destination = {
-      label: destination.label || HUBS.monteMaria.label,
-      lat: HUBS.monteMaria.lat,
-      lng: HUBS.monteMaria.lng,
-    };
-  }
 
   const originT = toTuple(origin);
   const destT = toTuple(destination);
@@ -242,37 +257,6 @@ export function rebuildPlanPaths<
   }
   if (haversineKm(stops[stops.length - 1], destT) > 0.12) stops.push(destT);
   else stops[stops.length - 1] = destT;
-
-  // Ensure south-coast trips include SM hub when origin is city/pier/CLB
-  const needsSm =
-    crossesBay(originT, destT) ||
-    (/monte maria|pagkilatan|ilijan|tabangao/i.test(destination.label) &&
-      /clb|pier|colegio|plaza|basilica|city|sm/i.test(origin.label));
-  if (needsSm || /monte maria|pagkilatan|ilijan/i.test(destination.label)) {
-    // Canonical coastal corridor (land only) — order matters for road routing
-    const coastal: LatLngTuple[] = [
-      originT,
-      toTuple(HUBS.city),
-      toTuple(HUBS.sm),
-      toTuple(HUBS.ilijanTerminal),
-      toTuple(HUBS.tabangao),
-      [13.70, 121.06],
-      [13.68, 121.052],
-      toTuple(HUBS.pagkilatan),
-      destT,
-    ];
-    // Merge: keep origin, coastal hubs, dest — drop duplicates
-    const merged: LatLngTuple[] = [];
-    for (const p of coastal) {
-      const last = merged[merged.length - 1];
-      if (!last || haversineKm(last, p) > 0.2) merged.push(p);
-    }
-    // Prefer coastal chain over sparse stop list for south trips
-    if (merged.length >= 3) {
-      stops.length = 0;
-      stops.push(...merged);
-    }
-  }
 
   // Assign endpoints by mode: short walks at ends / transfers; rides get the corridor.
   // Trust leg.mode only — descriptions often say "jeepney stop" on walk steps.

@@ -1,6 +1,6 @@
-import { useState, type MouseEvent } from 'react';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Star, MapPin } from 'lucide-react';
+import { Heart, Star, MapPin, Navigation, Map, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { favoritesService } from '@/services/favoritesService';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
 import { isVideoMediaUrl } from '@/lib/mediaUtils';
-import type { Place } from '@/types';
+import type { Place, Coordinates } from '@/types';
 
 export interface PlaceCardProps {
   place: Partial<Place> & {
@@ -17,8 +17,20 @@ export interface PlaceCardProps {
     description?: string | null;
     category?: string;
     image_url?: string | null;
+    imageUrl?: string;
     rating?: number;
     location?: string;
+    latitude?: number;
+    longitude?: number;
+    lat?: number;
+    lng?: number;
+    coordinates?: Coordinates;
+    isOpen?: boolean;
+    is_restaurant?: boolean;
+    type?: 'restaurant' | 'tourist-spot' | string;
+    priceRange?: string;
+    openingHours?: string;
+    isFeatured?: boolean;
   };
   isFavorited?: boolean;
   onFavoriteChange?: (placeId: string, isFavorited: boolean) => void;
@@ -38,13 +50,12 @@ export function PlaceCard({
   const [favorited, setFavorited] = useState(initialFavorited);
   const [isPulsing, setIsPulsing] = useState(false);
 
+  useEffect(() => {
+    setFavorited(initialFavorited);
+  }, [initialFavorited]);
+
   const handleHeartClick = async (e: MouseEvent) => {
     e.stopPropagation();
-
-    if (!user) {
-      showToast('Please sign in to save your favorite places');
-      return;
-    }
 
     // 1. Optimistic UI update
     const previousState = favorited;
@@ -56,30 +67,38 @@ export function PlaceCard({
     onFavoriteChange?.(place.id, nextState);
     showToast(nextState ? `Saved ${place.name} to bookmarks` : `Removed ${place.name} from bookmarks`);
 
-    // 2. Call backend service
-    try {
-      const serverResult = await favoritesService.toggleFavorite(user.id, place.id);
-      // Ensure local state synchronizes with server response
-      if (serverResult !== nextState) {
-        setFavorited(serverResult);
-        onFavoriteChange?.(place.id, serverResult);
+    // 2. Call backend service if user is signed in
+    if (user) {
+      try {
+        const serverResult = await favoritesService.toggleFavorite(user.id, place.id);
+        if (serverResult !== nextState) {
+          setFavorited(serverResult);
+          onFavoriteChange?.(place.id, serverResult);
+        }
+      } catch (error) {
+        console.warn('Could not sync favorite to Supabase:', error);
       }
-    } catch (error) {
-      // 3. Rollback on failure
-      console.error('Failed to toggle favorite:', error);
-      setFavorited(previousState);
-      onFavoriteChange?.(place.id, previousState);
-      showToast('Failed to update bookmark. Please try again.');
     }
   };
 
+  const isRestaurant =
+    place.isOpen !== undefined ||
+    place.type === 'restaurant' ||
+    place.category === 'Restaurant';
+
   const handleCardClick = () => {
-    navigate(`/tourist-spots/${place.id}`);
+    if (!isRestaurant) {
+      navigate(`/tourist-spots/${place.id}`);
+    }
   };
 
   const imageUrl =
     place.image_url ||
+    place.imageUrl ||
     'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop&q=80';
+
+  const lat = place.lat ?? place.latitude ?? place.coordinates?.lat;
+  const lng = place.lng ?? place.longitude ?? place.coordinates?.lng;
 
   return (
     <Card
@@ -92,7 +111,10 @@ export function PlaceCard({
       {/* Image & Heart Button Overlay */}
       <div
         onClick={handleCardClick}
-        className="relative aspect-[16/10] w-full cursor-pointer overflow-hidden bg-gray-100"
+        className={cn(
+          'relative aspect-[16/10] w-full overflow-hidden bg-gray-100',
+          !isRestaurant && 'cursor-pointer',
+        )}
       >
         {isVideoMediaUrl(imageUrl) ? (
           <video
@@ -115,27 +137,41 @@ export function PlaceCard({
         {/* Gradient overlay for contrast */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
 
-        {/* Top Badges */}
-        <div className="absolute left-3 top-3 flex items-center gap-1.5">
-          {place.category && (
-            <Badge className="border-0 bg-lacvay-green/90 text-white shadow-sm backdrop-blur-md">
-              {place.category}
-            </Badge>
+        {/* Top-Left Badges: Open/Closed for restaurants, Category for tourist spots */}
+        <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5 z-10">
+          {isRestaurant ? (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold shadow-sm backdrop-blur',
+                place.isOpen
+                  ? 'bg-emerald-500/90 text-white'
+                  : 'bg-rose-500/90 text-white',
+              )}
+            >
+              <span className={cn('h-1.5 w-1.5 rounded-full bg-white', place.isOpen && 'animate-pulse')} />
+              {place.isOpen ? 'Open Now' : 'Closed'}
+            </span>
+          ) : (
+            place.category && (
+              <Badge className="border-0 bg-lacvay-green/90 text-white shadow-sm backdrop-blur-md">
+                {place.category}
+              </Badge>
+            )
           )}
-          {place.is_featured && (
+          {(place.is_featured || place.isFeatured) && (
             <Badge variant="yellow" className="backdrop-blur-md shadow-sm font-bold">
               ★ Promoted
             </Badge>
           )}
         </div>
 
-        {/* Heart Toggle Button */}
+        {/* Top-Right Heart Icon */}
         <button
           type="button"
           aria-label={favorited ? 'Remove from bookmarks' : 'Add to bookmarks'}
           onClick={handleHeartClick}
           className={cn(
-            'absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-md transition-all duration-200',
+            'absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-md transition-all duration-200',
             favorited
               ? 'border-rose-300 bg-rose-50/95 text-rose-500 shadow-rose-200/50 hover:bg-rose-100'
               : 'border-white/40 bg-white/80 text-gray-600 hover:scale-105 hover:bg-white hover:text-rose-500',
@@ -150,14 +186,20 @@ export function PlaceCard({
           />
         </button>
 
-        {/* Bottom Bar on image: Rating / Featured */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
+        {/* Bottom Bar on image: Rating / Price Range */}
+        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white pointer-events-none">
           {place.rating ? (
             <span className="flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs font-semibold backdrop-blur-sm">
               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
               {place.rating}
             </span>
           ) : <span />}
+
+          {place.priceRange && (
+            <span className="rounded-full bg-white/95 px-2.5 py-0.5 text-xs font-bold text-lacvay-green shadow-sm">
+              {place.priceRange}
+            </span>
+          )}
         </div>
       </div>
 
@@ -165,7 +207,10 @@ export function PlaceCard({
       <div className="flex flex-1 flex-col p-4">
         <h3
           onClick={handleCardClick}
-          className="cursor-pointer text-[15px] font-bold text-gray-900 transition-colors group-hover:text-lacvay-green line-clamp-1"
+          className={cn(
+            'text-[15px] font-bold text-gray-900 transition-colors line-clamp-1',
+            !isRestaurant && 'cursor-pointer group-hover:text-lacvay-green',
+          )}
         >
           {place.name}
         </h3>
@@ -177,20 +222,49 @@ export function PlaceCard({
           </p>
         )}
 
+        {place.openingHours && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
+            <Clock className="h-3.5 w-3.5 text-lacvay-green shrink-0" />
+            <span>{place.openingHours}</span>
+          </div>
+        )}
+
         {place.description && (
           <p className="mt-2 line-clamp-2 text-[12.5px] leading-relaxed text-gray-600">
             {place.description}
           </p>
         )}
 
-        {/* Action Button */}
-        <div className="mt-auto pt-4">
+        {/* Bottom Action Buttons */}
+        <div className="mt-auto pt-4 flex items-center gap-2">
+          {/* Primary Button ("Directions") */}
           <button
             type="button"
-            onClick={handleCardClick}
-            className="w-full rounded-xl bg-lacvay-green/10 py-2.5 text-[13px] font-bold text-lacvay-green transition-all hover:bg-lacvay-green hover:text-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate('/ai-assistant?prompt=How+to+get+to+' + encodeURIComponent(place.name));
+            }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-lacvay-green py-2.5 px-3 text-xs font-bold text-white shadow-soft transition hover:bg-lacvay-green-dark"
           >
-            Explore Destination
+            <Navigation className="h-3.5 w-3.5" />
+            Directions
+          </button>
+
+          {/* Secondary/Outline Button ("Explore") */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(
+                lat != null && lng != null
+                  ? '/map?lat=' + lat + '&lng=' + lng
+                  : '/map'
+              );
+            }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white py-2.5 px-3 text-xs font-bold text-gray-700 shadow-soft transition hover:border-lacvay-green hover:text-lacvay-green"
+          >
+            <Map className="h-3.5 w-3.5" />
+            Explore
           </button>
         </div>
       </div>

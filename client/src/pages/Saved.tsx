@@ -97,7 +97,7 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
   };
 
   const handleViewOnMap = (guide: SavedGuide) => {
-    navigate('/map', {
+    navigate('/commute', {
       state: {
         guide: {
           id: guide.id,
@@ -115,11 +115,7 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
 
   if (!user) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Saved</h1>
-          <p className="text-sm text-gray-500">Your bookmarked places and saved trip guides</p>
-        </div>
+      <div className="space-y-4">
         <div className="flex flex-col items-center justify-center rounded-3xl bg-white p-12 text-center shadow-card">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-lacvay-green/10 text-lacvay-green">
             <Bookmark className="h-7 w-7" />
@@ -137,18 +133,9 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Saved Trips & Places</h1>
-          <p className="text-sm text-gray-500">
-            Access your bookmarked spots and AI-generated commute guides
-          </p>
-        </div>
-
-        {/* Tab Filter Chips */}
-        <div className="flex items-center gap-2 rounded-2xl bg-gray-100 p-1.5 shadow-inner">
+    <div className="space-y-5">
+      {/* Tab Filter Chips */}
+      <div className="flex items-center gap-2 rounded-2xl bg-gray-100 p-1.5 shadow-inner w-fit">
           <button
             type="button"
             onClick={() => handleTabChange('places')}
@@ -181,7 +168,6 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
             </span>
           </button>
         </div>
-      </div>
 
       {/* Tab 1: Saved Places */}
       {activeTab === 'places' && (
@@ -317,7 +303,7 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
                         className="w-full justify-center gap-2 text-xs font-bold shadow-sm"
                       >
                         <Map className="h-4 w-4" />
-                        <span>View on Map</span>
+                        <span>View Commute Guide</span>
                       </Button>
                     </div>
                   </Card>

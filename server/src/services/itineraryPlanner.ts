@@ -19,6 +19,7 @@ export interface RouteMatchInput {
 
 export interface ItineraryLeg {
   mode: 'walk' | 'jeepney' | 'tnvs';
+  title?: string;
   summary: string;
   minutes: number;
   fareRegular?: number;
@@ -60,6 +61,31 @@ function jeepneyMinutes(km: number): number {
   return Math.max(8, Math.round((km / JEEPNEY_KMH) * 60));
 }
 
+function buildAccessLeg(distanceKm: number, toFromText: string): ItineraryLeg {
+  const m = Math.max(50, Math.round(distanceKm * 1000));
+  if (distanceKm <= 0.3) {
+    return {
+      mode: 'walk',
+      summary: `Walk ~${m} meters ${toFromText}`,
+      minutes: walkMinutes(distanceKm),
+    };
+  } else if (distanceKm <= 1.2) {
+    return {
+      mode: 'walk', // Keeps the map line dashed
+      title: 'Walk / Tricycle / App',
+      summary: `Walk or book a tricycle/app (~${m} meters) ${toFromText}`,
+      minutes: walkMinutes(distanceKm),
+    };
+  } else {
+    return {
+      mode: 'tnvs',
+      title: 'Tricycle / TNVS',
+      summary: `Book a tricycle or TNVS app (~${distanceKm.toFixed(1)} km) ${toFromText}`,
+      minutes: Math.max(5, Math.round(distanceKm * 4)),
+    };
+  }
+}
+
 function nearestPointsBetweenPaths(
   a: [number, number][],
   b: [number, number][],
@@ -72,6 +98,25 @@ function nearestPointsBetweenPaths(
     }
   }
   return { walkKm };
+}
+
+export function nearestPointOnLine(
+  pt: [number, number],
+  path: [number, number][],
+): { point: [number, number]; index: number; distanceKm: number } {
+  if (!path.length) {
+    return { point: pt, index: 0, distanceKm: 0 };
+  }
+  let bestIdx = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < path.length; i++) {
+    const d = haversineKm(pt[0], pt[1], path[i][0], path[i][1]);
+    if (d < bestDist) {
+      bestDist = d;
+      bestIdx = i;
+    }
+  }
+  return { point: path[bestIdx], index: bestIdx, distanceKm: bestDist };
 }
 
 function pickFare(match: RouteMatchInput, tripKm: number): { regular?: number; discounted?: number } {
@@ -146,11 +191,7 @@ export function buildOptimizedItinerary(
     const rideKm = Math.max(straightKm, walkOrigKm + walkDestKm);
     const fare = pickFare(m, rideKm);
     const legs: ItineraryLeg[] = [
-      {
-        mode: 'walk',
-        summary: `Walk from ${origin.label} to the nearest stop on ${m.route.route_name} (~${walkOrigKm.toFixed(1)} km)`,
-        minutes: walkMinutes(walkOrigKm),
-      },
+      buildAccessLeg(walkOrigKm, `from ${origin.label} to the nearest stop on ${m.route.route_name}`),
       {
         mode: 'jeepney',
         summary: `Ride ${m.route.route_name} (corridor ${m.ends.from} ↔ ${m.ends.to}). Fares on file: ${m.fareNote}`,
@@ -159,11 +200,7 @@ export function buildOptimizedItinerary(
         fareDiscounted: fare.discounted,
         routeName: m.route.route_name,
       },
-      {
-        mode: 'walk',
-        summary: `Walk from the alight point on ${m.route.route_name} to ${destination.label} (~${walkDestKm.toFixed(1)} km)`,
-        minutes: walkMinutes(walkDestKm),
-      },
+      buildAccessLeg(walkDestKm, `from the alight point on ${m.route.route_name} to ${destination.label}`),
     ];
     const totals = sumFares(legs);
     candidates.push({
@@ -195,7 +232,7 @@ export function buildOptimizedItinerary(
       if (leg1.route.id === leg2.route.id) continue;
       const gap = nearestPointsBetweenPaths(leg1.path, leg2.path);
       if (!gap || gap.walkKm > MAX_TRANSFER_WALK_KM) continue;
-      const score = leg1.originKm! + gap.walkKm + leg2.destKm!;
+      const score = (leg1.originKm ?? 0) * 2 + gap.walkKm + (leg2.destKm ?? 0);
       if (!bestTransfer || score < bestTransfer.score) {
         bestTransfer = { leg1, leg2, walkKm: gap.walkKm, score };
       }
@@ -207,11 +244,7 @@ export function buildOptimizedItinerary(
     const fare1 = pickFare(leg1, leg1.originKm! + walkKm);
     const fare2 = pickFare(leg2, walkKm + leg2.destKm!);
     const legs: ItineraryLeg[] = [
-      {
-        mode: 'walk',
-        summary: `Walk from ${origin.label} to ${leg1.route.route_name} (~${leg1.originKm!.toFixed(1)} km)`,
-        minutes: walkMinutes(leg1.originKm!),
-      },
+      buildAccessLeg(leg1.originKm!, `from ${origin.label} to ${leg1.route.route_name} stop`),
       {
         mode: 'jeepney',
         summary: `Ride ${leg1.route.route_name}. Alight where this route is closest to ${leg2.route.route_name} (~${walkKm.toFixed(1)} km walk to transfer). Fares: ${leg1.fareNote}`,
@@ -222,7 +255,7 @@ export function buildOptimizedItinerary(
       },
       {
         mode: 'walk',
-        summary: `Walk ~${walkKm.toFixed(1)} km from ${leg1.route.route_name} to the nearest stop on ${leg2.route.route_name}`,
+        summary: `Walk ~${Math.max(1, Math.round(walkMinutes(walkKm)))} min (~${Math.max(50, Math.round(walkKm * 1000))}m) to ${leg2.route.route_name} stop`,
         minutes: walkMinutes(walkKm),
       },
       {
@@ -233,11 +266,99 @@ export function buildOptimizedItinerary(
         fareDiscounted: fare2.discounted,
         routeName: leg2.route.route_name,
       },
+      buildAccessLeg(leg2.destKm!, `from ${leg2.route.route_name} to ${destination.label}`),
+    ];
+    const totals = sumFares(legs);
+    candidates.push({
+      planType: 'transfer',
+      legs,
+      totalMinutes: legs.reduce((s, l) => s + l.minutes, 0),
+      totalFareRegular: totals.regular,
+      totalFareDiscounted: totals.discounted,
+      score,
+    });
+  }
+
+  // 3-jeepney transfer fallback: if no 2-jeepney transfer is found, find an intermediate bridge route
+  let best3Transfer: {
+    leg1: RouteMatchInput;
+    mid: RouteMatchInput;
+    leg2: RouteMatchInput;
+    walkKm1: number;
+    walkKm2: number;
+    score: number;
+  } | null = null;
+
+  if (!bestTransfer) {
+    const intermediateRoutes = matches.filter((m) => m.path.length >= 2);
+    for (const leg1 of nearOrigin.slice(0, 6)) {
+      for (const leg2 of nearDest.slice(0, 6)) {
+        if (leg1.route.id === leg2.route.id) continue;
+        for (const mid of intermediateRoutes) {
+          if (mid.route.id === leg1.route.id || mid.route.id === leg2.route.id) continue;
+          const gap1 = nearestPointsBetweenPaths(leg1.path, mid.path);
+          if (!gap1 || gap1.walkKm > MAX_TRANSFER_WALK_KM) continue;
+          const gap2 = nearestPointsBetweenPaths(mid.path, leg2.path);
+          if (!gap2 || gap2.walkKm > MAX_TRANSFER_WALK_KM) continue;
+
+          const score = (leg1.originKm ?? 0) * 2 + gap1.walkKm + gap2.walkKm + (leg2.destKm ?? 0) + 1.0;
+          if (!best3Transfer || score < best3Transfer.score) {
+            best3Transfer = {
+              leg1,
+              mid,
+              leg2,
+              walkKm1: gap1.walkKm,
+              walkKm2: gap2.walkKm,
+              score,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  if (best3Transfer) {
+    const { leg1, mid, leg2, walkKm1, walkKm2, score } = best3Transfer;
+    const fare1 = pickFare(leg1, (leg1.originKm ?? 0) + walkKm1);
+    const fareMid = pickFare(mid, walkKm1 + walkKm2 + 3);
+    const fare2 = pickFare(leg2, walkKm2 + (leg2.destKm ?? 0));
+    const legs: ItineraryLeg[] = [
+      buildAccessLeg(leg1.originKm ?? 0, `from ${origin.label} to ${leg1.route.route_name} stop`),
+      {
+        mode: 'jeepney',
+        summary: `Ride ${leg1.route.route_name}. Alight where this route is closest to ${mid.route.route_name} (~${walkKm1.toFixed(1)} km transfer). Fares: ${leg1.fareNote}`,
+        minutes: jeepneyMinutes((leg1.originKm ?? 0) + walkKm1),
+        fareRegular: fare1.regular,
+        fareDiscounted: fare1.discounted,
+        routeName: leg1.route.route_name,
+      },
       {
         mode: 'walk',
-        summary: `Walk from ${leg2.route.route_name} to ${destination.label} (~${leg2.destKm!.toFixed(1)} km)`,
-        minutes: walkMinutes(leg2.destKm!),
+        summary: `Walk ~${Math.max(1, Math.round(walkMinutes(walkKm1)))} min (~${Math.max(50, Math.round(walkKm1 * 1000))}m) to ${mid.route.route_name} stop`,
+        minutes: walkMinutes(walkKm1),
       },
+      {
+        mode: 'jeepney',
+        summary: `Ride ${mid.route.route_name}. Alight where this route connects with ${leg2.route.route_name} (~${walkKm2.toFixed(1)} km transfer). Fares: ${mid.fareNote}`,
+        minutes: jeepneyMinutes(walkKm1 + walkKm2 + 3),
+        fareRegular: fareMid.regular,
+        fareDiscounted: fareMid.discounted,
+        routeName: mid.route.route_name,
+      },
+      {
+        mode: 'walk',
+        summary: `Walk ~${Math.max(1, Math.round(walkMinutes(walkKm2)))} min (~${Math.max(50, Math.round(walkKm2 * 1000))}m) to ${leg2.route.route_name} stop`,
+        minutes: walkMinutes(walkKm2),
+      },
+      {
+        mode: 'jeepney',
+        summary: `Ride ${leg2.route.route_name} toward ${destination.label}. Fares: ${leg2.fareNote}`,
+        minutes: jeepneyMinutes(walkKm2 + (leg2.destKm ?? 0)),
+        fareRegular: fare2.regular,
+        fareDiscounted: fare2.discounted,
+        routeName: leg2.route.route_name,
+      },
+      buildAccessLeg(leg2.destKm ?? 0, `from ${leg2.route.route_name} to ${destination.label}`),
     ];
     const totals = sumFares(legs);
     candidates.push({
@@ -292,11 +413,57 @@ export function buildOptimizedItinerary(
     });
   }
 
-  if (!matches.some((m) => m.servesOrigin)) {
+  // First-mile access: if origin is away from a route, check if any routes serve the destination
+  const destServingRoutes = matches
+    .filter((m) => m.servesDest && m.path.length >= 2)
+    .map((m) => {
+      const nearest = nearestPointOnLine([origin.lat, origin.lng], m.path);
+      const originKm = m.originKm ?? nearest.distanceKm;
+      return { match: m, originKm, nearestPoint: nearest.point, nearestIndex: nearest.index };
+    })
+    .sort((a, b) => a.originKm - b.originKm);
+
+  if (destServingRoutes.length > 0) {
+    const best = destServingRoutes[0];
+    const m = best.match;
+    const originKm = best.originKm;
+    const destKm = m.destKm ?? 0.1;
+    const rideKm = Math.max(straightKm, originKm + destKm);
+    const fare = pickFare(m, rideKm);
+
+    const accessLeg: ItineraryLeg = buildAccessLeg(originKm, `to ${m.route.route_name} corridor`);
+
+    const jeepneyLeg: ItineraryLeg = {
+      mode: 'jeepney',
+      summary: `Board ${m.route.route_name} and alight near ${destination.label}`,
+      minutes: jeepneyMinutes(rideKm),
+      fareRegular: fare.regular,
+      fareDiscounted: fare.discounted,
+      routeName: m.route.route_name,
+    };
+
+    const finalWalkLeg: ItineraryLeg = buildAccessLeg(destKm, `to ${destination.label}`);
+
+    const legs: ItineraryLeg[] = [accessLeg, jeepneyLeg, finalWalkLeg];
+    const totals = sumFares(legs);
+    candidates.push({
+      planType: originKm <= 1.2 ? 'direct' : 'jeepney_tnvs',
+      legs,
+      totalMinutes: legs.reduce((s, l) => s + l.minutes, 0),
+      totalFareRegular: totals.regular,
+      totalFareDiscounted: totals.discounted,
+      score: originKm + destKm,
+    });
+  }
+
+  // Only fallback to full tnvs_only if neither the origin nor the destination has any accessible jeepney routes
+  const hasAccessibleOrigin = matches.some((m) => m.servesOrigin);
+  const hasAccessibleDest = matches.some((m) => m.servesDest);
+  if (!hasAccessibleOrigin && !hasAccessibleDest) {
     const legs: ItineraryLeg[] = [
       {
         mode: 'tnvs',
-        summary: `No uploaded jeepney route passes within ${PATH_SERVE_KM} km of ${origin.label}. Book Angkas, Grab, or iDOL Taxi door-to-door to ${destination.label}`,
+        summary: `No accessible jeepney route found near ${origin.label} or ${destination.label}. Book Angkas, Grab, or iDOL Taxi door-to-door to ${destination.label}`,
         minutes: jeepneyMinutes(straightKm),
       },
     ];
@@ -306,12 +473,23 @@ export function buildOptimizedItinerary(
       totalMinutes: legs[0].minutes,
       totalFareRegular: null,
       totalFareDiscounted: null,
-      score: straightKm + 5,
+      score: straightKm + 10,
     });
   }
 
   if (!candidates.length) return null;
-  return candidates.sort((a, b) => a.score - b.score)[0];
+  return candidates.sort((a, b) => {
+    const planPriority = (planType: string): number => {
+      if (planType === 'direct') return 1;
+      if (planType === 'transfer') return 2;
+      if (planType === 'jeepney_tnvs') return 3;
+      return 4; // tnvs_only
+    };
+    const prioA = planPriority(a.planType);
+    const prioB = planPriority(b.planType);
+    if (prioA !== prioB) return prioA - prioB;
+    return a.score - b.score;
+  })[0];
 }
 
 export function formatOptimizedItinerary(
@@ -326,7 +504,18 @@ export function formatOptimizedItinerary(
   ];
 
   itinerary.legs.forEach((leg, index) => {
-    const modeLabel = leg.mode === 'walk' ? 'Walk' : leg.mode === 'jeepney' ? 'Jeepney' : 'TNVS';
+    const modeLabel =
+      leg.title
+        ? leg.title
+        : leg.mode === 'walk'
+          ? index === 0
+            ? 'Walk / Tricycle'
+            : itinerary.planType === 'transfer' && (index === 2 || index === 4)
+              ? 'Transfer Walk'
+              : 'Walk'
+          : leg.mode === 'jeepney'
+            ? 'Jeepney'
+            : 'TNVS';
     let line = `${index + 1}. **${modeLabel}** (~${leg.minutes} min) — ${leg.summary}`;
     if (leg.fareRegular != null) {
       line += `. Fare ₱${leg.fareRegular}${leg.fareDiscounted != null ? ` (discounted ₱${leg.fareDiscounted})` : ''}`;

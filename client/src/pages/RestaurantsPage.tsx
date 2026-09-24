@@ -1,18 +1,25 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Clock, Navigation } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { dataService } from '@/services/dataService';
-import type { Restaurant } from '@/types';
+import { favoritesService } from '@/services/favoritesService';
+import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
-import { Card } from '@/components/ui/Card';
+import { PlaceCard } from '@/components/places/PlaceCard';
 import { LoadingState, EmptyState } from '@/components/ui/States';
-import { cn } from '@/lib/utils';
+import { isCurrentlyOpenNow } from '@/lib/timeUtils';
+import type { Restaurant } from '@/types';
 
 export default function RestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const { isSaved, saveItem, removeSaved, savedPlaces } = useApp();
+  const [openNowOnly, setOpenNowOnly] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  const [searchParams] = useSearchParams();
+  const searchQuery = (searchParams.get('search') || searchParams.get('q') || '').toLowerCase().trim();
+
+  const { user } = useAuth();
+  const { isSaved, saveItem, removeSaved } = useApp();
 
   useEffect(() => {
     dataService.getRestaurants().then((r) => {
@@ -21,94 +28,123 @@ export default function RestaurantsPage() {
     });
   }, []);
 
-  const toggleSave = (r: Restaurant) => {
-    const saved = savedPlaces.find((p) => p.itemId === r.id);
-    if (saved) removeSaved(saved.id);
-    else saveItem({ itemId: r.id, type: 'restaurant', title: r.name, subtitle: 'Batangas City', imageUrl: r.imageUrl });
+  useEffect(() => {
+    if (user) {
+      favoritesService
+        .getUserFavoritePlaceIds(user.id)
+        .then((ids) => setFavoriteIds(new Set(ids)))
+        .catch((err) => console.error('Error fetching restaurant favorites:', err));
+    }
+  }, [user]);
+
+  const handleFavoriteChange = (r: Restaurant, isFav: boolean) => {
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (isFav) next.add(r.id);
+      else next.delete(r.id);
+      return next;
+    });
+
+    if (isFav) {
+      saveItem({
+        itemId: r.id,
+        type: 'restaurant',
+        title: r.name,
+        subtitle: 'Batangas City',
+        imageUrl: r.imageUrl,
+      });
+    } else {
+      removeSaved(r.id);
+    }
   };
+
+  const filteredRestaurants = useMemo(() => {
+    return restaurants.filter((r) => {
+      if (searchQuery) {
+        const matchesSearch =
+          r.name.toLowerCase().includes(searchQuery) ||
+          r.description?.toLowerCase().includes(searchQuery) ||
+          r.location?.toLowerCase().includes(searchQuery);
+        if (!matchesSearch) return false;
+      }
+      if (openNowOnly && !isCurrentlyOpenNow(r.openTime, r.closeTime)) {
+        return false;
+      }
+      return true;
+    });
+  }, [restaurants, searchQuery, openNowOnly]);
+
+  const sortedRestaurants = useMemo(() => {
+    return [...filteredRestaurants].sort((a, b) => {
+      const aFav = favoriteIds.has(a.id) || isSaved(a.id);
+      const bFav = favoriteIds.has(b.id) || isSaved(b.id);
+      if (aFav && !bFav) return -1;
+      if (!aFav && bFav) return 1;
+      if (a.isFeatured && !b.isFeatured) return -1;
+      if (!a.isFeatured && b.isFeatured) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [filteredRestaurants, favoriteIds, isSaved]);
 
   if (loading) return <LoadingState />;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Nearby Restaurants & Eateries</h2>
-        <p className="text-sm text-gray-500">Discover dining spots across Batangas City</p>
+    <div className="space-y-4">
+      {/* Standalone Open Now Filter Toggle */}
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => setOpenNowOnly((prev) => !prev)}
+          aria-pressed={openNowOnly}
+          className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+            openNowOnly
+              ? 'bg-lacvay-green text-white shadow-soft ring-2 ring-lacvay-green/30'
+              : 'bg-white text-gray-600 shadow-soft hover:bg-gray-50'
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              openNowOnly ? 'bg-white animate-pulse' : 'bg-emerald-500'
+            }`}
+          />
+          Open Now
+        </button>
       </div>
 
-      {restaurants.length === 0 ? (
-        <EmptyState title="No restaurants found" description="Eateries will appear here once added." />
+      {sortedRestaurants.length === 0 ? (
+        <EmptyState
+          title="No restaurants found"
+          description={
+            openNowOnly
+              ? 'No restaurants are currently open. Try toggling off "Open Now".'
+              : searchQuery
+              ? `No restaurants found matching "${searchQuery}".`
+              : 'Eateries will appear here once added.'
+          }
+        />
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {[...restaurants]
-            .sort((a, b) => {
-              if (a.isFeatured && !b.isFeatured) return -1;
-              if (!a.isFeatured && b.isFeatured) return 1;
-              return a.name.localeCompare(b.name);
-            })
-            .map((r) => (
-              <Card key={r.id} padding="sm" className="overflow-hidden p-0 flex flex-col">
-                <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-100">
-                  <img src={r.imageUrl} alt={r.name} className="h-full w-full object-cover" loading="lazy" />
-                  <div className="absolute left-3 top-3 flex flex-col gap-1.5 items-start">
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold shadow-sm backdrop-blur',
-                        r.isOpen
-                          ? 'bg-emerald-500/90 text-white'
-                          : 'bg-rose-500/90 text-white',
-                      )}
-                    >
-                      <span className={cn('h-1.5 w-1.5 rounded-full bg-white', r.isOpen && 'animate-pulse')} />
-                      {r.isOpen ? 'Open Now' : 'Closed'}
-                    </span>
-                    {r.isFeatured && (
-                      <span className="inline-flex items-center rounded-full bg-yellow-400 px-2.5 py-0.5 text-xs font-bold text-gray-900 shadow-sm backdrop-blur">
-                        ★ Promoted
-                      </span>
-                    )}
-                  </div>
-                  {r.priceRange && (
-                    <span className="absolute bottom-3 right-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-lacvay-green shadow-sm">
-                      {r.priceRange}
-                    </span>
-                  )}
-                </div>
-
-              <div className="flex flex-1 flex-col p-4">
-                <h3 className="font-bold text-gray-900 text-[16px]">{r.name}</h3>
-
-                {r.description && (
-                  <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-gray-600">
-                    {r.description}
-                  </p>
-                )}
-
-                {r.openingHours && (
-                  <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
-                    <Clock className="h-3.5 w-3.5 text-lacvay-green shrink-0" />
-                    <span>{r.openingHours}</span>
-                  </div>
-                )}
-
-                <div className="mt-auto pt-4 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/map?to=${encodeURIComponent(r.name)}`)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-lacvay-green py-2.5 text-xs font-bold text-white transition hover:bg-lacvay-green-dark"
-                  >
-                    <Navigation className="h-3.5 w-3.5" /> Directions
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleSave(r)}
-                    className="rounded-xl border border-gray-200 px-3.5 py-2.5 text-xs font-bold text-gray-700 transition hover:border-lacvay-green"
-                  >
-                    {isSaved(r.id) ? 'Saved' : 'Save'}
-                  </button>
-                </div>
-              </div>
-            </Card>
+          {sortedRestaurants.map((r) => (
+            <PlaceCard
+              key={r.id}
+              place={{
+                id: r.id,
+                name: r.name,
+                description: r.description,
+                image_url: r.imageUrl,
+                isOpen: isCurrentlyOpenNow(r.openTime, r.closeTime),
+                is_featured: r.isFeatured,
+                priceRange: r.priceRange,
+                openingHours: r.openingHours,
+                lat: r.coordinates?.lat,
+                lng: r.coordinates?.lng,
+                rating: r.rating,
+                location: r.location,
+                type: 'restaurant',
+              }}
+              isFavorited={favoriteIds.has(r.id) || isSaved(r.id)}
+              onFavoriteChange={(_id, isFav) => handleFavoriteChange(r, isFav)}
+            />
           ))}
         </div>
       )}

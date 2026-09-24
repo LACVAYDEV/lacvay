@@ -104,6 +104,8 @@ export const restaurants: Restaurant[] = [
     distanceKm: 1.2,
     priceRange: '₱₱',
     isOpen: true,
+    openTime: '08:00',
+    closeTime: '21:00',
     openingHours: '8:00 AM – 9:00 PM',
   },
   {
@@ -118,6 +120,8 @@ export const restaurants: Restaurant[] = [
     distanceKm: 2.8,
     priceRange: '₱₱',
     isOpen: true,
+    openTime: '10:00',
+    closeTime: '21:00',
     openingHours: '10:00 AM – 9:00 PM',
   },
   {
@@ -132,6 +136,8 @@ export const restaurants: Restaurant[] = [
     distanceKm: 3.1,
     priceRange: '₱₱₱',
     isOpen: true,
+    openTime: '11:00',
+    closeTime: '22:00',
     openingHours: '11:00 AM – 10:00 PM',
   },
   {
@@ -146,6 +152,8 @@ export const restaurants: Restaurant[] = [
     distanceKm: 2.8,
     priceRange: '₱',
     isOpen: true,
+    openTime: '07:00',
+    closeTime: '22:00',
     openingHours: '7:00 AM – 10:00 PM',
   },
   {
@@ -160,7 +168,25 @@ export const restaurants: Restaurant[] = [
     distanceKm: 1.9,
     priceRange: '₱₱₱₱',
     isOpen: false,
+    openTime: '17:00',
+    closeTime: '23:00',
     openingHours: '5:00 PM – 11:00 PM',
+  },
+  {
+    id: 'kapeng-barako-corner',
+    name: 'Kapeng Barako Corner & Breakfast',
+    description: 'Traditional brewed Batangas coffee with pandesal and tapsilog.',
+    cuisine: ['Cafe', 'Budget'],
+    imageUrl: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&q=80',
+    location: 'Poblacion, Batangas City',
+    coordinates: { lat: 13.758, lng: 121.058 },
+    rating: 4.7,
+    distanceKm: 0.8,
+    priceRange: '₱',
+    isOpen: false,
+    openTime: '05:30',
+    closeTime: '14:00',
+    openingHours: '5:30 AM – 2:00 PM',
   },
 ];
 
@@ -257,10 +283,10 @@ export const commuteGuides: CommuteGuide[] = [];
 export const searchIndex: SearchResult[] = [
   ...touristSpots.map((s) => ({ id: s.id, type: 'tourist-spot' as const, title: s.name, subtitle: s.location || 'Batangas City', path: `/tourist-spots/${s.id}` })),
   ...restaurants.map((r) => ({ id: r.id, type: 'restaurant' as const, title: r.name, subtitle: r.location || 'Batangas City', path: `/restaurants/${r.id}` })),
-  { id: 'sm-batangas', type: 'landmark', title: 'SM City Batangas', subtitle: 'Diversion Road, Batangas City', path: '/map?to=SM City Batangas' },
-  { id: 'grand-terminal', type: 'landmark', title: 'Batangas City Grand Terminal', subtitle: 'Diversion Road', path: '/map?to=Batangas City Grand Terminal' },
-  { id: 'pallocan', type: 'barangay', title: 'Pallocan West', subtitle: 'Batangas City', path: '/map?to=Pallocan West' },
-  { id: 'calicanto', type: 'barangay', title: 'Calicanto', subtitle: 'Batangas City', path: '/map?to=Calicanto' },
+  { id: 'sm-batangas', type: 'landmark', title: 'SM City Batangas', subtitle: 'Diversion Road, Batangas City', path: '/assistant?prompt=How+do+I+get+to+SM+City+Batangas' },
+  { id: 'grand-terminal', type: 'landmark', title: 'Batangas City Grand Terminal', subtitle: 'Diversion Road', path: '/assistant?prompt=How+do+I+get+to+Batangas+City+Grand+Terminal' },
+  { id: 'pallocan', type: 'barangay', title: 'Pallocan West', subtitle: 'Batangas City', path: '/assistant?prompt=How+do+I+get+to+Pallocan+West' },
+  { id: 'calicanto', type: 'barangay', title: 'Calicanto', subtitle: 'Batangas City', path: '/assistant?prompt=How+do+I+get+to+Calicanto' },
 ];
 
 export const BATANGAS_CENTER = { lat: 13.7565, lng: 121.0583 };

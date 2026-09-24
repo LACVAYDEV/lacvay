@@ -13,31 +13,29 @@ describe('TNVS preference detection', () => {
 });
 
 describe('Pier → Grand Terminal', () => {
-  it('briefing uses Alangilan hub transfer not Sta Clara + TNVS', async () => {
+  it('briefing includes resolved points and winning plan', async () => {
     const briefing = await buildTransitBriefing('from Batangas Pier to Grand Terminal', {
       origin: 'pier',
       originLat: 13.754,
       originLng: 121.043,
     });
-    expect(briefing).toContain('KNOWN COMMUTER TRANSFER');
+    expect(briefing).toContain('RESOLVED ORIGIN: Batangas Pier');
+    expect(briefing).toContain('RESOLVED DESTINATION: Batangas City Grand Terminal');
+    expect(briefing).toContain('SELECTED COMMUTE PLAN:');
     expect(briefing).toContain('Alangilan - Batangas');
-    expect(briefing).toContain('Evangelista');
-    expect(briefing).toMatch(/PIER → GRAND TERMINAL|BATANGAS PIER → GRAND TERMINAL/);
-    expect(briefing).toContain('Do NOT plan Sta. Clara');
   });
 });
 
 describe('Pier → Acosta with Angkas', () => {
-  it('briefing honors TNVS preference and city-proper routing', async () => {
+  it('briefing honors TNVS preference and clean plan format', async () => {
     const briefing = await buildTransitBriefing(
       'Acosta Pastor Ancestral House, i want to use angkas',
       { origin: 'pier', originLat: 13.754, originLng: 121.043 },
     );
     expect(briefing).toContain('TRAVELER REQUESTED TNVS (Angkas)');
     expect(briefing).toContain('Acosta Pastor Ancestral House');
-    expect(briefing).toMatch(/PIER → CITY PROPER|Batangas Pier|RESOLVED ORIGIN:.*Pier/i);
-    expect(briefing).toContain('ALL-ROUTES AUDIT');
-    expect(briefing).toContain('BEST PLAN VERDICT');
+    expect(briefing).toContain('SELECTED COMMUTE PLAN:');
+    expect(briefing).toContain('Angkas');
   });
 });
 
