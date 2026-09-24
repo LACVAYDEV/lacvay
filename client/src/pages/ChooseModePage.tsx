@@ -49,7 +49,7 @@ export default function ChooseModePage() {
 
           <button type="button" onClick={enterAsAdmin} className="text-left">
             <Card className="h-full transition hover:border-lacvay-green/40 hover:shadow-md">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-lacvay-blush text-lacvay-green">
                 <Shield className="h-5 w-5" />
               </div>
               <h2 className="mt-4 font-bold text-gray-900">Open admin panel</h2>

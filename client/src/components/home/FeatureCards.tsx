@@ -23,10 +23,10 @@ const features = [
     path: '/map',
   },
   {
-    title: 'AI Travel Assistant',
+    title: 'LACVAY AI',
     description: 'Get instant answers and personalized commute instructions tailored to your trip.',
     image: '/images/icon-ride.png',
-    cta: 'Ask Assistant',
+    cta: 'Ask LACVAY AI',
     path: '/ai-assistant',
   },
 ];
@@ -41,16 +41,22 @@ export function FeatureCards() {
           key={f.title}
           type="button"
           onClick={() => navigate(f.path)}
-          className="group flex flex-col rounded-[22px] bg-white p-4 text-left shadow-card transition hover:-translate-y-0.5 hover:shadow-lg"
+          className="group relative flex flex-col overflow-hidden rounded-[22px] border border-lacvay-green/5 bg-white p-4 text-left shadow-card transition duration-200 hover:-translate-y-1 hover:border-lacvay-green/20 hover:shadow-lg"
         >
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-lacvay-blush">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-lacvay-blush/70 opacity-0 transition duration-300 group-hover:opacity-100"
+          />
+          <div className="relative mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-lacvay-blush transition group-hover:bg-lacvay-yellow/30">
             <img src={f.image} alt="" className="h-9 w-9 object-contain mix-blend-multiply" />
           </div>
-          <h3 className="text-[14px] font-bold text-gray-900">{f.title}</h3>
-          <p className="mt-1.5 flex-1 text-[11.5px] leading-relaxed text-gray-500">{f.description}</p>
-          <span className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-lacvay-green">
+          <h3 className="relative text-[14px] font-bold text-gray-900 transition group-hover:text-lacvay-green">
+            {f.title}
+          </h3>
+          <p className="relative mt-1.5 flex-1 text-[11.5px] leading-relaxed text-gray-500">{f.description}</p>
+          <span className="relative mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-lacvay-green">
             {f.cta}
-            <span className="transition group-hover:translate-x-0.5">→</span>
+            <span className="transition group-hover:translate-x-1">→</span>
           </span>
         </button>
       ))}

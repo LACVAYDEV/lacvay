@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
 import { ProtectedRoute, PublicOnlyRoute, AdminRoute, SessionModeRoute, AppSplash } from '@/components/auth/RouteGuards';
@@ -43,13 +44,13 @@ function LocationBootstrap() {
   return null;
 }
 
-function AppShell() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+function AppShellRoutes() {
+  const location = useLocation();
 
   return (
-    <AppLayout sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
+    <PageTransition routeKey={location.pathname}>
       <Suspense fallback={<LoadingState />}>
-        <Routes>
+        <Routes location={location}>
           <Route path="/" element={<HomePage />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/commute" element={<CommutePage />} />
@@ -67,6 +68,16 @@ function AppShell() {
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Suspense>
+    </PageTransition>
+  );
+}
+
+function AppShell() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+    <AppLayout sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
+      <AppShellRoutes />
     </AppLayout>
   );
 }

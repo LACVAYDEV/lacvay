@@ -36,13 +36,21 @@ const BATANGAS_CENTER: [number, number] = [13.7565, 121.0583];
 
 const MODE_COLORS: Record<GuideLegMode, string> = {
   walk: '#64748b',
-  jeepney: '#159447',
-  tnvs: '#2563eb',
+  jeepney: '#6B1B2E',
+  tnvs: '#123A5C',
+};
+
+const PLAN_TYPE_LABELS: Record<string, string> = {
+  direct: 'Direct jeepney',
+  transfer: 'With transfer',
+  walk_only: 'Walk only',
+  jeepney_tnvs: 'Jeepney + ride-hailing',
+  tnvs_only: 'Ride-hailing',
 };
 
 const originIcon = L.divIcon({
   className: 'commute-origin-marker',
-  html: `<div style="background:#159447;color:#fff;border-radius:999px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)">A</div>`,
+  html: `<div style="background:#6B1B2E;color:#fff;border-radius:999px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)">A</div>`,
   iconSize: [28, 28],
   iconAnchor: [14, 14],
 });
@@ -170,7 +178,7 @@ function PlanGuideView({
         }${plan.legs.some((l) => l.mode === 'tnvs') ? ' + TNVS in app' : ''}`
       : plan.legs.some((l) => l.mode === 'tnvs')
         ? 'TNVS fare in app'
-        : 'See step fares';
+        : null;
 
   const openTnvs = (app: TransportAppKey) => {
     launchTransportApp(app);
@@ -180,27 +188,23 @@ function PlanGuideView({
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="mb-1 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10.5px] font-semibold text-emerald-700">
-              <Sparkles className="h-3 w-3" />
-              From AI Assistant
-            </span>
-            <Badge variant="gray">{plan.planType.replace(/_/g, ' ')}</Badge>
-          </div>
+          {PLAN_TYPE_LABELS[plan.planType] && (
+            <div className="mb-1">
+              <Badge variant="yellow">{PLAN_TYPE_LABELS[plan.planType]}</Badge>
+            </div>
+          )}
           <h2 className="text-2xl font-bold text-gray-900">{plan.title}</h2>
-          <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-600">
-            <span className="flex items-center gap-1">
-              <MapPin className="h-4 w-4 text-lacvay-green" />
-              {plan.origin.label} → {plan.destination.label}
-            </span>
-            {plan.totalMinutes != null && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                ~{plan.totalMinutes} min
-              </span>
-            )}
-            <span>{fareLabel}</span>
-          </div>
+          {(plan.totalMinutes != null || fareLabel) && (
+            <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-600">
+              {plan.totalMinutes != null && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  ~{plan.totalMinutes} min
+                </span>
+              )}
+              {fareLabel && <span>{fareLabel}</span>}
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -234,7 +238,7 @@ function PlanGuideView({
                     onClick={() => setActiveLeg(isActive ? null : leg.order)}
                     className={`w-full rounded-2xl border p-3.5 text-left transition ${
                       isActive
-                        ? 'border-lacvay-green bg-emerald-50/60 ring-1 ring-lacvay-green/30'
+                        ? 'border-lacvay-green bg-lacvay-blush/60 ring-1 ring-lacvay-green/30'
                         : 'border-gray-100 bg-gray-50 hover:border-gray-200'
                     }`}
                   >
@@ -317,8 +321,8 @@ function PlanGuideView({
           </div>
         </Card>
 
-        <Card className="overflow-hidden p-0">
-          <div data-map-host className="w-full h-[calc(100vh-4rem)] relative overflow-hidden">
+        <Card className="order-first overflow-hidden p-0 lg:sticky lg:top-16 lg:order-none lg:self-start">
+          <div data-map-host className="relative h-[52vh] min-h-[320px] w-full overflow-hidden lg:h-[calc(100vh-6rem)]">
             {routing && (
               <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex justify-center p-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-gray-600 shadow">
@@ -542,39 +546,27 @@ export default function CommutePage() {
 
   if (!guides.length) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Commute Guide</h2>
-          <p className="text-sm text-gray-500">
-            Step-by-step guides for getting around Batangas City
-          </p>
-        </div>
-        <Card className="p-8 text-center">
-          <EmptyState
-            title="No Commute Guides Available"
-            description="Ask the AI Travel Assistant for a route, then tap View on Commute Guide to see the map and walk / jeepney / TNVS steps here. Official guides will also appear once published by the LACVAY team."
-          />
+      <EmptyState
+        icon={<Bus className="h-6 w-6" />}
+        title="No commute guides yet"
+        description="Ask LACVAY AI for a route, then tap View on Commute Guide to see the map and each walk, jeepney, and ride-hailing step here."
+        action={
           <button
             type="button"
             onClick={() => navigate('/ai-assistant')}
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-lacvay-green-dark"
+            className="inline-flex items-center gap-2 rounded-full bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-lacvay-green-dark"
           >
             <Sparkles className="h-4 w-4" />
-            Open AI Assistant
+            Ask LACVAY AI
           </button>
-        </Card>
-      </div>
+        }
+      />
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Commute Guide</h2>
-        <p className="text-sm text-gray-500">Step-by-step guides for getting around Batangas City</p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+    <div className="w-full space-y-5">
+      <div className="grid gap-5 lg:grid-cols-[340px_1fr] lg:gap-6">
         <div className="space-y-3">
           {guides.map((g) => {
             const segments: TransportSegment[] = Array.isArray(g.transport_segments)
@@ -584,7 +576,11 @@ export default function CommutePage() {
             return (
               <Card
                 key={g.id}
-                className={`cursor-pointer transition ${selected?.id === g.id ? 'ring-2 ring-lacvay-green' : 'hover:shadow-lg'}`}
+                className={`cursor-pointer border transition duration-200 ${
+                  selected?.id === g.id
+                    ? 'border-lacvay-green/40 ring-2 ring-lacvay-green/30'
+                    : 'border-lacvay-green/5 hover:-translate-y-0.5 hover:shadow-lg'
+                }`}
                 onClick={() => setSelected(g)}
               >
                 <h3 className="font-bold text-gray-900">{g.title}</h3>
@@ -608,7 +604,7 @@ export default function CommutePage() {
                     {segments.map((seg, i) => (
                       <span
                         key={i}
-                        className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[10.5px] font-semibold text-gray-600"
+                        className="flex items-center gap-1 rounded-full bg-lacvay-cream px-2 py-1 text-[10.5px] font-semibold text-gray-600"
                       >
                         {seg.color && (
                           <span
@@ -651,7 +647,7 @@ export default function CommutePage() {
             </div>
 
             {selected.summary && (
-              <p className="text-sm text-gray-600 leading-relaxed bg-emerald-50/50 border border-emerald-100/60 p-3 rounded-xl">
+              <p className="text-sm text-gray-600 leading-relaxed bg-lacvay-blush/50 border border-lacvay-green/10 p-3 rounded-xl">
                 {selected.summary}
               </p>
             )}
@@ -724,6 +720,7 @@ export default function CommutePage() {
         ) : (
           <Card>
             <EmptyState
+              icon={<MapPin className="h-6 w-6" />}
               title="Select a guide"
               description="Choose a commute guide from the list to see step-by-step directions and transport details."
             />

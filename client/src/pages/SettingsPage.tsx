@@ -121,110 +121,144 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500">Manage your profile and preferences</p>
-      </div>
-
-      <Card className="space-y-4">
-        <h3 className="font-bold text-gray-900">Profile</h3>
-        <div className="flex items-center gap-4">
-          <img src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="" className="h-16 w-16 rounded-full bg-gray-100" />
-          <div className="flex-1 space-y-3">
+    <div className="flex w-full flex-col gap-6 pb-2">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="flex h-full flex-col gap-4">
+          <h3 className="text-base font-bold text-gray-900">Profile</h3>
+          <div className="flex items-center gap-4">
+            <img
+              src={
+                user?.user_metadata?.avatar_url ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`
+              }
+              alt=""
+              className="h-16 w-16 shrink-0 rounded-full bg-gray-100 ring-2 ring-lacvay-blush"
+            />
+            <p className="text-sm text-gray-500">Update how LACVAY shows your name and sign-in email.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
             <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
             <Input label="Email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
           </div>
-        </div>
-      </Card>
+        </Card>
 
-      <Card className="space-y-4">
-        <h3 className="font-bold text-gray-900">Preferences</h3>
-        <Select
-          label="Language"
-          value={language}
-          onChange={(e) => setLanguage(e.target.value as 'en')}
-          options={[
-            { value: 'en', label: 'English' },
-          ]}
-        />
-        <p className="-mt-2 text-xs text-gray-500">Filipino translation is not available yet.</p>
-        <Select
-          label="Theme"
-          value={theme}
-          onChange={(e) => setTheme(e.target.value as 'light')}
-          options={[
-            { value: 'light', label: 'Light' },
-          ]}
-        />
-        <p className="-mt-2 text-xs text-gray-500">Dark theme is not available yet.</p>
-        <label className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3">
-          <span className="text-sm font-medium">Notifications</span>
-          <input type="checkbox" checked={notifications} onChange={(e) => setNotifications(e.target.checked)} className="h-5 w-5 accent-lacvay-green" />
-        </label>
-        <label className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3">
-          <span>
-            <span className="block text-sm font-medium">Use location features</span>
-            <span className="block text-xs text-gray-500">Browser permission is requested only when a location feature needs it.</span>
-          </span>
-          <input type="checkbox" checked={location} onChange={(e) => setLocation(e.target.checked)} className="h-5 w-5 accent-lacvay-green" />
-        </label>
-      </Card>
+        <Card className="flex h-full flex-col gap-4">
+          <h3 className="text-base font-bold text-gray-900">Preferences</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Select
+                label="Language"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as 'en')}
+                options={[{ value: 'en', label: 'English' }]}
+              />
+              <p className="mt-1 text-xs text-gray-500">Filipino translation is not available yet.</p>
+            </div>
+            <div>
+              <Select
+                label="Theme"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as 'light')}
+                options={[{ value: 'light', label: 'Light' }]}
+              />
+              <p className="mt-1 text-xs text-gray-500">Dark theme is not available yet.</p>
+            </div>
+          </div>
+          <div className="grid flex-1 gap-3 sm:grid-cols-2">
+            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl bg-lacvay-cream px-4 py-3 transition hover:bg-lacvay-blush/70">
+              <span>
+                <span className="block text-sm font-medium">Notifications</span>
+                <span className="block text-xs text-gray-500">Safety reminders and local deals.</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={notifications}
+                onChange={(e) => setNotifications(e.target.checked)}
+                className="h-5 w-5 shrink-0 accent-lacvay-green"
+              />
+            </label>
+            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl bg-lacvay-cream px-4 py-3 transition hover:bg-lacvay-blush/70">
+              <span>
+                <span className="block text-sm font-medium">Use location features</span>
+                <span className="block text-xs text-gray-500">Asked only when a feature needs GPS.</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={location}
+                onChange={(e) => setLocation(e.target.checked)}
+                className="h-5 w-5 shrink-0 accent-lacvay-green"
+              />
+            </label>
+          </div>
+        </Card>
 
-      <Card className="space-y-3">
-        <div className="flex items-center gap-2 text-lacvay-green">
-          <Mail className="h-5 w-5" />
-          <h3 className="font-bold text-gray-900">Partner & Advertising Inquiries</h3>
-        </div>
-        <p className="text-xs leading-relaxed text-gray-600">
-          Interested in featuring your local Batangas business, transport service, or tourist establishment on LACVAY? Contact our team directly.
-        </p>
-        <div className="pt-1">
+        <Card className="flex h-full flex-col gap-3">
+          <div className="flex items-center gap-2 text-lacvay-green">
+            <Mail className="h-5 w-5 shrink-0" />
+            <h3 className="text-base font-bold text-gray-900">Partner & Advertising Inquiries</h3>
+          </div>
+          <p className="flex-1 text-sm leading-relaxed text-gray-600">
+            Feature your Batangas business, transport service, or tourist spot on LACVAY — reach our team directly.
+          </p>
           <a
             href="mailto:partners@lacvay.ph?subject=LACVAY%20Partner%20%26%20Advertising%20Inquiry"
-            className="inline-flex items-center gap-2 rounded-xl bg-lacvay-green px-4 py-2.5 text-xs font-semibold text-white shadow-soft transition hover:bg-lacvay-green-dark"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-lacvay-green px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-lacvay-green-dark sm:w-auto sm:justify-start"
           >
             <Mail className="h-4 w-4" />
             partners@lacvay.ph
           </a>
-        </div>
-      </Card>
+        </Card>
 
-      <Card className="space-y-3">
-        <h3 className="font-bold text-gray-900">Privacy & Account</h3>
-        <Link to="/privacy" className="block text-sm font-medium text-gray-600 hover:text-lacvay-green hover:underline">
-          Privacy Policy
-        </Link>
-        <Link to="/terms" className="block text-sm font-medium text-gray-600 hover:text-lacvay-green hover:underline">
-          Terms of Service
-        </Link>
+        <Card className="flex h-full flex-col gap-3">
+          <h3 className="text-base font-bold text-gray-900">Privacy & Account</h3>
+          <div className="flex flex-1 flex-col gap-2">
+            <Link
+              to="/privacy"
+              className="rounded-xl px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-lacvay-cream hover:text-lacvay-green"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              to="/terms"
+              className="rounded-xl px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-lacvay-cream hover:text-lacvay-green"
+            >
+              Terms of Service
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteConfirmation('');
+                setDeleteError(null);
+                setDeleteOpen(true);
+              }}
+              className="rounded-xl px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
+            >
+              Delete Account
+            </button>
+          </div>
+        </Card>
+      </div>
+
+      {error && (
+        <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-col gap-3">
+        <Button className="w-full py-3.5" onClick={() => void save()} disabled={saving}>
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          Save Settings
+        </Button>
         <button
           type="button"
-          onClick={() => {
-            setDeleteConfirmation('');
-            setDeleteError(null);
-            setDeleteOpen(true);
-          }}
-          className="block text-sm font-semibold text-red-600 hover:underline"
+          onClick={() => void signOut()}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white py-3.5 text-sm font-semibold text-red-600 transition hover:bg-red-50"
         >
-          Delete Account
+          <LogOut className="h-4 w-4" />
+          Sign out
         </button>
-      </Card>
-
-      {error && <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-      <Button className="w-full" onClick={() => void save()} disabled={saving}>
-        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-        Save Settings
-      </Button>
-
-      <button
-        type="button"
-        onClick={() => void signOut()}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-      >
-        <LogOut className="h-4 w-4" />
-        Sign out
-      </button>
+      </div>
 
       <Modal
         open={deleteOpen}

@@ -1,11 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { UtensilsCrossed } from 'lucide-react';
 import { dataService } from '@/services/dataService';
 import { favoritesService } from '@/services/favoritesService';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { PlaceCard } from '@/components/places/PlaceCard';
-import { LoadingState, EmptyState } from '@/components/ui/States';
+import { EmptyState, CardGridSkeleton } from '@/components/ui/States';
+import { SearchField, FilterChip } from '@/components/ui/SearchField';
 import { isCurrentlyOpenNow } from '@/lib/timeUtils';
 import type { Restaurant } from '@/types';
 
@@ -15,8 +17,17 @@ export default function RestaurantsPage() {
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
-  const [searchParams] = useSearchParams();
-  const searchQuery = (searchParams.get('search') || searchParams.get('q') || '').toLowerCase().trim();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawSearch = searchParams.get('search') || searchParams.get('q') || '';
+  const searchQuery = rawSearch.toLowerCase().trim();
+
+  const setSearch = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('q');
+    if (value) next.set('search', value);
+    else next.delete('search');
+    setSearchParams(next, { replace: true });
+  };
 
   const { user } = useAuth();
   const { isSaved, saveItem, removeSaved } = useApp();
@@ -86,44 +97,61 @@ export default function RestaurantsPage() {
     });
   }, [filteredRestaurants, favoriteIds, isSaved]);
 
-  if (loading) return <LoadingState />;
+  const hasFilters = openNowOnly || searchQuery !== '';
 
   return (
-    <div className="space-y-4">
-      {/* Standalone Open Now Filter Toggle */}
-      <div className="flex items-center">
-        <button
-          type="button"
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-3xl border border-lacvay-green/5 bg-white p-3 shadow-soft sm:flex-row sm:items-center sm:p-4">
+        <SearchField
+          label="Search restaurants"
+          value={rawSearch}
+          onChange={setSearch}
+          placeholder="Search by name, dish, or area"
+          className="flex-1"
+        />
+
+        <FilterChip
+          active={openNowOnly}
           onClick={() => setOpenNowOnly((prev) => !prev)}
-          aria-pressed={openNowOnly}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
-            openNowOnly
-              ? 'bg-lacvay-green text-white shadow-soft ring-2 ring-lacvay-green/30'
-              : 'bg-white text-gray-600 shadow-soft hover:bg-gray-50'
-          }`}
+          className="flex items-center justify-center gap-1.5 px-4 py-3"
         >
           <span
-            className={`h-2 w-2 rounded-full ${
-              openNowOnly ? 'bg-white animate-pulse' : 'bg-emerald-500'
-            }`}
+            className={`h-2 w-2 rounded-full ${openNowOnly ? 'animate-pulse bg-white' : 'bg-emerald-500'}`}
           />
-          Open Now
-        </button>
+          Open now
+        </FilterChip>
       </div>
 
-      {sortedRestaurants.length === 0 ? (
+      {loading ? (
+        <CardGridSkeleton />
+      ) : sortedRestaurants.length === 0 ? (
         <EmptyState
+          icon={<UtensilsCrossed className="h-6 w-6" />}
           title="No restaurants found"
           description={
             openNowOnly
-              ? 'No restaurants are currently open. Try toggling off "Open Now".'
+              ? 'No restaurants are open right now.'
               : searchQuery
-              ? `No restaurants found matching "${searchQuery}".`
+              ? `Nothing matches "${rawSearch.trim()}".`
               : 'Eateries will appear here once added.'
+          }
+          action={
+            hasFilters ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenNowOnly(false);
+                  setSearch('');
+                }}
+                className="rounded-full bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-lacvay-green-dark"
+              >
+                Clear filters
+              </button>
+            ) : undefined
           }
         />
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
           {sortedRestaurants.map((r) => (
             <PlaceCard
               key={r.id}

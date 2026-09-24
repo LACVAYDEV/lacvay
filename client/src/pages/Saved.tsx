@@ -115,77 +115,70 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
 
   if (!user) {
     return (
-      <div className="space-y-4">
-        <div className="flex flex-col items-center justify-center rounded-3xl bg-white p-12 text-center shadow-card">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-lacvay-green/10 text-lacvay-green">
-            <Bookmark className="h-7 w-7" />
-          </div>
-          <h3 className="text-lg font-bold text-gray-900">Sign in to view your saved items</h3>
-          <p className="mt-1 max-w-sm text-sm text-gray-500">
-            Sign in with your LACVAY account to sync your saved places and AI-generated travel itineraries across devices.
-          </p>
-          <Button type="button" onClick={() => navigate('/login')} className="mt-5">
-            Sign In to LACVAY
+      <EmptyState
+        icon={<Bookmark className="h-6 w-6" />}
+        title="Sign in to view your saved items"
+        description="Sync your saved places and AI-generated travel itineraries across devices."
+        action={
+          <Button type="button" onClick={() => navigate('/login')}>
+            Sign in to LACVAY
           </Button>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
-  return (
-    <div className="space-y-5">
-      {/* Tab Filter Chips */}
-      <div className="flex items-center gap-2 rounded-2xl bg-gray-100 p-1.5 shadow-inner w-fit">
-          <button
-            type="button"
-            onClick={() => handleTabChange('places')}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
-              activeTab === 'places'
-                ? 'bg-white text-lacvay-green shadow-soft'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <MapPin className="h-4 w-4" />
-            <span>Saved Places</span>
-            <span className="rounded-full bg-lacvay-green/10 px-2 py-0.5 text-[10px] text-lacvay-green">
-              {favorites.length}
-            </span>
-          </button>
+  const tabs = [
+    { id: 'places' as const, label: 'Saved Places', icon: MapPin, count: favorites.length },
+    { id: 'guides' as const, label: 'Saved Guides', icon: Compass, count: savedGuides.length },
+  ];
 
-          <button
-            type="button"
-            onClick={() => handleTabChange('guides')}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
-              activeTab === 'guides'
-                ? 'bg-white text-lacvay-green shadow-soft'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Compass className="h-4 w-4" />
-            <span>Saved Guides</span>
-            <span className="rounded-full bg-lacvay-green/10 px-2 py-0.5 text-[10px] text-lacvay-green">
-              {savedGuides.length}
-            </span>
-          </button>
-        </div>
+  return (
+    <div className="w-full space-y-5">
+      {/* Tab Filter Chips */}
+      <div className="flex w-full items-center gap-1.5 rounded-2xl bg-white p-1.5 shadow-soft sm:w-fit">
+        {tabs.map(({ id, label, icon: Icon, count }) => {
+          const active = activeTab === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handleTabChange(id)}
+              aria-pressed={active}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition sm:flex-none ${
+                active
+                  ? 'bg-lacvay-green text-white shadow-soft'
+                  : 'text-gray-600 hover:bg-lacvay-cream hover:text-lacvay-green'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{label}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] ${
+                  active ? 'bg-white/20 text-white' : 'bg-lacvay-blush text-lacvay-green'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Tab 1: Saved Places */}
       {activeTab === 'places' && (
         <>
           {favorites.length === 0 ? (
-            <div className="space-y-4">
-              <EmptyState
-                title="No saved places yet"
-                description="Tap the heart icon on any tourist spot or attraction in Batangas City to bookmark it here."
-              />
-              <div className="flex justify-center">
-                <Button onClick={() => navigate('/tourist-spots')}>
-                  Explore Batangas Tourist Spots
-                </Button>
-              </div>
-            </div>
+            <EmptyState
+              icon={<MapPin className="h-6 w-6" />}
+              title="No saved places yet"
+              description="Tap the heart on any tourist spot or restaurant to keep it here."
+              action={
+                <Button onClick={() => navigate('/tourist-spots')}>Explore tourist spots</Button>
+              }
+            />
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
               {favorites.map((fav) => {
                 const place = fav.place || fav.places;
                 if (!place) return null;
@@ -208,20 +201,19 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
       {activeTab === 'guides' && (
         <>
           {savedGuides.length === 0 ? (
-            <div className="space-y-4">
-              <EmptyState
-                title="No saved guides yet"
-                description="Chat with our AI Travel Assistant to craft a custom itinerary, then tap 'Save Guide to My Trips' to view and project your stops here."
-              />
-              <div className="flex justify-center">
+            <EmptyState
+              icon={<Compass className="h-6 w-6" />}
+              title="No saved guides yet"
+              description="Ask LACVAY AI for a route, then tap Save Guide to keep the steps here."
+              action={
                 <Button onClick={() => navigate('/ai-assistant')} className="gap-2">
                   <Sparkles className="h-4 w-4" />
-                  Ask AI Assistant
+                  Ask LACVAY AI
                 </Button>
-              </div>
-            </div>
+              }
+            />
           ) : (
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
               {savedGuides.map((guide) => {
                 const steps: SavedGuideStep[] = Array.isArray(guide.steps)
                   ? guide.steps
@@ -230,13 +222,13 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
                 return (
                   <Card
                     key={guide.id}
-                    className="flex flex-col justify-between overflow-hidden border border-gray-100 bg-white p-6 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-xl rounded-2xl"
+                    className="flex flex-col justify-between overflow-hidden border border-lacvay-green/5 bg-white transition duration-200 hover:-translate-y-1 hover:shadow-lg"
                   >
                     <div className="space-y-3.5">
                       {/* Top Row: Title & Action */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10.5px] font-semibold text-emerald-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-lacvay-blush px-2.5 py-0.5 text-[10.5px] font-semibold text-lacvay-green">
                             <Route className="h-3 w-3" />
                             {steps.length > 0 ? `${steps.length} Stops` : 'Custom Itinerary'}
                           </span>
@@ -264,7 +256,7 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
 
                       {/* Steps Checklist Preview */}
                       {steps.length > 0 && (
-                        <div className="rounded-xl bg-gray-50/90 p-3 border border-gray-100 space-y-2">
+                        <div className="space-y-2 rounded-2xl bg-lacvay-cream p-3">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
                             Itinerary Stops
                           </p>

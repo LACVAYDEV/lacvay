@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Clock, Navigation, ChevronLeft, ChevronRight, Compass } from 'lucide-react';
+import {
+  Clock,
+  Navigation,
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  Heart,
+  Map,
+  MapPin,
+  UtensilsCrossed,
+} from 'lucide-react';
 import { dataService } from '@/services/dataService';
 import { isVideoMediaUrl } from '@/lib/mediaUtils';
 import type { TouristSpot } from '@/types';
@@ -63,12 +73,17 @@ export default function TouristSpotDetailPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <button type="button" onClick={() => navigate('/tourist-spots')} className="text-sm font-semibold text-lacvay-green hover:underline">
-        ← Back to Tourist Spots
+    <div className="w-full space-y-5">
+      <button
+        type="button"
+        onClick={() => navigate('/tourist-spots')}
+        className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-semibold text-lacvay-green shadow-soft transition hover:bg-lacvay-blush"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Back to Tourist Spots
       </button>
 
-      <div className={`relative overflow-hidden rounded-3xl ${isNavigating ? 'tourist-spot-image-out' : incomingTransition ? 'tourist-spot-image-in' : ''}`}>
+      <div className={`relative overflow-hidden rounded-3xl shadow-card ${isNavigating ? 'tourist-spot-image-out' : incomingTransition ? 'tourist-spot-image-in' : ''}`}>
           {isVideoMediaUrl(spot.imageUrl) ? (
             <video
               src={spot.imageUrl}
@@ -77,12 +92,34 @@ export default function TouristSpotDetailPage() {
               loop
               muted
               playsInline
-              className="aspect-[21/9] w-full object-cover"
+              className="aspect-[16/9] w-full object-cover sm:aspect-[21/9]"
             />
           ) : (
-            <img src={spot.imageUrl} alt={spot.name} className="aspect-[21/9] w-full object-cover" />
+            <img src={spot.imageUrl} alt={spot.name} className="aspect-[16/9] w-full object-cover sm:aspect-[21/9]" />
           )}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-black/25" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/25" />
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5 sm:p-7">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="border-0 bg-white/95 text-lacvay-green shadow-sm backdrop-blur">
+                {spot.categoryLabel ?? spot.category}
+              </Badge>
+              {spot.isFeatured && (
+                <Badge variant="yellow" className="font-bold shadow-sm backdrop-blur">
+                  ★ Promoted
+                </Badge>
+              )}
+            </div>
+            <h1 className="mt-2 text-2xl font-extrabold leading-tight tracking-tight text-white drop-shadow sm:text-3xl">
+              {spot.name}
+            </h1>
+            {spot.location && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-white/90">
+                <MapPin className="h-4 w-4" />
+                {spot.location}
+              </p>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => previousSpot && navigateToSpot(previousSpot, 'previous')}
@@ -103,50 +140,69 @@ export default function TouristSpotDetailPage() {
           </button>
       </div>
 
-      <div className={`tourist-spot-details ${isNavigating ? 'tourist-spot-details-out' : incomingTransition ? 'tourist-spot-details-in' : ''}`}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{spot.name}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <Badge variant="lime">{spot.categoryLabel ?? spot.category}</Badge>
-            {spot.isFeatured && (
-              <Badge variant="yellow" className="font-bold">
-                ★ Promoted Destination
-              </Badge>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={toggleSave}>{isSaved(spot.id) ? 'Saved' : 'Save'}</Button>
-          <Button onClick={() => navigate(`/assistant?prompt=How+do+I+get+to+${encodeURIComponent(spot.name)}`)}>
-            <Navigation className="h-4 w-4" /> Directions
-          </Button>
-        </div>
-      </div>
+      <div className={`tourist-spot-details grid gap-5 lg:grid-cols-3 lg:items-start ${isNavigating ? 'tourist-spot-details-out' : incomingTransition ? 'tourist-spot-details-in' : ''}`}>
+        <Card className="space-y-4 lg:col-span-2">
+          <h2 className="text-base font-bold text-gray-900">About this place</h2>
+          <p className="leading-relaxed text-gray-600">{spot.description}</p>
+        </Card>
 
-      <Card>
-        <p className="text-gray-600 leading-relaxed">{spot.description}</p>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {spot.openingHours && (
-            <div>
-              <p className="text-xs font-semibold uppercase text-gray-400">Opening Hours</p>
-              <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-gray-800">
-                <Clock className="h-4 w-4 text-lacvay-green" /> {spot.openingHours}
-              </p>
+        <div className="space-y-5">
+          <Card className="space-y-4">
+            <h2 className="text-base font-bold text-gray-900">Visit details</h2>
+            <div className="space-y-3">
+              {spot.openingHours && (
+                <div className="flex items-start gap-3 rounded-2xl bg-lacvay-cream px-3.5 py-3">
+                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-lacvay-green" />
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Opening hours</p>
+                    <p className="text-sm font-medium text-gray-800">{spot.openingHours}</p>
+                  </div>
+                </div>
+              )}
+              {spot.coordinates && (
+                <div className="flex items-start gap-3 rounded-2xl bg-lacvay-cream px-3.5 py-3">
+                  <Compass className="mt-0.5 h-4 w-4 shrink-0 text-lacvay-green" />
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Coordinates</p>
+                    <p className="text-sm font-medium text-gray-800">
+                      {spot.coordinates.lat.toFixed(4)}, {spot.coordinates.lng.toFixed(4)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-          {spot.coordinates && (
-            <div>
-              <p className="text-xs font-semibold uppercase text-gray-400">Coordinates</p>
-              <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-gray-800">
-                <Compass className="h-4 w-4 text-lacvay-green" /> {spot.coordinates.lat.toFixed(4)}, {spot.coordinates.lng.toFixed(4)}
-              </p>
-            </div>
-          )}
-        </div>
-      </Card>
 
-      <Button variant="outline" onClick={() => navigate('/restaurants')}>Nearby Restaurants →</Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => navigate(`/assistant?prompt=How+do+I+get+to+${encodeURIComponent(spot.name)}`)}
+                className="w-full"
+              >
+                <Navigation className="h-4 w-4" /> Get directions
+              </Button>
+              <Button variant="secondary" onClick={toggleSave} className="w-full">
+                <Heart className={`h-4 w-4 ${isSaved(spot.id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                {isSaved(spot.id) ? 'Saved' : 'Save this place'}
+              </Button>
+              {spot.coordinates && (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/map?lat=${spot.coordinates!.lat}&lng=${spot.coordinates!.lng}`)}
+                  className="w-full"
+                >
+                  <Map className="h-4 w-4" /> Show on map
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          <Card className="space-y-2">
+            <h2 className="text-base font-bold text-gray-900">Hungry nearby?</h2>
+            <p className="text-sm text-gray-500">Find lomi houses, cafés, and local favorites close by.</p>
+            <Button variant="outline" onClick={() => navigate('/restaurants')} className="mt-1 w-full">
+              <UtensilsCrossed className="h-4 w-4" /> Browse restaurants
+            </Button>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -13,14 +13,14 @@ import { LogoMark, SidebarWaveArt } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { to: '/', label: 'Home', icon: Home, end: true },
-  { to: '/map', label: 'Map & Routes', icon: Map },
-  { to: '/commute', label: 'Commute Guide', icon: BookOpen },
-  { to: '/tourist-spots', label: 'Nearby Tourist Spots', icon: Camera },
-  { to: '/restaurants', label: 'Nearby Restaurants', icon: UtensilsCrossed },
-  { to: '/ai-assistant', label: 'AI Travel Assistant', icon: Sparkles },
-  { to: '/saved', label: 'Saved', icon: Bookmark },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/', label: 'Home', shortLabel: 'Home', icon: Home, end: true },
+  { to: '/map', label: 'Map & Routes', shortLabel: 'Map', icon: Map },
+  { to: '/commute', label: 'Commute Guide', shortLabel: 'Commute', icon: BookOpen },
+  { to: '/tourist-spots', label: 'Nearby Tourist Spots', shortLabel: 'Spots', icon: Camera },
+  { to: '/restaurants', label: 'Nearby Restaurants', shortLabel: 'Food', icon: UtensilsCrossed },
+  { to: '/ai-assistant', label: 'LACVAY AI', shortLabel: 'AI', icon: Sparkles },
+  { to: '/saved', label: 'Saved', shortLabel: 'Saved', icon: Bookmark },
+  { to: '/settings', label: 'Settings', shortLabel: 'Settings', icon: Settings },
 ];
 
 interface SidebarProps {

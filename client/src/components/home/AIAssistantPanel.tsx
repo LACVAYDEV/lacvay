@@ -24,7 +24,7 @@ export function AIAssistantSection() {
   };
 
   return (
-    <Card className="overflow-hidden border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/30 p-5 sm:p-6">
+    <Card className="overflow-hidden border border-lacvay-green/10 bg-gradient-to-br from-white via-white to-lacvay-blush/50 p-5 sm:p-6">
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:gap-8">
         {/* Left Column: Context & Quick Prompts */}
         <div className="flex flex-col justify-between lg:col-span-5">
@@ -33,8 +33,8 @@ export function AIAssistantSection() {
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-lacvay-green/10 text-lacvay-green">
                 <Sparkles className="h-4 w-4" />
               </div>
-              <h3 className="text-[17px] font-extrabold text-gray-900">AI Travel Assistant</h3>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+              <h3 className="text-[17px] font-extrabold text-gray-900">LACVAY AI</h3>
+              <span className="rounded-full bg-lacvay-yellow/25 px-2 py-0.5 text-[10px] font-bold text-lacvay-green-dark">
                 Live Chat
               </span>
             </div>
@@ -80,7 +80,7 @@ export function AIAssistantSection() {
           <div className="flex items-center justify-between border-b border-gray-100 pb-2.5 px-1">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[11px] font-bold text-gray-700">Batangas Travel AI</span>
+              <span className="text-[11px] font-bold text-gray-700">LACVAY AI</span>
             </div>
             <button
               type="button"
@@ -141,7 +141,7 @@ export function AIAssistantSection() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Ask about fares, places, or dining..."
-              aria-label="Ask the AI travel assistant"
+              aria-label="Ask LACVAY AI"
               className="min-w-0 flex-1 bg-transparent text-[12px] text-gray-900 outline-none placeholder:text-gray-400"
             />
             <button
@@ -171,7 +171,7 @@ export function AIAssistantFab() {
       type="button"
       onClick={() => navigate('/ai-assistant')}
       className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-lacvay-green text-white shadow-lg lg:hidden transition hover:scale-105"
-      aria-label="Open AI Travel Assistant"
+      aria-label="Open LACVAY AI"
     >
       <Sparkles className="h-6 w-6" />
     </button>

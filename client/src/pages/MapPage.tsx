@@ -90,8 +90,8 @@ const highlightedEateryIcon = L.divIcon({
 const explorePinIcon = L.divIcon({
   className: 'custom-explore-pin',
   html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
-    <span style="position:absolute;width:44px;height:44px;border-radius:9999px;background:rgba(21,148,71,0.3);animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></span>
-    <div style="background:#159447;color:#fff;border-radius:9999px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(21,148,71,0.55);border:3px solid #fff;font-size:18px;z-index:2;transform:translateY(-2px);">
+    <span style="position:absolute;width:44px;height:44px;border-radius:9999px;background:rgba(107,27,46,0.3);animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></span>
+    <div style="background:#6B1B2E;color:#fff;border-radius:9999px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(107,27,46,0.5);border:3px solid #fff;font-size:18px;z-index:2;transform:translateY(-2px);">
       📍
     </div>
   </div>`,
@@ -470,11 +470,11 @@ export default function MapPage() {
       {/* Explorer Controls Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-3 border border-gray-100 shadow-soft">
         {/* Category Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="no-scrollbar -mx-1 flex min-w-0 max-w-full items-center gap-1.5 overflow-x-auto px-1 sm:flex-wrap">
           <button
             type="button"
             onClick={() => setSelectedCategory('all')}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+            className={`shrink-0 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
               selectedCategory === 'all'
                 ? 'bg-lacvay-green text-white shadow-xs'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -491,7 +491,7 @@ export default function MapPage() {
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
                   selectedCategory.toLowerCase() === cat.toLowerCase()
                     ? 'bg-lacvay-green text-white shadow-xs'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -525,7 +525,7 @@ export default function MapPage() {
             onClick={() => setShowRoutes((v) => !v)}
             className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold border transition ${
               showRoutes
-                ? 'bg-emerald-50 border-emerald-200 text-lacvay-green'
+                ? 'bg-lacvay-blush border-lacvay-green/20 text-lacvay-green'
                 : 'bg-gray-50 border-gray-200 text-gray-500'
             }`}
           >
@@ -658,7 +658,7 @@ export default function MapPage() {
                         </div>
                       )}
                       <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                        <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                        <span className="inline-block rounded-full bg-lacvay-blush px-2 py-0.5 text-[10px] font-bold text-lacvay-green-dark">
                           {p.category || 'Spot'}
                         </span>
                         {p.is_featured && (
@@ -695,7 +695,7 @@ export default function MapPage() {
               <Marker position={exploreCoord} icon={explorePinIcon} zIndexOffset={1500}>
                 <Popup autoPan={false}>
                   <div className="p-1 text-left">
-                    <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                    <span className="inline-block rounded-full bg-lacvay-blush px-2 py-0.5 text-[10px] font-bold text-lacvay-green-dark">
                       Explored Destination
                     </span>
                     <p className="mt-1 font-bold text-sm text-gray-900 leading-tight">
@@ -726,7 +726,7 @@ export default function MapPage() {
                       <h3 className="text-sm font-bold text-gray-900 truncate">
                         {selectedRouteItem.route.route_name}
                       </h3>
-                      <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-lacvay-green border border-emerald-200">
+                      <span className="rounded-md bg-lacvay-blush px-2 py-0.5 text-[10px] font-bold text-lacvay-green border border-lacvay-green/20">
                         {selectedRouteItem.route.vehicle_type || 'Jeepney'}
                       </span>
                     </div>
@@ -768,12 +768,12 @@ export default function MapPage() {
 
                   <div className="grid grid-cols-2 gap-2">
                     {/* Standard Trip */}
-                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-2.5">
+                    <div className="rounded-xl border border-lacvay-green/10 bg-lacvay-blush/50 p-2.5">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-lacvay-green">
                           Standard Trip
                         </span>
-                        <span className="rounded bg-emerald-100 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-800">
+                        <span className="rounded bg-lacvay-blush px-1.5 py-0.5 text-[9px] font-semibold text-lacvay-green-dark">
                           Base
                         </span>
                       </div>
