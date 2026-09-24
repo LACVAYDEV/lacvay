@@ -56,6 +56,11 @@ export function placeToRestaurant(row: PlaceRow): Restaurant {
     location: 'Batangas City',
     coordinates: { lat: row.latitude, lng: row.longitude },
     priceRange: String(meta.priceRange ?? '₱₱'),
+    cuisine: Array.isArray(meta.cuisine)
+      ? meta.cuisine
+      : (Array.isArray(meta.cuisines)
+        ? meta.cuisines
+        : (row.category && row.category !== 'restaurant' ? [row.category as any] : undefined)),
     openTime,
     closeTime,
     openingHours,

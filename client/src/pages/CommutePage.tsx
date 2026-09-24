@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -29,6 +29,7 @@ import {
   MAX_WALK_KM,
   type RoadLegPath,
 } from '@/lib/roadRouting';
+import { buildFallbackCommutePlan } from '@/lib/commutePlanFromReply';
 import 'leaflet/dist/leaflet.css';
 
 const BATANGAS_CENTER: [number, number] = [13.7565, 121.0583];
@@ -136,11 +137,12 @@ function PlanGuideView({
     // Do not overwrite Walk titles just because routing upgraded a long hop.
     return plan.legs.map((leg) => {
       const road = roadLegs?.find((r) => r.order === leg.order);
+      const isRouteGeoJson = leg.path.length > 2 || leg.mode === 'jeepney';
       return {
         order: leg.order,
         mode: leg.mode as GuideLegMode,
         mapMode: (road?.mode ?? leg.mode) as GuideLegMode,
-        path: road?.path?.length ? road.path : sanitizePath(leg.path),
+        path: isRouteGeoJson ? sanitizePath(leg.path) : (road?.path?.length ? road.path : sanitizePath(leg.path)),
         title: leg.title,
         description: leg.description,
         minutes: leg.minutes,
@@ -163,8 +165,8 @@ function PlanGuideView({
 
   const fareLabel =
     plan.totalFareRegular != null
-      ? `â‚±${plan.totalFareRegular}${
-          plan.totalFareDiscounted != null ? ` (disc. â‚±${plan.totalFareDiscounted})` : ''
+      ? `₱${plan.totalFareRegular}${
+          plan.totalFareDiscounted != null ? ` (disc. ₱${plan.totalFareDiscounted})` : ''
         }${plan.legs.some((l) => l.mode === 'tnvs') ? ' + TNVS in app' : ''}`
       : plan.legs.some((l) => l.mode === 'tnvs')
         ? 'TNVS fare in app'
@@ -189,7 +191,7 @@ function PlanGuideView({
           <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-600">
             <span className="flex items-center gap-1">
               <MapPin className="h-4 w-4 text-lacvay-green" />
-              {plan.origin.label} â†’ {plan.destination.label}
+              {plan.origin.label} → {plan.destination.label}
             </span>
             {plan.totalMinutes != null && (
               <span className="flex items-center gap-1">
@@ -252,7 +254,7 @@ function PlanGuideView({
                           )}
                           {leg.fareRegular != null && (
                             <span className="text-[11px] font-semibold text-lacvay-green">
-                              â‚±{leg.fareRegular}
+                              ₱{leg.fareRegular}
                             </span>
                           )}
                         </div>
@@ -316,12 +318,12 @@ function PlanGuideView({
         </Card>
 
         <Card className="overflow-hidden p-0">
-          <div data-map-host className="relative h-[360px] w-full sm:h-[480px] lg:h-full lg:min-h-[520px]">
+          <div data-map-host className="w-full h-[calc(100vh-4rem)] relative overflow-hidden">
             {routing && (
               <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex justify-center p-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-gray-600 shadow">
                   <Loader2 className="h-3 w-3 animate-spin text-lacvay-green" />
-                  Tracing roadsâ€¦
+                  Tracing roads…
                 </span>
               </div>
             )}
@@ -373,7 +375,7 @@ function PlanGuideView({
                 if (positions.length < 2) return null;
                 const km = pathLengthKm(positions);
                 const isLast = leg.order === displayLegs[displayLegs.length - 1]?.order;
-                // Last-mile to shrine: keep walk dash so Pagkilatan â†’ Monte Maria spur shows
+                // Last-mile to shrine: keep walk dash so Pagkilatan → Monte Maria spur shows
                 const styleMode: GuideLegMode =
                   leg.mode === 'walk' && (km <= MAX_WALK_KM || isLast)
                     ? 'walk'
@@ -384,19 +386,34 @@ function PlanGuideView({
                 const isWalk = styleMode === 'walk';
                 const isTnvs = styleMode === 'tnvs';
                 return (
-                  <Polyline
-                    key={`${leg.order}-${styleMode}-${positions.length}`}
-                    positions={positions}
-                    pathOptions={{
-                      color: MODE_COLORS[styleMode] ?? MODE_COLORS.jeepney,
-                      weight: dimmed ? 3 : isWalk ? 4 : 5,
-                      opacity: dimmed ? 0.3 : 0.92,
-                      dashArray: isWalk ? '8 10' : isTnvs ? '2 12' : undefined,
-                    }}
-                    eventHandlers={{
-                      click: () => setActiveLeg(leg.order),
-                    }}
-                  />
+                  <Fragment key={`${leg.order}-${styleMode}-${positions.length}`}>
+                    {/* Bottom Layer: Thicker Black Outline */}
+                    <Polyline
+                      positions={positions}
+                      pathOptions={{
+                        color: '#000000',
+                        weight: dimmed ? 5 : isWalk ? 7 : 8,
+                        opacity: dimmed ? 0.25 : 0.85,
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                      }}
+                    />
+                    {/* Top Layer: Thinner Route Color */}
+                    <Polyline
+                      positions={positions}
+                      pathOptions={{
+                        color: MODE_COLORS[styleMode] ?? MODE_COLORS.jeepney,
+                        weight: dimmed ? 3 : isWalk ? 4 : 5,
+                        opacity: dimmed ? 0.35 : 1,
+                        dashArray: isWalk ? '8 10' : isTnvs ? '2 12' : undefined,
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                      }}
+                      eventHandlers={{
+                        click: () => setActiveLeg(leg.order),
+                      }}
+                    />
+                  </Fragment>
                 );
               })}
             </MapContainer>
@@ -407,31 +424,96 @@ function PlanGuideView({
   );
 }
 
+function parsePassedGuide(g: any): GlobalCommuteGuide {
+  return {
+    id: g.id || 'saved-guide',
+    title: g.title || 'Saved Itinerary',
+    summary: g.summary || null,
+    destination: g.destination || null,
+    difficulty: g.difficulty || 'Custom Itinerary',
+    estimated_travel_time_min: g.estimated_travel_time_min ?? null,
+    estimated_fare_min: g.estimated_fare_min ?? null,
+    estimated_fare_max: g.estimated_fare_max ?? null,
+    is_global: false,
+    transport_segments: Array.isArray(g.transport_segments) ? g.transport_segments : [],
+    steps: Array.isArray(g.steps)
+      ? g.steps.map((s: any, idx: number) => ({
+          order: s.order ?? idx + 1,
+          title: s.title || `Stop ${idx + 1}`,
+          description: s.description || (s.location ? `Location: ${s.location}` : ''),
+          tip: s.tip,
+        }))
+      : [],
+  };
+}
+
 export default function CommutePage() {
   const location = useLocation();
-  const [guides, setGuides] = useState<GlobalCommuteGuide[]>([]);
+  const stateObj = location.state as {
+    plan?: CommuteGuidePlan;
+    guide?: any;
+    commuteGuide?: any;
+  } | null;
+  const passedGuide = stateObj?.guide || stateObj?.commuteGuide;
+
+  const [selected, setSelected] = useState<GlobalCommuteGuide | null>(() => {
+    return passedGuide ? parsePassedGuide(passedGuide) : null;
+  });
+
+  const [guides, setGuides] = useState<GlobalCommuteGuide[]>(() => {
+    return passedGuide ? [parsePassedGuide(passedGuide)] : [];
+  });
+
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<GlobalCommuteGuide | null>(null);
+
   const [activePlan, setActivePlan] = useState<CommuteGuidePlan | null>(() => {
-    const fromState = (location.state as { plan?: CommuteGuidePlan } | null)?.plan;
+    // If a saved guide was passed explicitly, prioritize showing it rather than any stale activePlan from localStorage
+    if (passedGuide) {
+      return null;
+    }
+    const fromState = stateObj?.plan;
     const loaded = fromState ?? loadActiveCommutePlan();
     return loaded ? rebuildPlanPaths(loaded) : null;
   });
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fromState = (location.state as { plan?: CommuteGuidePlan } | null)?.plan;
-    if (fromState) {
-      setActivePlan(rebuildPlanPaths(fromState));
+    const currentState = location.state as {
+      plan?: CommuteGuidePlan;
+      guide?: any;
+      commuteGuide?: any;
+    } | null;
+    const currentPassed = currentState?.guide || currentState?.commuteGuide;
+
+    if (currentState?.plan) {
+      setActivePlan(rebuildPlanPaths(currentState.plan));
+    } else if (currentPassed) {
+      setActivePlan(null);
+      const parsed = parsePassedGuide(currentPassed);
+      setSelected(parsed);
+      setGuides((prev) => [parsed, ...prev.filter((g) => g.id !== parsed.id)]);
     }
   }, [location.state]);
 
   useEffect(() => {
     dataService.getCommuteGuides().then((g) => {
-      setGuides(g);
+      const currentState = location.state as {
+        plan?: CommuteGuidePlan;
+        guide?: any;
+        commuteGuide?: any;
+      } | null;
+      const currentPassed = currentState?.guide || currentState?.commuteGuide;
+
+      if (currentPassed) {
+        const parsed = parsePassedGuide(currentPassed);
+        setGuides([parsed, ...g.filter((item) => item.id !== parsed.id)]);
+        setSelected(parsed);
+      } else {
+        setGuides(g);
+      }
       setLoading(false);
     });
-  }, []);
+  }, [location.state]);
 
   const clearPlan = () => {
     clearActiveCommutePlan();
@@ -440,21 +522,16 @@ export default function CommutePage() {
   };
 
   const handleViewRoute = (guide: GlobalCommuteGuide) => {
-    navigate('/map', {
-      state: {
-        commuteGuide: {
-          id: guide.id,
-          title: guide.title,
-          summary: guide.summary,
-          destination: guide.destination,
-          steps: Array.isArray(guide.steps) ? guide.steps : [],
-          transport_segments: Array.isArray(guide.transport_segments) ? guide.transport_segments : [],
-          estimated_fare_min: guide.estimated_fare_min,
-          estimated_fare_max: guide.estimated_fare_max,
-          estimated_travel_time_min: guide.estimated_travel_time_min,
-        },
-      },
-    });
+    const content = `${guide.title}\n${guide.summary || ''}\n` +
+      (Array.isArray(guide.steps)
+        ? guide.steps.map((s) => `${s.order}. ${s.title}: ${s.description || ''}`).join('\n')
+        : '');
+    const plan = buildFallbackCommutePlan(content, guide.destination || undefined);
+    if (plan) {
+      setActivePlan(rebuildPlanPaths(plan));
+    } else {
+      navigate(`/ai-assistant?prompt=${encodeURIComponent(`How do I travel to ${guide.destination || guide.title}`)}`);
+    }
   };
 
   if (activePlan) {

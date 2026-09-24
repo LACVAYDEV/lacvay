@@ -22,6 +22,7 @@ export const favoritesService = {
       .select('id')
       .eq('user_id', userId)
       .eq('place_id', placeId)
+      .limit(1)
       .maybeSingle();
 
     if (checkError) {
@@ -30,11 +31,12 @@ export const favoritesService = {
     }
 
     if (existing) {
-      // Remove favorite
+      // Remove favorite (safely clears all duplicate rows matching user and place)
       const { error: deleteError } = await supabase
         .from('user_favorites')
         .delete()
-        .eq('id', existing.id);
+        .eq('user_id', userId)
+        .eq('place_id', placeId);
 
       if (deleteError) {
         console.error('Error removing favorite:', deleteError);
@@ -125,6 +127,7 @@ export const favoritesService = {
       .select('id')
       .eq('user_id', userId)
       .eq('place_id', placeId)
+      .limit(1)
       .maybeSingle();
 
     if (error) {

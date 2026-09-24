@@ -59,7 +59,7 @@ const termsSections = [
   {
     title: 'Third-party services',
     paragraphs: [
-      'Links to maps, ride providers, restaurants, promotions, and other services are provided for convenience. Your use of a third-party service is governed by that providerΓÇÖs terms, fees, availability, and policies.',
+      'Links to maps, ride providers, restaurants, promotions, and other services are provided for convenience. Your use of a third-party service is governed by that provider\'s terms, fees, availability, and policies.',
     ],
   },
   {

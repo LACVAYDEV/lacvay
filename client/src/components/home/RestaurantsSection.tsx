@@ -85,7 +85,7 @@ export function RestaurantsSection() {
 
               <button
                 type="button"
-                onClick={() => navigate(`/map?to=${encodeURIComponent(r.name)}`)}
+                onClick={() => navigate(`/assistant?prompt=How+do+I+get+to+${encodeURIComponent(r.name)}`)}
                 className="mt-3 flex items-center justify-center gap-1 rounded-xl bg-lacvay-blush py-1.5 text-[11px] font-semibold text-lacvay-green-dark transition hover:bg-lacvay-green hover:text-white"
               >
                 <Navigation className="h-3 w-3" />

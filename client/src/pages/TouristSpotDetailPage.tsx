@@ -118,7 +118,7 @@ export default function TouristSpotDetailPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={toggleSave}>{isSaved(spot.id) ? 'Saved' : 'Save'}</Button>
-          <Button onClick={() => navigate(`/map?to=${encodeURIComponent(spot.name)}`)}>
+          <Button onClick={() => navigate(`/assistant?prompt=How+do+I+get+to+${encodeURIComponent(spot.name)}`)}>
             <Navigation className="h-4 w-4" /> Directions
           </Button>
         </div>

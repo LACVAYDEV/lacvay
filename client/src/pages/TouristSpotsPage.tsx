@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bookmark } from 'lucide-react';
 import { dataService } from '@/services/dataService';
 import { favoritesService } from '@/services/favoritesService';
 import { useAuth } from '@/context/AuthContext';
@@ -29,7 +27,6 @@ export default function TouristSpotsPage() {
 
   const { user } = useAuth();
   const { isSaved, saveItem, removeSaved } = useApp();
-  const navigate = useNavigate();
 
   useEffect(() => {
     dataService.getTouristSpots(filter === 'All' ? undefined : filter).then((s) => {
@@ -71,22 +68,7 @@ export default function TouristSpotsPage() {
   if (loading) return <LoadingState />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Nearby Tourist Spots</h2>
-          <p className="text-sm text-gray-500">Discover attractions around Batangas City and nearby areas</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate('/saved-places')}
-          className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-700 shadow-soft transition hover:border-lacvay-green hover:text-lacvay-green"
-        >
-          <Bookmark className="h-4 w-4 text-lacvay-green" />
-          View Saved Places
-        </button>
-      </div>
-
+    <div className="space-y-4">
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filter tourist spots by category">
         {categories.map((c) => (
           <button
@@ -109,6 +91,10 @@ export default function TouristSpotsPage() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[...spots]
             .sort((a, b) => {
+              const aFav = favoriteIds.has(a.id) || isSaved(a.id);
+              const bFav = favoriteIds.has(b.id) || isSaved(b.id);
+              if (aFav && !bFav) return -1;
+              if (!aFav && bFav) return 1;
               if (a.isFeatured && !b.isFeatured) return -1;
               if (!a.isFeatured && b.isFeatured) return 1;
               return a.name.localeCompare(b.name);
@@ -123,6 +109,10 @@ export default function TouristSpotsPage() {
                   category: spot.categoryLabel ?? spot.category,
                   image_url: spot.imageUrl,
                   is_featured: spot.isFeatured,
+                  lat: spot.coordinates?.lat,
+                  lng: spot.coordinates?.lng,
+                  rating: spot.rating,
+                  location: spot.location,
                 }}
                 isFavorited={favoriteIds.has(spot.id) || isSaved(spot.id)}
                 onFavoriteChange={(_id, isFav) => handleFavoriteChange(spot, isFav)}

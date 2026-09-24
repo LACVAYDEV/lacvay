@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 import type { Database, Json } from '../types/database.types.js';
 import { resolveGpsOrigin } from './reverseGeocode.js';
+import { buildOptimizedItinerary, type RouteMatchInput } from './itineraryPlanner.js';
 
 type TransitRoute = Database['public']['Tables']['transit_routes']['Row'];
 type JeepneyFare = Database['public']['Tables']['jeepney_fare_matrix']['Row'];
@@ -1801,285 +1802,125 @@ export async function buildTransitBriefing(
     originAssumed = true;
   }
 
-  const originFromMessage = originExplicitInMessage;
-
-  const tripRoutes = analyzeTripRoutes(live.routes, live.fares, live.landmarks, origin, destination);
-  const jeepneyRecommendations = formatJeepneyRecommendations(tripRoutes, origin, destination);
-
-  const routeLines = [...tripRoutes]
-    .sort((a, b) => {
-      if (a.direct !== b.direct) return a.direct ? -1 : 1;
-      if (a.servesOrigin !== b.servesOrigin) return a.servesOrigin ? -1 : 1;
-      if (a.servesDest !== b.servesDest) return a.servesDest ? -1 : 1;
-      return (a.originKm ?? 99) + (a.destKm ?? 99) - ((b.originKm ?? 99) + (b.destKm ?? 99));
-    })
-    .map((m) => {
-      const pathNote = m.path.length
-        ? `path points ${m.path.length}`
-        : 'no path uploaded';
-      const match = m.direct
-        ? `DIRECT MATCH (serves both origin and destination)`
-        : m.servesOrigin || m.servesDest
-          ? `partial (origin=${m.servesOrigin}, dest=${m.servesDest})`
-          : 'does not serve this trip';
-      return `- ${m.route.route_name} (${m.route.vehicle_type}${m.ends.color ? `, ${m.ends.color}` : ''}): corridor "${m.ends.from}" ↔ "${m.ends.to}". Fares: ${m.fareNote}. ${pathNote}. ${match}.${m.landmarkNames.length ? ` Stops: ${m.landmarkNames.join(', ')}.` : ''}`;
-    });
-
-  const destPlace = destination
-    ? live.places.find((p) => normalize(p.name) === normalize(destination.label))
-    : undefined;
-
-  const placeLines = live.places.slice(0, 40).map((p) => `- ${p.name} (${p.category}) at ${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)}`);
-
-  const pairFare =
-    origin && destination ? documentedFare(origin.label, destination.label) : null;
-
-  const corridor =
-    origin && destination
-      ? KNOWN_CORRIDORS.find((c) => {
-          const destHit = includesAlias(destination.label, c.destinationAliases);
-          if (!destHit) return false;
-
-          const sanIsidroCorridor = c.originAliases.some((a) => normalize(a).includes('san isidro'));
-          const chapelCorridor = c.originAliases.some((a) => normalize(a).includes('chapel'));
-          const brgyStoNinoCorridor = c.originAliases.some((a) => normalize(a).includes('barangay sto nino') || normalize(a).includes('brgy sto nino'));
-          const clbCorridor = c.originAliases.some((a) => normalize(a) === 'clb' || normalize(a).includes('colegio'));
-          const atMonteMaria = isMonteMariaArea(origin.label, origin.lat, origin.lng);
-          const atBrgyStoNino = isBarangayStoNino(origin.label, origin.lat, origin.lng);
-          const atPier = isPierOrigin(origin.label, origin.lat, origin.lng);
-          const atClb = includesAlias(origin.label, ['clb', 'colegio ng lungsod', 'sports coliseum']);
-
-          if (sanIsidroCorridor && (atMonteMaria || atBrgyStoNino)) return false;
-          if (chapelCorridor && !atMonteMaria) return false;
-          if (brgyStoNinoCorridor && !atBrgyStoNino) return false;
-          if (sanIsidroCorridor && atBrgyStoNino) return false;
-          // CLB corridors must not fire for Pier (0.8 km away) or other nearby spots
-          if (clbCorridor && (atPier || !atClb)) {
-            if (!atClb) {
-              if (origin.lat == null || origin.lng == null) return false;
-              const clbPt = findPoint('clb');
-              if (!clbPt || haversineKm(origin.lat, origin.lng, clbPt.lat, clbPt.lng) > 0.35) return false;
-            }
-          }
-
-          if (includesAlias(origin.label, c.originAliases)) return true;
-          if (origin.lat == null || origin.lng == null) return false;
-          const radiusKm = clbCorridor ? 0.35 : 1.2;
-          return c.originAliases.some((alias) => {
-            const point = findPoint(alias);
-            return point != null && haversineKm(origin.lat!, origin.lng!, point.lat, point.lng) <= radiusKm;
-          });
-        })
-      : undefined;
-
-  const alreadyAtMonteMaria =
-    origin &&
-    destination &&
-    isMonteMariaArea(origin.label, origin.lat, origin.lng) &&
-    isSouthCoastalDestination(destination.label);
-
-  const originKm = origin && destination && origin.lat != null && origin.lng != null && destination.lat != null && destination.lng != null
-    ? haversineKm(origin.lat, origin.lng, destination.lat, destination.lng)
-    : null;
-
-  const sections = [
-    'LIVE JEEPNEY ROUTES (admin-managed; use names/colors/fares exactly):',
-    routeLines.length ? routeLines.join('\n') : '- None loaded.',
-    '',
-    origin
-      ? `RESOLVED ORIGIN: ${origin.label}${origin.lat != null ? ` (${origin.lat.toFixed(4)}, ${origin.lng?.toFixed(4)})` : ''}${isBarangayStoNino(origin.label, origin.lat, origin.lng) ? ' — Barangay Sto. Niño (inland barangay); NOT San Isidro (~4 km away) and NOT Sto. Niño Chapel at Monte Maria (~7 km away)' : ''}${isMonteMariaArea(origin.label, origin.lat, origin.lng) ? ' — Monte Maria / Sto. Niño Chapel coastal area; NOT San Isidro or Barangay Sto. Niño' : ''}${originAssumed ? ' (ASSUMED default: SM City Batangas because the traveler only named a destination)' : hasGps && !originFromMessage ? ' (from device GPS — use this exact barangay/landmark as written. Do not rename Barangay Sto. Niño to San Isidro or the Monte Maria chapel.)' : ''}`
-      : 'RESOLVED ORIGIN: unknown — assume SM City Batangas if they want directions.',
-    destination?.lat != null
-      ? `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng?.toFixed(4)})${destPlace ? ` — ${destPlace.category} POI in LACVAY` : ''}; do NOT ask for address or nearest landmark`
-      : destination
-        ? `RESOLVED DESTINATION: ${destination.label} (no coordinates on file)`
-        : 'RESOLVED DESTINATION: unknown — ask where they want to go.',
-    originKm != null ? `STRAIGHT-LINE DISTANCE: ${originKm.toFixed(1)} km (jeepney ETA roughly ${etaMin(originKm * 1.35, 18, 15)} min if a direct jeepney exists).` : '',
-    pairFare != null ? `DOCUMENTED JEEPNEY PAIR FARE: ₱${pairFare} regular between these two landmarks.` : '',
-  ];
-
-  if (originKm != null && originKm <= 1.2 && origin && destination) {
-    const walkMin = Math.max(8, Math.round(originKm * 14));
-    sections.push(
-      '',
-      `SHORT TRIP (~${originKm.toFixed(1)} km): Prefer walking (~${walkMin} min) from ${origin.label} to ${destination.label}. Do NOT send the traveler to SM City Batangas or Grand Terminal as a boarding detour — that is farther away. Jeepney is optional only if a DIRECT MATCH boards within ~0.5 km of the origin (e.g. Sta. Clara/Pier near CLB for pier trips).`,
-    );
+  if (!destination || destination.lat == null || destination.lng == null) {
+    return [
+      origin ? `RESOLVED ORIGIN: ${origin.label}${origin.lat != null ? ` (${origin.lat.toFixed(4)}, ${origin.lng?.toFixed(4)})` : ''}` : 'RESOLVED ORIGIN: unknown',
+      destination ? `RESOLVED DESTINATION: ${destination.label} (no coordinates on file)` : 'RESOLVED DESTINATION: unknown — ask where they want to go.',
+    ].join('\n');
   }
 
-  if (jeepneyRecommendations.length) {
-    sections.push('', ...jeepneyRecommendations);
+  if (!origin || origin.lat == null || origin.lng == null) {
+    return [
+      'RESOLVED ORIGIN: unknown — ask where they are starting from.',
+      `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
+    ].join('\n');
   }
 
-  if (
-    tnvsPreference.requested &&
-    origin?.lat != null &&
-    destination?.lat != null
-  ) {
-    const appLabel =
+  const originPt = { label: origin.label, lat: origin.lat, lng: origin.lng };
+  const destPt = { label: destination.label, lat: destination.lat, lng: destination.lng };
+
+  if (tnvsPreference.requested) {
+    const app =
       tnvsPreference.app === 'angkas'
         ? 'Angkas'
         : tnvsPreference.app === 'grab'
           ? 'Grab'
           : tnvsPreference.app === 'idol'
             ? 'iDOL Taxi'
-            : 'TNVS (Angkas / Grab / iDOL Taxi)';
-    sections.push(
+            : 'TNVS';
+    return [
+      `RESOLVED ORIGIN: ${origin.label} (${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)})`,
+      `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
       '',
-      `TRAVELER REQUESTED TNVS (${appLabel}): The user explicitly asked to use ${appLabel}, NOT jeepney. Give a door-to-door ${appLabel} plan from RESOLVED ORIGIN to RESOLVED DESTINATION (set pickup pin at origin, drop-off pin at destination). Do NOT add a jeepney leg unless you mention it in one optional line as a cheaper alternative. Do NOT use Angkas/Grab only for a trivial last few meters after a jeepney — if they asked for ${appLabel}, they want the whole trip.`,
+      `TRAVELER REQUESTED TNVS (${app}):`,
+      'SELECTED COMMUTE PLAN:',
+      `1. **Walk / Tricycle** — Walk to the pickup location at ${origin.label}.`,
+      `2. **TNVS** — Book ${app} door-to-door from ${origin.label} to ${destination.label}. Fare shown in app.`,
+      `3. **Walk** — Walk to the entrance of ${destination.label}.`,
+    ].join('\n');
+  }
+
+  const tripRoutes = analyzeTripRoutes(live.routes, live.fares, live.landmarks, origin, destination);
+  const matchesInput: RouteMatchInput[] = tripRoutes.map((m) => ({
+    route: { id: m.route.id, route_name: m.route.route_name, vehicle_type: m.route.vehicle_type },
+    ends: m.ends,
+    path: m.path,
+    originKm: m.originKm,
+    destKm: m.destKm,
+    servesOrigin: m.servesOrigin,
+    servesDest: m.servesDest,
+    direct: m.direct,
+    fareNote: m.fareNote,
+    landmarkNames: m.landmarkNames,
+    fares: parseFareNoteNumbers(m.fareNote),
+  }));
+
+  const itinerary = buildOptimizedItinerary(originPt, destPt, matchesInput);
+
+  const steps: string[] = [];
+  if (itinerary && itinerary.legs.length) {
+    const isTransfer = itinerary.planType === 'transfer';
+    itinerary.legs.forEach((leg, index) => {
+      const stepNum = index + 1;
+      if (leg.mode === 'walk') {
+        if (index === 0) {
+          steps.push(`${stepNum}. **Walk / Tricycle** — ${leg.summary}.`);
+        } else if (isTransfer && itinerary.legs.slice(index + 1).some((l) => l.mode === 'jeepney')) {
+          steps.push(`${stepNum}. **Transfer Walk** — ${leg.summary}.`);
+        } else {
+          steps.push(`${stepNum}. **Walk** — ${leg.summary}.`);
+        }
+      } else if (leg.mode === 'tnvs') {
+        steps.push(`${stepNum}. **Walk / Tricycle** — ${leg.summary}.`);
+      } else if (leg.mode === 'jeepney') {
+        const matched = tripRoutes.find(
+          (r) => r.route.route_name.toLowerCase() === leg.routeName?.toLowerCase(),
+        );
+        const color = matched?.ends.color ? ` (${matched.ends.color})` : '';
+        const fare = leg.fareRegular != null ? ` Fare: ₱${leg.fareRegular}.` : '';
+        const subsequentJeepney = itinerary.legs.slice(index + 1).find((l) => l.mode === 'jeepney');
+        if (isTransfer && subsequentJeepney) {
+          steps.push(
+            `${stepNum}. **Jeepney** — Board ${leg.routeName ?? 'jeepney'}${color}. Alight at transfer hub/stop for ${subsequentJeepney.routeName ?? 'next jeepney'}.${fare}`,
+          );
+        } else {
+          steps.push(
+            `${stepNum}. **Jeepney** — Board ${leg.routeName ?? 'jeepney'}${color}. Alight near ${destination.label}.${fare}`,
+          );
+        }
+      }
+    });
+  }
+
+  const winningJeepneys = itinerary?.legs.filter((l) => l.mode === 'jeepney') ?? [];
+  const winningDetails = winningJeepneys.map((j) => {
+    const matched = tripRoutes.find(
+      (r) => r.route.route_name.toLowerCase() === j.routeName?.toLowerCase(),
     );
-  }
+    return matched
+      ? `- Winning Route: ${matched.route.route_name}${matched.ends.color ? ` (${matched.ends.color})` : ''}\n  Board Corridor: ${matched.ends.from} ↔ ${matched.ends.to}\n  Fares: ${matched.fareNote}`
+      : `- Winning Route: ${j.routeName}`;
+  });
 
-  if (
-    origin &&
-    destination &&
-    isPierOrigin(origin.label, origin.lat, origin.lng) &&
-    isNorthTerminalDestination(destination.label, destination.lat, destination.lng)
-  ) {
-    sections.push(
-      '',
-      'BATANGAS PIER → GRAND TERMINAL / ALANGILAN: Two jeepneys via City Hall hub — (1) Sta. Clara/Pier - Batangas from pier, (2) walk Evangelista St, (3) Alangilan - Batangas to Grand Terminal. Sta. Clara alone does NOT reach the terminal (~2.6 km from route line). Do NOT plan Sta. Clara → City Hall → Grab unless traveler requested TNVS.',
-    );
-  }
+  const otherDirect = tripRoutes
+    .filter(
+      (m) =>
+        m.direct &&
+        !winningJeepneys.some((w) => w.routeName?.toLowerCase() === m.route.route_name.toLowerCase()),
+    )
+    .map((m) => m.route.route_name);
 
-  if (
-    origin &&
-    destination &&
-    isNorthTerminalDestination(destination.label, destination.lat, destination.lng) &&
-    !tripRoutes.some((m) => m.direct)
-  ) {
-    sections.push(
-      '',
-      'COMMUTER HUB PATTERN (apply when going to Grand Terminal / Alangilan / BatStateU without a direct boardable route): Alight at Batangas City Hall → walk ~4 min to A. Evangelista Street → board Alangilan - Batangas (Yellow) toward Grand Terminal or Alangilan. Infer this from route geometry when Leg A serves city proper and Alangilan serves the destination.',
-    );
-  }
-
-  if (
-    origin &&
-    destination &&
-    isPierOrigin(origin.label, origin.lat, origin.lng) &&
-    isCityProperDestination(destination.label, destination.lat, destination.lng) &&
-    !isNorthTerminalDestination(destination.label, destination.lat, destination.lng)
-  ) {
-    sections.push(
-      '',
-      'PIER → CITY PROPER (Plaza Mabini / museums / ancestral houses): Only Sta. Clara/Pier - Batangas passes beside the pier for boarding (~0.2 km). Sorosoro, Balagtas, and Libjo/San Isidro are closer to downtown for ALIGHTING (~0.0–0.1 km) but their lines are ~0.7–1.0 km from the pier — they do NOT stop at the pier. By jeepney: board Sta. Clara/Pier at the pier → ride toward city proper → alight nearest the destination (usually a short walk). Do NOT recommend boarding Sorosoro/Balagtas/Libjo "at the pier". TNVS/Angkas door-to-door from pier is valid when the traveler requested it.',
-    );
-  }
-
-  if (alreadyAtMonteMaria) {
-    sections.push(
-      '',
-      'ALREADY AT MONTE MARIA AREA: RESOLVED ORIGIN is at the coastal shrine/chapel area — NOT Barangay Sto. Niño (inland) and NOT San Isidro. Tell the traveler they are already at the shrine area; a short walk reaches Monte Maria.',
-    );
-  }
-
-  if (
-    origin &&
-    destination &&
-    isBarangayStoNino(origin.label, origin.lat, origin.lng) &&
-    isSouthCoastalDestination(destination.label)
-  ) {
-    sections.push(
-      '',
-      'BARANGAY STO NINO → MONTE MARIA: These are DIFFERENT places (~7 km apart). Barangay Sto. Niño is an inland barangay — it does NOT contain Monte Maria. Monte Maria is the coastal shrine destination on the Pagkilatan/Ilijan road. Do NOT ask clarifying questions. Do NOT say "Monte Maria (Sto. Niño Chapel)" as if they are the same place inside the barangay. Give the full jeepney plan from Barangay Sto. Niño to Monte Maria immediately.',
-    );
-  }
-
-  if (
-    origin &&
-    destination &&
-    isPierOrigin(origin.label, origin.lat, origin.lng) &&
-    isSouthCoastalDestination(destination.label)
-  ) {
-    sections.push(
-      '',
-      'BATANGAS PIER → MONTE MARIA: Dela Paz/Ilijan does NOT pass beside the pier (~2.5 km from the route line). Two jeepney legs: Sta. Clara/Pier - Batangas from pier to SM/Ilijan terminal (~₱14), then Dela Paz/Ilijan - Batangas to Monte Maria (~₱23). Do NOT walk from the pier expecting Dela Paz/Ilijan. Do NOT use Libjo/San Isidro or Alangilan junction.',
-    );
-  }
-
-  const knownTransfer =
-    origin && destination ? findKnownTransfer(origin, destination) : null;
-  const hasDirectJeepney = tripRoutes.some((m) => m.direct);
-
-  if (corridor) {
-    sections.push(
-      '',
-      'KNOWN LOCAL ITINERARY (prefer this over forcing an unmatched live route):',
-      `1. Walk ~${corridor.walkMin} min to ${corridor.walkTo}.`,
-      `2. Ride jeepney: ${corridor.jeepneySignboard}. Regular fare ₱${corridor.fareRegular}${corridor.fareDiscounted != null ? ` / discounted ₱${corridor.fareDiscounted}` : ''}. ETA ~${corridor.etaMin} min.`,
-      `3. Alight at ${corridor.alight}.`,
-      `4. Last mile: ${corridor.lastMile}`,
-      `5. Booking apps: ${corridor.apps}`,
-    );
-  }
-
-  // Never override a DIRECT MATCH with a City Hall hub transfer (e.g. CLB → Grand Terminal via Balagtas)
-  if (knownTransfer && !hasDirectJeepney) {
-    sections.push(
-      '',
-      'KNOWN COMMUTER TRANSFER (local practice — use these exact alight/walk/board points):',
-      `1. Board: ${knownTransfer.leg1Board}. Jeepney — ${knownTransfer.leg1Route}.`,
-      `2. Alight at ${knownTransfer.alightAt}.`,
-      `3. Walk ~${knownTransfer.walkMin} min — ${knownTransfer.walkTransfer}.`,
-      `4. Board: ${knownTransfer.leg2Board}. Jeepney — ${knownTransfer.leg2Route}.`,
-      `5. Alight at ${knownTransfer.leg2Alight}.`,
-      `Note: ${knownTransfer.note}`,
-    );
-  } else if (knownTransfer && hasDirectJeepney) {
-    sections.push(
-      '',
-      'NOTE: A DIRECT MATCH jeepney exists — use ONE jeepney from DIRECT MATCH (e.g. Balagtas / Alangilan / Sorosoro from CLB to Grand Terminal). Do NOT use City Hall → Evangelista → Alangilan transfer when a direct route boards at the origin.',
-    );
-  }
-
-  if (placeLines.length) {
-    sections.push('', 'PLACES IN LACVAY:', placeLines.join('\n'));
-  }
-
-  if (destPlace && origin?.lat != null && destination?.lat != null) {
-    const cat = destPlace.category.toLowerCase();
-    const poiHints: string[] = [];
-    if (cat === 'restaurant') {
-      poiHints.push(
-        'RESTAURANT POI: Usually in city proper or near SM. Use DIRECT MATCH closest to destination; short walk from jeepney stop is normal. TNVS last mile only if off-corridor or traveler requested Angkas/Grab.',
-      );
-    } else if (cat === 'beach' || cat === 'adventure') {
-      poiHints.push(
-        'BEACH / ADVENTURE POI: Usually on the south Pagkilatan/Ilijan coast. From pier: Sta. Clara/Pier → SM/Ilijan terminal → Dela Paz/Ilijan (NOT Libjo at pier). From SM: Dela Paz/Ilijan or Tabangao direct. TNVS optional for last meters.',
-      );
-    } else if (cat === 'cultural' || cat === 'historical') {
-      poiHints.push(
-        'CULTURAL / HISTORICAL POI: Often near Plaza Mabini / city proper — Sorosoro, Balagtas, Libjo serve well for alighting. From pier: board Sta. Clara/Pier only; do not board Sorosoro/Balagtas at pier.',
-      );
-    } else if (cat === 'nature') {
-      poiHints.push(
-        'NATURE POI: May be inland or coastal — follow DIRECT MATCH geometry. If no direct route, jeepney to nearest corridor + walk or TNVS for barangay interior.',
-      );
-    }
-    if (poiHints.length) sections.push('', ...poiHints);
-  }
-
-  if (origin?.lat != null && destination?.lat != null) {
-    sections.push(
-      '',
-      'GENERIC BATANGAS CITY ROUTING (works for any origin → destination inside Batangas City):',
-      '- Prefer DIRECT MATCH when listed — one jeepney leg; board at the nearest stop on that route line to the origin, alight nearest to the destination.',
-      '- If no DIRECT MATCH: use NEAR ORIGIN route(s) → walk transfer → NEAR DESTINATION route, or KNOWN COMMUTER TRANSFER / TWO-JEEPNEY TRANSFER when listed.',
-      '- Do NOT default every trip to Batangas City Grand Terminal unless the matched route signboard explicitly requires it.',
-      '- City proper (Plaza Mabini, Basilica, City Hall, museums): Balagtas, Capitolio, Libjo/San Isidro, Sorosoro, Sta. Clara/Pier may apply — follow geometry in JEEPNEY ROUTING.',
-      '- North (Alangilan, BatStateU): Alangilan - Batangas. South coast (Monte Maria, Ilijan, Pagkilatan): Dela Paz/Ilijan or Tabangao. Pier area: Sta. Clara/Pier first leg.',
-      '- Restaurants, beaches, cultural spots: walk from the POI to the nearest jeepney corridor under NEAR ORIGIN, ride toward destination side, TNVS/walk for last mile if needed.',
-      '- Always give a full numbered plan for the RESOLVED ORIGIN and RESOLVED DESTINATION — never refuse because the place is a restaurant or random POI.',
-    );
-  }
-
-  sections.push(
+  const sections = [
+    `RESOLVED ORIGIN: ${origin.label} (${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)})`,
+    `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
     '',
-    formatStreetAtlas(),
+    'SELECTED ROUTE DETAILS:',
+    winningDetails.length ? winningDetails.join('\n') : `- Mode: ${itinerary?.planType ?? 'direct'}`,
+    otherDirect.length ? `- Alternative Direct Routes: ${otherDirect.join(', ')}` : '',
     '',
-    'LAST-MILE / REMOTE AREAS: LACVAY has no current tricycle TODA roster or fares. When the destination is off the jeepney route (barangay interior, shrine gate, coastal access road, etc.), recommend TNVS first: Angkas (solo motorcycle taxi), Grab (car/taxi), iDOL Taxi (groups, luggage, night/rain). Also tell them they can look for the nearest tricycle TODA and ask locals for directions. Never invent TODA names, territories, or tricycle prices.',
-    'GEOGRAPHY HINTS: Three different places — (1) Barangay Sto. Niño inland ~13.699, 121.094, (2) Sto. Niño Chapel / Monte Maria coastal ~13.641, 121.042, (3) San Isidro / Libjo ~13.733, 121.077. Never confuse them. Barangay Sto. Niño → Monte Maria: Dela Paz/Ilijan or Tabangao jeepney on the Batangas–Tabangao–Lobo Road (N439) — NOT from San Isidro. San Isidro ↔ Monte Maria: Dela Paz/Ilijan direct. San Isidro/Libjo → Alangilan or Grand Terminal: Libjo/San Isidro jeepney → City Hall (P. Burgos) → walk A. Evangelista Street → Alangilan jeepney.',
-  );
+    'SELECTED COMMUTE PLAN:',
+    ...steps,
+  ];
 
   return sections.filter(Boolean).join('\n');
 }
@@ -2109,7 +1950,11 @@ function classifyOdPlan(
 ): OdPlanType {
   if (hasKnownCorridor) return 'corridor';
   if (matches.some((m) => m.direct)) return 'direct';
-  if (hasKnownTransfer || briefing.includes('TWO-JEEPNEY TRANSFER (')) return 'transfer';
+  if (
+    hasKnownTransfer ||
+    briefing.includes('TWO-JEEPNEY TRANSFER') ||
+    briefing.includes('Transfer Walk')
+  ) return 'transfer';
   const servesAny = matches.some((m) => m.servesOrigin || m.servesDest);
   if (!servesAny && briefing.includes('TNVS')) return 'tnvs';
   if (servesAny) return 'partial';

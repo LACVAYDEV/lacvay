@@ -14,30 +14,35 @@ const userLocationIcon = L.divIcon({
 
 function LocateButton({
   map,
+  geo,
   onLocated,
 }: {
   map: L.Map;
+  geo: UserGeo | null;
   onLocated: (geo: UserGeo) => void;
 }) {
   return (
-    <div className="leaflet-bottom leaflet-right">
-      <div className="leaflet-control mb-3 mr-3">
+    <div className="leaflet-bottom leaflet-right pointer-events-none z-[1000]">
+      <div className="leaflet-control pointer-events-auto mb-7 mr-3.5">
         <button
           type="button"
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
+            if (geo) {
+              map.setView([geo.lat, geo.lng], 16, { animate: true });
+            }
             void requestUserLocation().then((result) => {
               if (!result) return;
               onLocated(result);
               map.setView([result.lat, result.lng], 16, { animate: true });
             });
           }}
-          className="flex items-center gap-1.5 rounded-full border border-blue-100 bg-white px-3 py-2 text-xs font-semibold text-blue-700 shadow-md hover:bg-blue-50"
-          aria-label="Center map on my location"
+          className="flex items-center gap-1.5 rounded-full border border-blue-100 bg-white px-3.5 py-2 text-xs font-bold text-blue-700 shadow-lg hover:bg-blue-50 transition active:scale-95 cursor-pointer"
+          aria-label="Locate Me"
         >
-          <LocateFixed className="h-3.5 w-3.5" />
-          My location
+          <LocateFixed className="h-4 w-4 text-blue-600" />
+          Locate Me
         </button>
       </div>
     </div>
@@ -76,7 +81,7 @@ export function CurrentLocationMarker({
   }, [didPan, geo, map, panOnFirstFix]);
 
   if (!geo) {
-    return <LocateButton map={map} onLocated={setGeo} />;
+    return <LocateButton map={map} geo={null} onLocated={setGeo} />;
   }
 
   return (
@@ -99,7 +104,7 @@ export function CurrentLocationMarker({
           </div>
         </Popup>
       </Marker>
-      <LocateButton map={map} onLocated={setGeo} />
+      <LocateButton map={map} geo={geo} onLocated={setGeo} />
     </>
   );
 }

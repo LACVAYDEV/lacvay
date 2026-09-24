@@ -369,3 +369,10 @@ body {
     transform: none;
   }
 }
+
+.custom-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+

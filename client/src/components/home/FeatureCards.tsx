@@ -10,24 +10,24 @@ const features = [
   },
   {
     title: 'Commute Guide',
-    description: 'Learn how to commute by jeepney, then use Angkas, Grab, or iDOL Taxi off-route.',
+    description: 'Step-by-step commute planning, jeepney transfers, and ride-hailing connections.',
     image: '/images/icon-commute.png',
     cta: 'View Guide',
     path: '/commute',
   },
   {
-    title: 'Transport Checker',
-    description: 'Check available transport routes, fixed fares, and view on map.',
+    title: 'Fares & Corridors',
+    description: 'Check official fixed fares and jeepney corridors directly on the map.',
     image: '/images/icon-fare.png',
-    cta: 'Check Transport',
-    path: '/fares',
+    cta: 'Explore Map',
+    path: '/map',
   },
   {
-    title: 'Ride Guide',
-    description: 'Step-by-step instructions for booking Angkas, Grab, and local taxis.',
+    title: 'AI Travel Assistant',
+    description: 'Get instant answers and personalized commute instructions tailored to your trip.',
     image: '/images/icon-ride.png',
-    cta: 'View Guide',
-    path: '/rides',
+    cta: 'Ask Assistant',
+    path: '/ai-assistant',
   },
 ];
 

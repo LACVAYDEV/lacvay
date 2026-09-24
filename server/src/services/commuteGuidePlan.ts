@@ -109,11 +109,12 @@ function enrichLegs(
       if (haversineKm(cursor[0], cursor[1], board[0], board[1]) > 0.05) {
         // board point is on the corridor
       }
+      const nextJeepneyLeg = legs.slice(index + 1).find((l) => l.mode === 'jeepney' && l.routeName);
       const target = isLast
         ? dest
-        : legs[index + 1]?.routeName
+        : nextJeepneyLeg
           ? (() => {
-              const nextPath = findRoutePath(matches, legs[index + 1].routeName);
+              const nextPath = findRoutePath(matches, nextJeepneyLeg.routeName);
               if (nextPath.length) {
                 const gap = nearestPoints(routePath, nextPath);
                 return gap?.onA ?? dest;
@@ -122,9 +123,11 @@ function enrichLegs(
             })()
           : dest;
       const alightIdx = nearestIndex(routePath, target[0], target[1]);
-      const start = Math.min(boardIdx, alightIdx);
-      const end = Math.max(boardIdx, alightIdx);
-      path = routePath.slice(start, end + 1);
+      if (boardIdx <= alightIdx) {
+        path = routePath.slice(boardIdx, alightIdx + 1);
+      } else {
+        path = routePath.slice(alightIdx, boardIdx + 1).reverse();
+      }
       if (path.length < 2) {
         path = [board, routePath[alightIdx]];
       }
@@ -156,7 +159,14 @@ function enrichLegs(
     out.push({
       order: index + 1,
       mode: leg.mode,
-      title: modeTitle(leg.mode),
+      title:
+        leg.title ||
+        (leg.mode === 'walk' &&
+        index > 0 &&
+        index < legs.length - 1 &&
+        legs.slice(index + 1).some((l) => l.mode === 'jeepney')
+          ? 'Transfer Walk'
+          : modeTitle(leg.mode)),
       description: leg.summary,
       minutes: leg.minutes,
       fareRegular: leg.fareRegular,
@@ -225,18 +235,19 @@ function parseReplyLegs(
   const steps: { mode: GuideLegMode; title: string; description: string }[] = [];
 
   for (const line of lines) {
-    const num = line.match(/^\d+[.)]\s+\*\*(Walk|Jeepney|TNVS)[^*]*\*\*\s*[—:-]?\s*(.*)/i);
-    const plain = line.match(/^\d+[.)]\s+(Walk|Jeepney|TNVS)\b[—:-]?\s*(.*)/i);
+    const num = line.match(/^\d+[.)]\s+\*\*(Walk|Jeepney|TNVS|Transfer Walk)[^*]*\*\*\s*[—:-]?\s*(.*)/i);
+    const plain = line.match(/^\d+[.)]\s+(Walk|Jeepney|TNVS|Transfer Walk)\b[—:-]?\s*(.*)/i);
     const hit = num ?? plain;
     if (!hit) continue;
     const modeRaw = hit[1].toLowerCase();
     const mode: GuideLegMode =
-      modeRaw.startsWith('walk') ? 'walk' : modeRaw.startsWith('jeep') ? 'jeepney' : 'tnvs';
+      modeRaw.includes('walk') ? 'walk' : modeRaw.startsWith('jeep') ? 'jeepney' : 'tnvs';
+    const isTransfer = /transfer\s+walk/i.test(hit[1]);
     const rest = (hit[2] || '').replace(/[*_]/g, '').trim();
     steps.push({
       mode,
-      title: modeTitle(mode),
-      description: rest || modeTitle(mode),
+      title: isTransfer ? 'Transfer Walk' : modeTitle(mode),
+      description: rest || (isTransfer ? 'Transfer Walk' : modeTitle(mode)),
     });
   }
 

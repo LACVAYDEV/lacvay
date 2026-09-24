@@ -1,29 +1,24 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Bell,
   CheckCheck,
-  ChevronDown,
   LogOut,
   Search,
   Shield,
   ShieldCheck,
-  Sun,
   Tag,
   User,
+  X,
+  Camera,
+  Utensils,
 } from 'lucide-react';
 import { dataService } from '@/services/dataService';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { readPreferences } from '@/lib/preferences';
-
-const WEATHER_CACHE_KEY = 'lacvay-weather';
-const WEATHER_CACHE_TTL_MS = 30 * 60 * 1000;
-
-interface CachedWeather {
-  temperature: number;
-  timestamp: number;
-}
+import { supabase } from '@/lib/supabase';
+import type { Place } from '@/types';
 
 interface AppNotification {
   id: string;
@@ -34,28 +29,132 @@ interface AppNotification {
 }
 
 export function Header() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Awaited<ReturnType<typeof dataService.search>>>([]);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState(false);
-  const [activeResultIndex, setActiveResultIndex] = useState(-1);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
-  const [temperature, setTemperature] = useState<number | null>(null);
-  const [weatherUnavailable, setWeatherUnavailable] = useState(false);
 
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, signOut, isAdmin, isAdminMode, chooseSessionMode } = useAuth();
-  const searchRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
-  const searchRequestRef = useRef(0);
-  const searchListId = useId();
-  const searchStatusId = useId();
   const notificationPanelId = useId();
+
+  // Smart autocomplete places search state
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (location.pathname === '/map') {
+      supabase
+        .from('places')
+        .select('*')
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setPlaces(data as unknown as Place[]);
+          } else {
+            Promise.all([dataService.getTouristSpots(), dataService.getRestaurants()]).then(
+              ([spots, eateries]) => {
+                setPlaces([
+                  ...spots.map((s) => ({
+                    id: s.id,
+                    name: s.name,
+                    category: s.category,
+                    latitude: s.coordinates.lat,
+                    longitude: s.coordinates.lng,
+                    description: s.description,
+                    image_url: s.imageUrl,
+                  })),
+                  ...eateries.map((r) => ({
+                    id: r.id,
+                    name: r.name,
+                    category: 'restaurant',
+                    latitude: r.coordinates.lat,
+                    longitude: r.coordinates.lng,
+                    description: r.description,
+                    image_url: r.imageUrl,
+                  })),
+                ]);
+              },
+            );
+          }
+        });
+    }
+  }, [location.pathname]);
+
+  // Sync search input with URL search param
+  useEffect(() => {
+    const s = searchParams.get('search') || '';
+    if (s !== searchTerm) {
+      setSearchTerm(s);
+    }
+  }, [searchParams]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const matchingPlaces = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return [];
+    return places.filter((p) => p.name.toLowerCase().includes(query)).slice(0, 8);
+  }, [places, searchTerm]);
+
+  const handleSelectPlace = (place: Place) => {
+    const lat = (place as any).lat ?? place.latitude;
+    const lng = (place as any).lng ?? place.longitude;
+    setSearchTerm(place.name);
+    setIsSearchOpen(false);
+
+    const next = new URLSearchParams(searchParams);
+    next.set('search', place.name);
+    next.set('highlight', place.id);
+    next.delete('lat');
+    next.delete('lng');
+    setSearchParams(next, { replace: true });
+
+    window.dispatchEvent(
+      new CustomEvent('lacvay:fly-to-place', {
+        detail: { ...place, latitude: lat, longitude: lng },
+      }),
+    );
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setIsSearchOpen(false);
+    const next = new URLSearchParams(searchParams);
+    next.delete('search');
+    next.delete('highlight');
+    next.delete('lat');
+    next.delete('lng');
+    setSearchParams(next, { replace: true });
+    window.dispatchEvent(new CustomEvent('lacvay:clear-highlight'));
+  };
+
+  const handleInputChange = (val: string) => {
+    setSearchTerm(val);
+    setIsSearchOpen(true);
+    const next = new URLSearchParams(searchParams);
+    if (val.trim()) {
+      next.set('search', val);
+    } else {
+      next.delete('search');
+      next.delete('highlight');
+    }
+    setSearchParams(next, { replace: true });
+  };
 
   const notificationsEnabled = readPreferences(user).notifications;
   const notificationStorageKey = `lacvay-read-notifications-${user?.id ?? 'guest'}`;
@@ -63,53 +162,96 @@ export function Header() {
     (notification) => !readNotificationIds.has(notification.id),
   ).length;
 
-  useEffect(() => {
-    const fetchWeather = async () => {
-      const cached = localStorage.getItem(WEATHER_CACHE_KEY);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached) as CachedWeather;
-          if (
-            Number.isFinite(parsed.temperature) &&
-            Date.now() - parsed.timestamp < WEATHER_CACHE_TTL_MS
-          ) {
-            setTemperature(Math.round(parsed.temperature));
-            setWeatherUnavailable(false);
-            return;
-          }
-        } catch {
-          localStorage.removeItem(WEATHER_CACHE_KEY);
-        }
-      }
+  const renderHeaderLeft = () => {
+    if (location.pathname === '/map') {
+      return (
+        <div ref={searchContainerRef} className="relative w-full max-w-[240px] sm:max-w-xs md:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+          <input
+            type="search"
+            placeholder="Search map..."
+            value={searchTerm}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onFocus={() => {
+              if (searchTerm.trim()) setIsSearchOpen(true);
+            }}
+            className="w-full rounded-full border border-gray-200 bg-white py-1.5 pl-8 pr-7 text-xs font-medium text-gray-900 placeholder-gray-400 shadow-xs transition focus:border-lacvay-green focus:outline-none focus:ring-1 focus:ring-lacvay-green"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-gray-400 hover:text-gray-600"
+              aria-label="Clear search"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
 
-      try {
-        const response = await fetch(
-          'https://api.open-meteo.com/v1/forecast?latitude=13.7626&longitude=121.0040&current=temperature_2m&timezone=auto',
-        );
-        if (!response.ok) throw new Error(`Weather service returned ${response.status}`);
+          {isSearchOpen && searchTerm.trim() && (
+            <div className="absolute top-full left-0 right-0 mt-1.5 max-h-64 overflow-y-auto rounded-2xl border border-gray-100 bg-white/95 backdrop-blur-md shadow-xl p-1.5 z-50">
+              {matchingPlaces.length === 0 ? (
+                <div className="p-3 text-center text-xs text-gray-400">
+                  No matching places found
+                </div>
+              ) : (
+                <ul className="space-y-0.5">
+                  {matchingPlaces.map((place) => {
+                    const isRestaurant =
+                      place.category === 'restaurant' ||
+                      place.category?.toLowerCase() === 'restaurant';
+                    const isSelected = place.id === searchParams.get('highlight');
 
-        const data = await response.json() as { current?: { temperature_2m?: number } };
-        const nextTemperature = data.current?.temperature_2m;
-        if (typeof nextTemperature !== 'number' || !Number.isFinite(nextTemperature)) {
-          throw new Error('Weather service returned an invalid temperature');
-        }
+                    return (
+                      <li key={place.id}>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectPlace(place)}
+                          className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left transition ${
+                            isSelected
+                              ? 'bg-emerald-50 text-lacvay-green font-semibold'
+                              : 'hover:bg-gray-50 text-gray-700'
+                          }`}
+                        >
+                          <span
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[9px] ${
+                              isRestaurant ? 'bg-orange-500' : 'bg-teal-500'
+                            }`}
+                          >
+                            {isRestaurant ? <Utensils size={10} /> : <Camera size={10} />}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-semibold leading-tight">{place.name}</p>
+                            <p className="truncate text-[10px] text-gray-400">
+                              {place.category || (isRestaurant ? 'Restaurant' : 'Tourist Spot')}
+                            </p>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
 
-        setTemperature(Math.round(nextTemperature));
-        setWeatherUnavailable(false);
-        localStorage.setItem(
-          WEATHER_CACHE_KEY,
-          JSON.stringify({ temperature: nextTemperature, timestamp: Date.now() } satisfies CachedWeather),
-        );
-      } catch (error) {
-        console.warn('Failed to fetch weather:', error);
-        setWeatherUnavailable(true);
-      }
-    };
+    if (location.pathname === '/tourist-spots' || location.pathname.startsWith('/tourist-spots')) {
+      return <h1 className="text-lg font-bold text-gray-900 truncate">Tourist Spots</h1>;
+    }
 
-    void fetchWeather();
-    const interval = setInterval(() => void fetchWeather(), WEATHER_CACHE_TTL_MS);
-    return () => clearInterval(interval);
-  }, []);
+    if (location.pathname === '/restaurants') {
+      return <h1 className="text-lg font-bold text-gray-900 truncate">Restaurants & Eateries</h1>;
+    }
+
+    if (location.pathname === '/saved' || location.pathname === '/saved-places') {
+      return <h1 className="text-lg font-bold text-gray-900 truncate">Saved Trips</h1>;
+    }
+
+    return null;
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem(notificationStorageKey);
@@ -143,7 +285,7 @@ export function Header() {
             id: 'travel-safety',
             title: 'Review the travel safety guide',
             message: 'Verify your driver and vehicle, wear required safety equipment, and confirm routes before leaving.',
-            path: '/rides',
+            path: '/commute',
             kind: 'safety',
           },
           ...promotions.slice(0, 3).map((promotion) => ({
@@ -168,10 +310,6 @@ export function Header() {
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (searchRef.current && !searchRef.current.contains(target)) {
-        setSearchOpen(false);
-        setActiveResultIndex(-1);
-      }
       if (profileRef.current && !profileRef.current.contains(target)) setProfileOpen(false);
       if (notificationRef.current && !notificationRef.current.contains(target)) {
         setNotificationOpen(false);
@@ -190,65 +328,6 @@ export function Header() {
     };
   }, []);
 
-  const handleSearch = async (value: string) => {
-    const requestId = ++searchRequestRef.current;
-    setQuery(value);
-    setActiveResultIndex(-1);
-    setSearchError(false);
-    if (value.trim().length < 2) {
-      setResults([]);
-      setSearchOpen(false);
-      setSearchLoading(false);
-      return;
-    }
-
-    setSearchOpen(true);
-    setSearchLoading(true);
-    try {
-      const found = await dataService.search(value);
-      if (requestId !== searchRequestRef.current) return;
-      setResults(found);
-    } catch (error) {
-      console.warn('Search failed:', error);
-      if (requestId !== searchRequestRef.current) return;
-      setResults([]);
-      setSearchError(true);
-    } finally {
-      if (requestId === searchRequestRef.current) setSearchLoading(false);
-    }
-  };
-
-  const selectResult = (path?: string, _title?: string) => {
-    setSearchOpen(false);
-    setActiveResultIndex(-1);
-    setQuery('');
-    if (path) navigate(path);
-  };
-
-  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (!searchOpen && ['ArrowDown', 'ArrowUp'].includes(event.key) && query.trim().length >= 2) {
-      setSearchOpen(true);
-    }
-    if (results.length === 0 && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-      event.preventDefault();
-      return;
-    }
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      setActiveResultIndex((index) => Math.min(index + 1, results.length - 1));
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      setActiveResultIndex((index) => index <= 0 ? results.length - 1 : index - 1);
-    } else if (event.key === 'Enter' && activeResultIndex >= 0) {
-      event.preventDefault();
-      const result = results[activeResultIndex];
-      if (result) selectResult(result.path, result.title);
-    } else if (event.key === 'Escape') {
-      setSearchOpen(false);
-      setActiveResultIndex(-1);
-    }
-  };
-
   const markNotificationsRead = (ids: string[]) => {
     setReadNotificationIds((current) => {
       const next = new Set([...current, ...ids]);
@@ -264,94 +343,14 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 bg-lacvay-cream/95 px-4 py-4 backdrop-blur md:px-6 lg:px-7">
-      <div
-        ref={searchRef}
-        onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-            setSearchOpen(false);
-            setActiveResultIndex(-1);
-          }
-        }}
-        className="relative min-w-0 flex-1 md:max-w-sm lg:max-w-md"
-      >
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => void handleSearch(event.target.value)}
-          onKeyDown={handleSearchKeyDown}
-          onFocus={() => {
-            if (query.trim().length >= 2) setSearchOpen(true);
-          }}
-          placeholder="Search places, routes, or attractions..."
-          aria-label="Search places, routes, or attractions"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded={searchOpen}
-          aria-controls={searchListId}
-          aria-describedby={searchStatusId}
-          aria-activedescendant={
-            activeResultIndex >= 0 ? `${searchListId}-option-${activeResultIndex}` : undefined
-          }
-          className="w-full rounded-full border border-gray-200 bg-white py-2.5 pl-11 pr-4 text-[12.5px] shadow-soft outline-none transition placeholder:text-gray-400 focus:border-lacvay-green focus:ring-2 focus:ring-lacvay-green/15"
-        />
-        {searchOpen && (
-          <div
-            id={searchListId}
-            role="listbox"
-            aria-label="Search suggestions"
-            className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card"
-          >
-            {searchLoading && <p className="px-4 py-3 text-sm text-gray-500">Searching...</p>}
-            {!searchLoading && searchError && (
-              <p className="px-4 py-3 text-sm text-red-600">Search is unavailable. Please try again.</p>
-            )}
-            {!searchLoading && !searchError && results.length === 0 && (
-              <p className="px-4 py-3 text-sm text-gray-500">No matching places or routes.</p>
-            )}
-            {!searchLoading && results.map((result, index) => (
-              <div
-                id={`${searchListId}-option-${index}`}
-                key={result.id}
-                role="option"
-                aria-selected={activeResultIndex === index}
-                onMouseEnter={() => setActiveResultIndex(index)}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectResult(result.path, result.title)}
-                className={cn(
-                  'flex w-full cursor-pointer flex-col px-4 py-2.5 text-left',
-                  activeResultIndex === index ? 'bg-lacvay-green/10' : 'hover:bg-gray-50',
-                )}
-              >
-                <span className="text-[12.5px] font-medium text-gray-900">{result.title}</span>
-                <span className="text-[11px] text-gray-500">{result.subtitle}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <span id={searchStatusId} className="sr-only" aria-live="polite">
-          {searchLoading
-            ? 'Searching'
-            : searchError
-              ? 'Search is unavailable'
-              : query.trim().length >= 2
-              ? `${results.length} search result${results.length === 1 ? '' : 's'} available`
-              : ''}
-        </span>
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 bg-lacvay-cream/95 px-4 backdrop-blur md:px-6 lg:px-7 shrink-0">
+      {/* Left Side: Dynamic Page Title or Map Search */}
+      <div className="flex items-center min-w-0 flex-1">
+        {renderHeaderLeft()}
       </div>
 
-      <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        <div className="hidden items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-soft sm:flex">
-          <Sun className="h-4 w-4 text-lacvay-yellow" fill="#F2A93D" strokeWidth={1.5} />
-          <div className="leading-tight">
-            <p className="text-[12.5px] font-bold text-gray-800">
-              {temperature !== null ? `${temperature}°C` : weatherUnavailable ? 'Unavailable' : 'Loading'}
-            </p>
-            <p className="text-[9.5px] text-gray-500">Batangas City</p>
-          </div>
-        </div>
-
+      {/* Right Side: Notifications & Account */}
+      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
         <div ref={notificationRef} className="relative">
           <button
             type="button"
@@ -359,7 +358,7 @@ export function Header() {
               setNotificationOpen((current) => !current);
               setProfileOpen(false);
             }}
-            className="relative rounded-full bg-white p-2 shadow-soft hover:bg-gray-50"
+            className="relative rounded-full bg-white p-2 shadow-soft hover:bg-gray-50 transition"
             aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
             aria-expanded={notificationOpen}
             aria-controls={notificationPanelId}
@@ -457,13 +456,14 @@ export function Header() {
                 setNotificationOpen(false);
               }}
               aria-expanded={profileOpen}
-              className="flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-2.5 shadow-soft hover:bg-gray-50"
+              aria-label="User menu"
+              className="flex items-center rounded-full p-0.5 shadow-soft ring-1 ring-gray-200/80 hover:ring-lacvay-green transition focus:outline-none"
             >
-              <img src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="" className="h-8 w-8 rounded-full bg-gray-100" />
-              <span className="hidden text-[12.5px] font-medium text-gray-800 md:inline">
-                Hello, {(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Traveler')?.split(' ')[0]}!
-              </span>
-              <ChevronDown className={cn('h-3.5 w-3.5 text-gray-500 transition', profileOpen && 'rotate-180')} />
+              <img
+                src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
+                alt=""
+                className="h-8 w-8 rounded-full bg-gray-100 object-cover"
+              />
             </button>
             {profileOpen && (
               <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-gray-100 bg-white py-1.5 shadow-card">
