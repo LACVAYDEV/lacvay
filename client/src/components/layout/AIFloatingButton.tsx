@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 export function AIFloatingButton() {
   const location = useLocation();
   
-  // Don't show the button if already on the AI assistant page
-  if (location.pathname.startsWith('/ai-assistant')) {
+  // Don't show the button if already on the AI assistant page or rides page
+  if (location.pathname.startsWith('/ai-assistant') || location.pathname.startsWith('/rides')) {
     return null;
   }
 
@@ -15,7 +15,7 @@ export function AIFloatingButton() {
       to="/ai-assistant"
       aria-label="Open AI Assistant"
       className={cn(
-        'fixed bottom-20 right-4 z-30 lg:bottom-6 lg:right-6',
+        'fixed bottom-24 right-4 z-30 sm:bottom-28 md:bottom-32 lg:bottom-6 lg:right-6',
         'flex h-14 w-14 lg:h-16 lg:w-16 items-center justify-center',
         'rounded-full bg-lacvay-green shadow-lg hover:shadow-xl',
         'transition-all duration-200 ease-out hover:scale-110 active:scale-95',
