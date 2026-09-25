@@ -118,9 +118,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const mode = readSessionMode() || 'user';
     writeSessionMode(mode);
     setSessionMode(mode);
+    
+    // Use the current origin, or fallback to production if not localhost
+    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const redirectUrl = isLocalDev 
+      ? `http://${window.location.host}`
+      : window.location.origin;
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: redirectUrl },
     });
     if (error) throw error;
   };

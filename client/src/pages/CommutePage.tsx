@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { LoadingState, EmptyState } from '@/components/ui/States';
 import { MotorcycleIcon } from '@/components/ui/TransportIcons';
+import { TransportBar } from '@/components/home/TransportBar';
 import { launchTransportApp, type TransportAppKey } from '@/lib/transportApps';
 import { CurrentLocationMarker } from '@/components/map/CurrentLocationMarker';
 import { rebuildPlanPaths, sanitizePath } from '@/lib/mapCoordinates';
@@ -220,6 +221,11 @@ function PlanGuideView({
           </button>
         </div>
       </div>
+
+      <Card className="p-4 sm:p-5">
+        <h3 className="mb-3 text-sm font-bold text-gray-900">Quick Book a Ride</h3>
+        <TransportBar variant="horizontal" />
+      </Card>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <Card className="space-y-3 p-4 sm:p-5">

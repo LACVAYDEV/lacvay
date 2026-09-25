@@ -148,8 +148,13 @@ export function AuthForm({ mode }: AuthFormProps) {
     
     setResettingPassword(true);
     try {
+      const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const baseUrl = isLocalDev 
+        ? `http://${window.location.host}`
+        : window.location.origin;
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${baseUrl}/reset-password`,
       });
       if (error) throw error;
       setNotice('Password reset email sent! Check your inbox.');

@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import { Sidebar, mobileNavItems } from './Sidebar';
 import { Header } from './Header';
 import { LocationPermissionBar } from './LocationPermissionBar';
+import { AIFloatingButton } from './AIFloatingButton';
 import { LogoMark } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
@@ -127,6 +128,8 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
         >
           {children}
         </main>
+
+        <AIFloatingButton />
 
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-100 bg-white px-2 py-1.5 lg:hidden">
           <div className="flex justify-around">
