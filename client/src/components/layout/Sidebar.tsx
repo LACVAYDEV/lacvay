@@ -8,6 +8,7 @@ import {
   UtensilsCrossed,
   Bookmark,
   Settings,
+  Car,
 } from 'lucide-react';
 import { LogoMark, SidebarWaveArt } from '@/components/ui/Logo';
 import { TransportBar } from '@/components/home/TransportBar';
@@ -17,6 +18,7 @@ const navItems = [
   { to: '/', label: 'Home', shortLabel: 'Home', icon: Home, end: true },
   { to: '/map', label: 'Map & Routes', shortLabel: 'Map', icon: Map },
   { to: '/commute', label: 'Commute Guide', shortLabel: 'Commute', icon: BookOpen },
+  { to: '/rides', label: 'Book a Ride', shortLabel: 'Rides', icon: Car },
   { to: '/tourist-spots', label: 'Nearby Tourist Spots', shortLabel: 'Spots', icon: Camera },
   { to: '/restaurants', label: 'Nearby Restaurants', shortLabel: 'Food', icon: UtensilsCrossed },
   { to: '/ai-assistant', label: 'LACVAY AI', shortLabel: 'AI', icon: Sparkles },

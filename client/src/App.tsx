@@ -17,6 +17,7 @@ const LegalPage = lazy(() => import('@/pages/LegalPage'));
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const MapPage = lazy(() => import('@/pages/MapPage'));
 const CommutePage = lazy(() => import('@/pages/CommutePage'));
+const RidesPage = lazy(() => import('@/pages/RidesPage'));
 const TouristSpotsPage = lazy(() => import('@/pages/TouristSpotsPage'));
 const TouristSpotDetailPage = lazy(() => import('@/pages/TouristSpotDetailPage'));
 const AIAssistantPage = lazy(() => import('@/pages/AIAssistantPage'));
@@ -55,8 +56,8 @@ function AppShellRoutes() {
           <Route path="/" element={<HomePage />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/commute" element={<CommutePage />} />
+          <Route path="/rides" element={<RidesPage />} />
           <Route path="/fares" element={<Navigate to="/map" replace />} />
-          <Route path="/rides" element={<Navigate to="/commute" replace />} />
           <Route path="/tourist-spots" element={<TouristSpotsPage />} />
           <Route path="/tourist-spots/:id" element={<TouristSpotDetailPage />} />
           <Route path="/ai-assistant" element={<AIAssistantPage />} />
