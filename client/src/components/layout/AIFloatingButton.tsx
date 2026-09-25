@@ -6,7 +6,7 @@ export function AIFloatingButton() {
   const location = useLocation();
   
   // Don't show the button if already on the AI assistant page or rides page
-  if (location.pathname.startsWith('/ai-assistant') || location.pathname.startsWith('/rides')) {
+  if (location.pathname.startsWith('/ai-assistant') || location.pathname.startsWith('/assistant') || location.pathname.startsWith('/rides')) {
     return null;
   }
 

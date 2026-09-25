@@ -126,9 +126,9 @@ export function LandingHero() {
           </svg>
 
           <img
-            src="/images/hero-batangas.png"
+            src="/images/logo1.jpg"
             alt="Batangas City landmarks with a traditional jeepney"
-            className="relative w-full animate-float-in mix-blend-multiply"
+            className="relative w-full animate-float-in mix-blend-lighten"
             style={{ animationDelay: '220ms, 1.2s' }}
           />
 
