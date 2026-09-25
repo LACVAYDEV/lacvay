@@ -11,7 +11,6 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { adminService } from '@/services/adminService';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
-import { isEnvAdmin } from '@/lib/adminAccess';
 import type { UserProfile } from '@/types';
 
 type RoleFilter = 'all' | 'traveler' | 'admin';
@@ -113,6 +112,7 @@ export default function AdminUsersPage() {
       title: 'Permanently remove account?',
       description: `This will permanently delete ${user.full_name || user.email}'s account, profile, and saved data. This action cannot be undone.`,
       confirmLabel: 'Remove account',
+      variant: 'danger',
     });
     if (!confirmed) return;
     setDeletingId(user.id);
@@ -227,9 +227,8 @@ export default function AdminUsersPage() {
           <div className="space-y-2">
             {filteredUsers.map((user) => {
               const isAdmin = adminService.isUserAdmin(user);
-              const locked = isEnvAdmin(user.email);
               const isSelf = currentUser?.id === user.id;
-              const canRemove = !isSelf && !locked;
+              const canRemove = !isSelf && !isAdmin;
               const isExpanded = expandedId === user.id;
 
               return (
@@ -272,7 +271,11 @@ export default function AdminUsersPage() {
                   </button>
 
                   {isExpanded && (
-                    <div className="space-y-4 border-t border-gray-100/80 px-4 pb-4 pt-3">
+                    <div
+                      className="space-y-4 border-t border-gray-100/80 px-4 pb-4 pt-3"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
                       <div className="grid gap-3 rounded-2xl bg-white/80 p-4">
                         <DetailRow label="Email" value={user.email} />
                         <DetailRow label="User ID" value={user.id} />
@@ -292,10 +295,11 @@ export default function AdminUsersPage() {
                             value={new Date(user.updated_at).toLocaleString()}
                           />
                         )}
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {user.role === 'admin' && <Badge variant="lime">DB admin</Badge>}
-                          {locked && <Badge variant="yellow">Env admin</Badge>}
-                        </div>
+                        {user.role === 'admin' && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            <Badge variant="lime">Admin (Supabase)</Badge>
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-3 rounded-2xl bg-white/80 p-4">
@@ -331,8 +335,6 @@ export default function AdminUsersPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={locked}
-                              title={locked ? 'Env-configured admins cannot be changed here' : undefined}
                               onClick={() => void toggleAdmin(user)}
                             >
                               {isAdmin ? (
@@ -368,15 +370,26 @@ export default function AdminUsersPage() {
                           <Button
                             size="sm"
                             variant="danger"
-                            disabled={!canRemove || deletingId === user.id}
+                            disabled={deletingId === user.id}
+                            className={cn(!canRemove && 'opacity-60')}
                             title={
                               isSelf
                                 ? 'You cannot delete your own account while signed in'
-                                : locked
-                                  ? 'Env-configured admin accounts cannot be deleted here'
+                                : isAdmin
+                                  ? 'Remove admin role before deleting this account'
                                   : undefined
                             }
-                            onClick={() => void removeUser(user)}
+                            onClick={() => {
+                              if (isSelf) {
+                                showToast('You cannot delete your own account while signed in.');
+                                return;
+                              }
+                              if (isAdmin) {
+                                showToast('Remove admin role before deleting this account.');
+                                return;
+                              }
+                              void removeUser(user);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                             {deletingId === user.id ? 'Removing…' : 'Remove user'}

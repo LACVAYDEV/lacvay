@@ -19,6 +19,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   const isAssistant = location.pathname.startsWith('/ai-assistant');
+  const isHome = location.pathname === '/';
 
   useEffect(() => {
     if (!sidebarOpen) return;
@@ -102,28 +103,30 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
         )}
         inert={sidebarOpen ? true : undefined}
       >
-        <div className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 lg:hidden shrink-0">
-          <button
-            ref={menuButtonRef}
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-            className="rounded-xl p-1.5 hover:bg-gray-100"
-            aria-label="Open menu"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <LogoMark className="size-10" />
-          <span className="text-[17px] font-extrabold text-lacvay-green">LACVAY</span>
-        </div>
+        {isHome && (
+          <div className="flex shrink-0 items-center gap-3 border-b border-lacvay-green/10 bg-white px-4 py-2.5 lg:hidden">
+            <button
+              ref={menuButtonRef}
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-lacvay-green hover:bg-lacvay-blush"
+              aria-label="Open menu"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <LogoMark className="size-9" />
+            <span className="text-[17px] font-extrabold text-lacvay-green">LACVAY</span>
+          </div>
+        )}
 
-        <Header />
+        <Header menuButtonRef={menuButtonRef} onMenuClick={() => setSidebarOpen(true)} />
         <LocationPermissionBar />
         <main
           className={cn(
             'flex-1 min-h-0',
             isAssistant
-              ? 'flex flex-col overflow-hidden p-0'
-              : 'px-4 pb-6 md:px-6 lg:px-7',
+              ? 'flex flex-col overflow-hidden p-0 pt-1.5'
+              : cn('px-4 pb-6 md:px-6 lg:px-7', !isHome && 'pt-1.5 md:pt-2'),
           )}
         >
           {children}
@@ -131,27 +134,31 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
 
         <AIFloatingButton />
 
-        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-100 bg-white px-2 py-1.5 lg:hidden">
+        <nav
+          aria-label="Primary"
+          className="pb-safe fixed bottom-0 left-0 right-0 z-40 border-t border-lacvay-green/10 bg-white/95 px-2 pt-1.5 backdrop-blur lg:hidden"
+        >
           <div className="flex justify-around">
-            {mobileNavItems.map(({ to, label, icon: Icon, end }) => (
+            {mobileNavItems.map(({ to, label, shortLabel, icon: Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={end}
+                aria-label={label}
                 className={({ isActive }) =>
                   cn(
-                    'flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[10px] font-medium',
-                    isActive ? 'text-lacvay-green' : 'text-gray-500',
+                    'flex min-h-[48px] min-w-[56px] flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1 text-[10.5px] font-semibold transition',
+                    isActive ? 'bg-lacvay-blush text-lacvay-green' : 'text-gray-500 hover:text-lacvay-green',
                   )
                 }
               >
                 <Icon className="h-5 w-5" strokeWidth={2} />
-                <span className="max-w-[56px] truncate">{label.split(' ')[0]}</span>
+                <span>{shortLabel}</span>
               </NavLink>
             ))}
           </div>
         </nav>
-        {!isAssistant && <div className="h-16 lg:hidden" />}
+        {!isAssistant && <div className="h-20 lg:hidden" />}
       </div>
     </div>
   );

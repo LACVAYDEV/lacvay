@@ -1,7 +1,15 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { SavedPlace, SearchHistoryItem, AIMessage, ChatSession } from '@/types';
 import { generateId } from '@/lib/utils';
-import { sendAIMessage, AI_SUGGESTIONS } from '@/services/aiService';
+import {
+  sendAIMessage,
+  AI_SUGGESTIONS,
+  getStoredAiOrigin,
+  setStoredAiOrigin,
+  markManualAiOrigin,
+  clearManualAiOrigin,
+} from '@/services/aiService';
+import { GEO_EVENT, GEO_ORIGIN_MANUAL_KEY, getStoredGeo, requestUserLocation, type UserGeo } from '@/lib/userLocation';
 
 interface AppContextValue {
   savedPlaces: SavedPlace[];
@@ -21,6 +29,10 @@ interface AppContextValue {
   setHistorySyncEnabled: (enabled: boolean) => Promise<void>;
   sendAI: (message: string, origin?: string) => Promise<void>;
   clearAIMessages: () => void;
+  aiOrigin: string;
+  setAiOrigin: (value: string) => void;
+  locatingAiOrigin: boolean;
+  locateAiOriginFromGps: () => Promise<void>;
   showToast: (message: string) => void;
   aiSuggestions: string[];
   selectSession: (sessionId: string) => Promise<void>;
@@ -44,7 +56,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([WELCOME_MESSAGE]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiOrigin, setAiOriginState] = useState('');
+  const [locatingAiOrigin, setLocatingAiOrigin] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    const applyGeo = (geo: UserGeo | null) => {
+      try {
+        if (sessionStorage.getItem(GEO_ORIGIN_MANUAL_KEY) === '1') {
+          const stored = getStoredAiOrigin();
+          if (stored) {
+            setAiOriginState(stored);
+            return;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      if (geo?.label) {
+        setAiOriginState(geo.label);
+        setStoredAiOrigin(geo.label);
+      } else {
+        setAiOriginState(getStoredAiOrigin() || 'SM Batangas');
+      }
+    };
+    applyGeo(getStoredGeo());
+    void requestUserLocation().then(applyGeo);
+
+    const onGeo = (event: Event) => {
+      const next = (event as CustomEvent<UserGeo>).detail;
+      applyGeo(next ?? null);
+    };
+    window.addEventListener(GEO_EVENT, onGeo);
+    return () => window.removeEventListener(GEO_EVENT, onGeo);
+  }, []);
+
+  const setAiOrigin = useCallback((value: string) => {
+    setAiOriginState(value);
+    setStoredAiOrigin(value);
+    markManualAiOrigin();
+  }, []);
 
   // Load saved places from localStorage.
   useEffect(() => {
@@ -59,6 +110,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setToast(message);
     setTimeout(() => setToast(null), 3000);
   }, []);
+
+  const locateAiOriginFromGps = useCallback(async () => {
+    setLocatingAiOrigin(true);
+    try {
+      const geo = await requestUserLocation();
+      if (!geo) {
+        showToast('Could not get your location. Allow location access in your browser.');
+        return;
+      }
+      clearManualAiOrigin();
+      setAiOriginState(geo.label);
+      setStoredAiOrigin(geo.label);
+    } finally {
+      setLocatingAiOrigin(false);
+    }
+  }, [showToast]);
 
   const saveItem = useCallback(
     (item: Omit<SavedPlace, 'id' | 'savedAt'>) => {
@@ -97,6 +164,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const sendAI = useCallback(
     async (message: string, origin?: string) => {
+      const effectiveOrigin = (origin ?? aiOrigin).trim() || undefined;
       const userMsg: AIMessage = {
         id: generateId(),
         role: 'user',
@@ -108,7 +176,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAiLoading(true);
 
       try {
-        const reply = await sendAIMessage(message, origin);
+        const reply = await sendAIMessage(message, effectiveOrigin);
         setAiMessages((prev) => [...prev, reply]);
       } catch (err) {
         console.error('Failed to get AI reply:', err);
@@ -117,7 +185,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setAiLoading(false);
       }
     },
-    [showToast],
+    [aiOrigin, showToast],
   );
 
   const clearAIMessages = useCallback(() => {
@@ -158,6 +226,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setHistorySyncEnabled,
         sendAI,
         clearAIMessages,
+        aiOrigin,
+        setAiOrigin,
+        locatingAiOrigin,
+        locateAiOriginFromGps,
         showToast,
         aiSuggestions: AI_SUGGESTIONS,
         selectSession,

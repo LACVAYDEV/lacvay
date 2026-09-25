@@ -58,7 +58,7 @@ export function LocationPermissionBar() {
   if (!visible) return null;
 
   return (
-    <div className="flex items-center gap-3 border-b border-emerald-100 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-950">
+    <div className="flex items-center gap-3 border-b border-lacvay-green/10 bg-lacvay-blush px-4 py-2.5 text-sm text-lacvay-green-dark md:px-6 lg:px-7">
       <MapPin className="h-4 w-4 shrink-0 text-lacvay-green" />
       <p className="min-w-0 flex-1 text-[13px] leading-snug">
         {denied
@@ -82,7 +82,8 @@ export function LocationPermissionBar() {
             }
           })();
         }}
-        className="shrink-0 rounded-full bg-lacvay-green px-3 py-1 text-[12px] font-semibold text-white hover:bg-lacvay-green-dark"
+        disabled={asking}
+        className="shrink-0 rounded-full bg-lacvay-green px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-soft hover:bg-lacvay-green-dark disabled:opacity-70"
       >
         {asking ? 'Asking…' : 'Allow location'}
       </button>
@@ -97,7 +98,7 @@ export function LocationPermissionBar() {
           }
           setDismissed(true);
         }}
-        className="rounded-full p-1 text-emerald-800/70 hover:bg-emerald-100"
+        className="flex h-8 w-8 items-center justify-center rounded-full text-lacvay-green/70 hover:bg-lacvay-green/10 hover:text-lacvay-green"
       >
         <X className="h-4 w-4" />
       </button>

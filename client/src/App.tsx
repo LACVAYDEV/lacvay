@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { PageTransition } from '@/components/layout/PageTransition';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
 import { ProtectedRoute, PublicOnlyRoute, AdminRoute, SessionModeRoute, AppSplash } from '@/components/auth/RouteGuards';
@@ -7,6 +8,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { LoadingState } from '@/components/ui/States';
 import { requestUserLocation } from '@/lib/userLocation';
 import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog';
+import { ToastHost } from '@/components/ui/ToastHost';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
@@ -43,13 +45,13 @@ function LocationBootstrap() {
   return null;
 }
 
-function AppShell() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+function AppShellRoutes() {
+  const location = useLocation();
 
   return (
-    <AppLayout sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
+    <PageTransition routeKey={location.pathname}>
       <Suspense fallback={<LoadingState />}>
-        <Routes>
+        <Routes location={location}>
           <Route path="/" element={<HomePage />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/commute" element={<CommutePage />} />
@@ -67,6 +69,16 @@ function AppShell() {
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Suspense>
+    </PageTransition>
+  );
+}
+
+function AppShell() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+    <AppLayout sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
+      <AppShellRoutes />
     </AppLayout>
   );
 }
@@ -95,6 +107,7 @@ export default function App() {
       <AuthProvider>
         <AppProvider>
           <ConfirmDialogProvider>
+            <ToastHost />
             <Suspense fallback={<AppSplash />}>
               <Routes>
               {/* Root URL: LandingPage for visitors; User AppShell for signed-in commuters */}

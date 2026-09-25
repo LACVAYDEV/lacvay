@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Camera } from 'lucide-react';
 import { dataService } from '@/services/dataService';
 import type { TouristSpot } from '@/types';
 import { Card } from '@/components/ui/Card';
+import { SectionHeader, SectionLink } from '@/components/ui/SectionHeader';
 
 export function TouristSpotsSection() {
   const navigate = useNavigate();
@@ -14,19 +16,12 @@ export function TouristSpotsSection() {
 
   return (
     <Card className="h-full">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="text-[15px] font-bold text-gray-900">Nearby Tourist Spots</h3>
-          <p className="text-[11.5px] text-gray-500">Top attractions, historical sites, and natural escapes across Batangas</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate('/tourist-spots')}
-          className="text-[12px] font-semibold text-lacvay-green hover:underline shrink-0 ml-2"
-        >
-          View All
-        </button>
-      </div>
+      <SectionHeader
+        title="Nearby Tourist Spots"
+        subtitle="Attractions, heritage sites, and nature escapes"
+        icon={<Camera className="h-4 w-4" />}
+        action={<SectionLink label="View all" onClick={() => navigate('/tourist-spots')} />}
+      />
 
       <div className="grid grid-cols-2 items-start gap-4 lg:grid-cols-4">
         {featured.map((spot) => (

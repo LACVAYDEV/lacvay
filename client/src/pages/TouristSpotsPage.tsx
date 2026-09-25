@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Camera } from 'lucide-react';
 import { dataService } from '@/services/dataService';
 import { favoritesService } from '@/services/favoritesService';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { PlaceCard } from '@/components/places/PlaceCard';
-import { LoadingState, EmptyState } from '@/components/ui/States';
+import { EmptyState, CardGridSkeleton } from '@/components/ui/States';
+import { SearchField, FilterChip } from '@/components/ui/SearchField';
 import type { TouristSpot, TouristCategory } from '@/types';
 
 const categories: (TouristCategory | 'All')[] = [
@@ -23,6 +25,7 @@ export default function TouristSpotsPage() {
   const [spots, setSpots] = useState<TouristSpot[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<TouristCategory | 'All'>('All');
+  const [query, setQuery] = useState('');
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const { user } = useAuth();
@@ -65,31 +68,67 @@ export default function TouristSpotsPage() {
     }
   };
 
-  if (loading) return <LoadingState />;
+  const visibleSpots = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return spots;
+    return spots.filter(
+      (spot) =>
+        spot.name.toLowerCase().includes(q) ||
+        spot.shortDescription?.toLowerCase().includes(q) ||
+        spot.location?.toLowerCase().includes(q),
+    );
+  }, [spots, query]);
+
+  const hasFilters = filter !== 'All' || query.trim() !== '';
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter tourist spots by category">
-        {categories.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setFilter(c)}
-            aria-pressed={filter === c}
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              filter === c ? 'bg-lacvay-green text-white' : 'bg-white text-gray-600 shadow-soft'
-            }`}
-          >
-            {c}
-          </button>
-        ))}
+    <div className="space-y-5">
+      <div className="space-y-3 rounded-3xl border border-lacvay-green/5 bg-white p-3 shadow-soft sm:p-4">
+        <SearchField
+          label="Search tourist spots"
+          value={query}
+          onChange={setQuery}
+          placeholder="Search by name or area"
+        />
+
+        <div
+          className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 sm:flex-wrap"
+          role="group"
+          aria-label="Filter tourist spots by category"
+        >
+          {categories.map((c) => (
+            <FilterChip key={c} active={filter === c} onClick={() => setFilter(c)}>
+              {c}
+            </FilterChip>
+          ))}
+        </div>
       </div>
 
-      {spots.length === 0 ? (
-        <EmptyState title="No spots found" description="Try a different category filter." />
+      {loading ? (
+        <CardGridSkeleton />
+      ) : visibleSpots.length === 0 ? (
+        <EmptyState
+          icon={<Camera className="h-6 w-6" />}
+          title="No spots found"
+          description={query.trim() ? `Nothing matches "${query.trim()}".` : 'Try a different category.'}
+          action={
+            hasFilters ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setFilter('All');
+                  setQuery('');
+                }}
+                className="rounded-full bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-lacvay-green-dark"
+              >
+                Clear filters
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {[...spots]
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+          {[...visibleSpots]
             .sort((a, b) => {
               const aFav = favoriteIds.has(a.id) || isSaved(a.id);
               const bFav = favoriteIds.has(b.id) || isSaved(b.id);

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Navigation } from 'lucide-react';
+import { Navigation, UtensilsCrossed } from 'lucide-react';
 import { dataService } from '@/services/dataService';
 import type { Restaurant } from '@/types';
 import { Card } from '@/components/ui/Card';
+import { SectionHeader, SectionLink } from '@/components/ui/SectionHeader';
 
 export function RestaurantsSection() {
   const navigate = useNavigate();
@@ -22,19 +23,12 @@ export function RestaurantsSection() {
 
   return (
     <Card className="h-full">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="text-[15px] font-bold text-gray-900">Nearby Restaurants</h3>
-          <p className="text-[11.5px] text-gray-500">Local delicacies, fresh seafood, and cafes in Batangas</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate('/restaurants')}
-          className="text-[12px] font-semibold text-lacvay-green hover:underline shrink-0 ml-2"
-        >
-          View All
-        </button>
-      </div>
+      <SectionHeader
+        title="Nearby Restaurants"
+        subtitle="Lomi houses, cafés, and local favorites"
+        icon={<UtensilsCrossed className="h-4 w-4" />}
+        action={<SectionLink label="View all" onClick={() => navigate('/restaurants')} />}
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {restaurants.map((r) => (

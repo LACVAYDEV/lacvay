@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database.types.js';
+import { supabaseAdmin } from '../services/supabaseAdmin.js';
 import '../config/env.js';
 
 declare global {
@@ -14,11 +15,38 @@ declare global {
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-function parseAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS ?? process.env.VITE_ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
+function roleIsAdmin(role: string | null | undefined): boolean {
+  return role?.trim().toLowerCase() === 'admin';
+}
+
+function userClientForToken(token: string) {
+  return createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+}
+
+async function callerIsAdmin(token: string, userId: string): Promise<boolean> {
+  const userClient = userClientForToken(token);
+
+  const { data: profile, error: profileError } = await userClient
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (!profileError && roleIsAdmin(profile?.role)) return true;
+
+  if (supabaseAdmin) {
+    const { data: adminProfile, error: adminProfileError } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (!adminProfileError && roleIsAdmin(adminProfile?.role)) return true;
+  }
+
+  return false;
 }
 
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
@@ -43,15 +71,15 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
   }
 
   const email = user.email?.toLowerCase() ?? '';
-  const envAdmins = parseAdminEmails();
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle();
+  let isAdmin = false;
+  try {
+    isAdmin = await callerIsAdmin(token, user.id);
+  } catch {
+    res.status(500).json({ error: 'Could not verify admin role.' });
+    return;
+  }
 
-  const isAdmin = profile?.role === 'admin' || envAdmins.includes(email);
   if (!isAdmin) {
     res.status(403).json({ error: 'Admin access required.' });
     return;

@@ -90,7 +90,7 @@ export function PromotionsSection() {
           <button
             type="button"
             onClick={() => navigate('/promotions')}
-            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-emerald-50/40 to-teal-50/30 p-4 text-left transition duration-200 hover:shadow-md border border-emerald-200/60 flex flex-col justify-between"
+            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-lacvay-blush via-lacvay-blush/50 to-white p-4 text-left transition duration-200 hover:shadow-md border border-lacvay-green/15 flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between">
@@ -111,9 +111,9 @@ export function PromotionsSection() {
               </p>
             </div>
 
-            <div className="mt-3.5 flex items-center justify-between pt-2 border-t border-emerald-200/50">
+            <div className="mt-3.5 flex items-center justify-between pt-2 border-t border-lacvay-green/10">
               {promo2.promoCode ? (
-                <span className="inline-block rounded-lg bg-white px-2.5 py-1 text-[11px] font-mono font-bold text-gray-800 shadow-sm border border-emerald-200">
+                <span className="inline-block rounded-lg bg-white px-2.5 py-1 text-[11px] font-mono font-bold text-gray-800 shadow-sm border border-lacvay-green/15">
                   Code: {promo2.promoCode}
                 </span>
               ) : <div />}
