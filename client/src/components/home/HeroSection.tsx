@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 const heroBackground = {
   backgroundImage: [
     'linear-gradient(90deg, rgba(247, 243, 234, 0.96) 0%, rgba(248, 231, 215, 0.78) 34%, rgba(248, 231, 215, 0) 64%)',
-    "url('/images/hero-batangas-transparent.png')",
+    "url('/images/logo1.jpg')",
   ].join(', '),
 };
 

@@ -11,7 +11,6 @@ import {
   Car,
 } from 'lucide-react';
 import { LogoMark, SidebarWaveArt } from '@/components/ui/Logo';
-import { TransportBar } from '@/components/home/TransportBar';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -71,12 +70,7 @@ export function Sidebar({ onNavigate, className }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="relative mt-4 mb-3 px-0.5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/60 mb-2">Quick Access</p>
-        <TransportBar variant="vertical" className="gap-2" />
-      </div>
-
-      <div className="relative -mx-3.5 -mb-5 h-[92px] shrink-0">
+      <div className="relative -mx-3.5 -mb-5 mt-2 h-[92px] shrink-0">
         <SidebarWaveArt className="pointer-events-none absolute inset-0 h-full w-full" />
         <div className="absolute left-5 top-2.5">
           <p className="font-script text-[18px] leading-none text-white/90">More places,</p>
