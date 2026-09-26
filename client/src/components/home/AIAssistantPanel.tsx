@@ -162,18 +162,3 @@ export function AIAssistantSection() {
 
 // Backwards-compatible alias for existing imports
 export const AIAssistantPanel = AIAssistantSection;
-
-export function AIAssistantFab() {
-  const navigate = useNavigate();
-
-  return (
-    <button
-      type="button"
-      onClick={() => navigate('/ai-assistant')}
-      className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-lacvay-green text-white shadow-lg lg:hidden transition hover:scale-105"
-      aria-label="Open LACVAY AI"
-    >
-      <Sparkles className="h-6 w-6" />
-    </button>
-  );
-}

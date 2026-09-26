@@ -3,13 +3,6 @@ import { Sparkles, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
-const heroBackground = {
-  backgroundImage: [
-    'linear-gradient(90deg, rgba(247, 243, 234, 0.96) 0%, rgba(248, 231, 215, 0.78) 34%, rgba(248, 231, 215, 0) 64%)',
-    "url('/images/logo1.jpg')",
-  ].join(', '),
-};
-
 export function HeroSection({ className = '' }: { className?: string }) {
   const navigate = useNavigate();
 
@@ -19,9 +12,16 @@ export function HeroSection({ className = '' }: { className?: string }) {
         'home-hero relative h-[360px] overflow-hidden rounded-[22px] bg-lacvay-cream shadow-card sm:h-[320px] sm:rounded-[26px] lg:h-[267px]',
         className,
       )}
-      style={heroBackground}
     >
-      <div className="home-hero-landmark" aria-hidden="true" />
+      <img
+        src="/images/logo1.jpg"
+        alt="Batangas City landscape and the Montemaria shrine"
+        className="absolute inset-0 h-full w-full object-cover object-center sm:object-[58%_center] lg:object-[65%_center]"
+      />
+      <div
+        className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,243,234,0.98)_0%,rgba(247,243,234,0.94)_36%,rgba(247,243,234,0.45)_62%,rgba(247,243,234,0.08)_100%)]"
+        aria-hidden="true"
+      />
 
       <div className="relative z-10 flex h-full items-center px-5 py-7 min-[375px]:px-6 sm:px-8 sm:py-8 lg:px-10">
         <div className="max-w-[19rem] sm:max-w-[23rem]">

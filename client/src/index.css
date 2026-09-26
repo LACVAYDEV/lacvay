@@ -61,47 +61,6 @@ body {
   }
 }
 
-.home-hero {
-  background-position: center, 60% center;
-  background-repeat: no-repeat;
-  background-size: cover, auto 100%;
-}
-
-.home-hero-landmark {
-  display: none;
-}
-
-@media (min-width: 640px) {
-  .home-hero {
-    background-position: center, left 14%;
-    background-size: cover, 135% auto;
-  }
-}
-
-@media (min-width: 1024px) {
-  .home-hero-landmark {
-    position: absolute;
-    inset: 0 calc(22% - 177px) 0 auto;
-    display: block;
-    width: 421px;
-    background: url('/images/logo1.jpg') center / 100% 100% no-repeat;
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent 0%,
-      #000 24%,
-      #000 76%,
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent 0%,
-      #000 24%,
-      #000 76%,
-      transparent 100%
-    );
-  }
-}
-
 .leaflet-container {
   font-family: inherit;
   z-index: 0;
@@ -417,4 +376,3 @@ body {
     animation: none;
   }
 }
-
