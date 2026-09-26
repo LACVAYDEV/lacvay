@@ -16,7 +16,7 @@ export function HeroSection({ className = '' }: { className?: string }) {
   return (
     <section
       className={cn(
-        'home-hero relative h-[360px] overflow-hidden rounded-[22px] bg-lacvay-cream shadow-card sm:h-[320px] sm:rounded-[26px] lg:h-[267px]',
+        'home-hero relative h-[420px] overflow-hidden rounded-[22px] bg-lacvay-cream shadow-card sm:h-[380px] sm:rounded-[26px] lg:h-[380px]',
         className,
       )}
       style={heroBackground}
