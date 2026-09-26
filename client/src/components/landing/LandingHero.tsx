@@ -127,8 +127,8 @@ export function LandingHero() {
 
           <img
             src="/images/logo1.jpg"
-            alt="Batangas City landmarks with a traditional jeepney"
-            className="relative w-full animate-float-in mix-blend-lighten"
+            alt="Batangas City landscape and the Montemaria shrine"
+            className="relative w-full animate-float-in rounded-3xl object-cover shadow-card"
             style={{ animationDelay: '220ms, 1.2s' }}
           />
 

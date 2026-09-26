@@ -65,8 +65,6 @@ export default {
         'scale-in': 'scale-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both',
         float: 'float 7s ease-in-out infinite',
         'float-sm': 'float-sm 5.5s ease-in-out infinite',
-        // Applied directly to blended images: a transform on an ancestor would
-        // isolate them from their backdrop and break mix-blend-mode.
         'float-in':
           'fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both, float 7s ease-in-out 1s infinite',
         drift: 'drift 20s ease-in-out infinite',

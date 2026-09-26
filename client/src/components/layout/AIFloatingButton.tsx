@@ -6,8 +6,7 @@ export function AIFloatingButton() {
   const location = useLocation();
   
   if (
-    location.pathname === '/'
-    || location.pathname.startsWith('/ai-assistant')
+    location.pathname.startsWith('/ai-assistant')
     || location.pathname.startsWith('/assistant')
     || location.pathname.startsWith('/rides')
   ) {
