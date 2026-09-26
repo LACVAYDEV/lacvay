@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 const heroBackground = {
   backgroundImage: [
-    'linear-gradient(90deg, rgba(247, 243, 234, 0.96) 0%, rgba(248, 231, 215, 0.78) 34%, rgba(248, 231, 215, 0) 64%)',
+    'linear-gradient(90deg, rgba(200, 225, 245, 0.96) 0%, rgba(180, 210, 240, 0.78) 34%, rgba(180, 210, 240, 0) 64%)',
     "url('/images/logo1.jpg')",
   ].join(', '),
 };
