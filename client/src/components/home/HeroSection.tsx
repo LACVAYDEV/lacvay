@@ -29,11 +29,11 @@ export function HeroSection({ className = '' }: { className?: string }) {
             <MapPin className="h-3 w-3" strokeWidth={3} />
             BATANGAS CITY
           </span>
-          <h2 className="mt-3 leading-[1.08] text-lacvay-green-dark">
+          <h2 className="mt-3 leading-[1.08] text-white drop-shadow-md">
             <span className="block font-display text-[23px] font-bold tracking-tight min-[375px]:text-[25px] sm:text-[30px]">
               Explore Batangas City
             </span>
-            <span className="mt-1 block font-signature text-[29px] font-normal text-lacvay-yellow min-[375px]:text-[32px] sm:text-[38px]">
+            <span className="mt-1 block font-signature text-[29px] font-normal text-white min-[375px]:text-[32px] sm:text-[38px]">
               with LACVAY
             </span>
           </h2>
