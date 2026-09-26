@@ -16,6 +16,9 @@ export default {
       },
       fontFamily: {
         sans: ['Poppins', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Playfair Display', 'serif'],
+        montserrat: ['Montserrat', 'sans-serif'],
+        signature: ['Brittany Signature', 'Caveat', 'cursive'],
         script: ['Caveat', 'cursive'],
       },
       boxShadow: {
