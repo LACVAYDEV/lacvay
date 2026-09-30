@@ -10,6 +10,8 @@ interface LoginPopupAdProps {
 export function LoginPopupAd({ isOpen, onClose }: LoginPopupAdProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [showAd, setShowAd] = useState(false);
+  const [email, setEmail] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -32,6 +34,14 @@ export function LoginPopupAd({ isOpen, onClose }: LoginPopupAdProps) {
     setTimeout(onClose, 300);
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
+    setTimeout(() => {
+      handleClose();
+    }, 1500);
+  };
+
   if (!isVisible) return null;
 
   return (
@@ -50,7 +60,7 @@ export function LoginPopupAd({ isOpen, onClose }: LoginPopupAdProps) {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
           className={cn(
-            'relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 pointer-events-auto',
+            'relative w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden transition-all duration-300 pointer-events-auto',
             showAd
               ? 'opacity-100 scale-100 translate-y-0'
               : 'opacity-0 scale-95 translate-y-4',
@@ -59,69 +69,65 @@ export function LoginPopupAd({ isOpen, onClose }: LoginPopupAdProps) {
           {/* Close button */}
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 z-10 flex items-center justify-center rounded-full p-2 text-gray-500 hover:bg-gray-100 transition"
+            className="absolute top-4 right-4 z-10 flex items-center justify-center rounded p-1 text-gray-400 hover:text-gray-600 transition"
             aria-label="Close advertisement"
           >
-            <X className="h-5 w-5" strokeWidth={2.5} />
+            <X className="h-6 w-6" strokeWidth={2} />
           </button>
 
-          {/* Ad Content */}
-          <div className="bg-gradient-to-br from-teal-600 via-blue-600 to-blue-800 px-6 py-8">
-            <div className="text-center">
-              <div className="mb-4 text-6xl">🎉</div>
-              <h2 className="text-2xl font-bold text-white mb-2">
-                Welcome to LACVAY!
-              </h2>
-              <p className="text-sm text-white/90 mb-6">
-                Explore your city with ease. Start your adventure now!
-              </p>
+          {/* Content */}
+          <div className="px-8 py-10">
+            {!submitted ? (
+              <>
+                <h2 className="text-center text-3xl font-bold text-lacvay-green mb-3">
+                  Get 20% Off
+                </h2>
+                <p className="text-center text-sm text-gray-600 mb-6">
+                  Enter your email. Get your 20% off code.
+                  <br />
+                  Be the first to know about all things LACVAY.
+                </p>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-white">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-white/30 flex items-center justify-center">
-                    ✓
-                  </div>
-                  <span className="text-sm">Find the best tourist spots</span>
-                </div>
-                <div className="flex items-center gap-3 text-white">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-white/30 flex items-center justify-center">
-                    ✓
-                  </div>
-                  <span className="text-sm">Book affordable rides</span>
-                </div>
-                <div className="flex items-center gap-3 text-white">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-white/30 flex items-center justify-center">
-                    ✓
-                  </div>
-                  <span className="text-sm">Discover great restaurants</span>
-                </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email address"
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-lacvay-green focus:ring-1 focus:ring-lacvay-green"
+                  />
+
+                  <button
+                    type="submit"
+                    className="w-full px-4 py-3 rounded bg-gradient-to-r from-teal-600 to-blue-600 text-white font-bold text-sm hover:shadow-lg transition"
+                  >
+                    Get My 20% Off
+                  </button>
+                </form>
+
+                <button
+                  onClick={handleClose}
+                  className="w-full mt-3 py-2 text-sm text-gray-600 hover:text-gray-800 transition font-medium"
+                >
+                  Continue Shopping
+                </button>
+              </>
+            ) : (
+              <div className="text-center py-4">
+                <div className="mb-4 text-5xl">✓</div>
+                <h3 className="text-xl font-bold text-lacvay-green mb-2">
+                  Thank you!
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Your discount code has been sent to<br />
+                  <span className="font-semibold">{email}</span>
+                </p>
+                <p className="text-xs text-gray-500">
+                  Use code: <span className="font-bold text-lacvay-green">WELCOME20</span>
+                </p>
               </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="px-6 py-4 space-y-2">
-            <button
-              onClick={() => {
-                handleClose();
-              }}
-              className="w-full px-4 py-3 rounded-full bg-gradient-to-r from-teal-600 to-blue-600 text-white font-semibold hover:shadow-lg transition"
-            >
-              Start Exploring
-            </button>
-            <button
-              onClick={handleClose}
-              className="w-full px-4 py-3 rounded-full border-2 border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition"
-            >
-              Maybe Later
-            </button>
-          </div>
-
-          {/* Promo badge */}
-          <div className="bg-lacvay-blush px-6 py-3 text-center border-t border-gray-100">
-            <p className="text-xs text-lacvay-green font-semibold">
-              🎁 First ride discount code: WELCOME20
-            </p>
+            )}
           </div>
         </div>
       </div>
