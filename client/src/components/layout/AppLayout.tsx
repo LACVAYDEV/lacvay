@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Sidebar, mobileNavItems } from './Sidebar';
@@ -6,6 +6,7 @@ import { Header } from './Header';
 import { LocationPermissionBar } from './LocationPermissionBar';
 import { AIFloatingButton } from './AIFloatingButton';
 import { LogoMark } from '@/components/ui/Logo';
+import { AdvertisementBanner } from '@/components/ads/AdvertisementBanner';
 import { cn } from '@/lib/utils';
 
 interface AppLayoutProps {
@@ -20,6 +21,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
   const location = useLocation();
   const isAssistant = location.pathname.startsWith('/ai-assistant');
   const isHome = location.pathname === '/';
+  const [showBanner, setShowBanner] = useState(true);
 
   useEffect(() => {
     if (!sidebarOpen) return;
@@ -121,6 +123,11 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
 
         <Header menuButtonRef={menuButtonRef} onMenuClick={() => setSidebarOpen(true)} />
         <LocationPermissionBar />
+        {showBanner && (
+          <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-7">
+            <AdvertisementBanner onClose={() => setShowBanner(false)} />
+          </div>
+        )}
         <main
           className={cn(
             'flex-1 min-h-0',
