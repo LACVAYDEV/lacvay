@@ -208,6 +208,7 @@ export type Database = {
           full_name: string | null
           id: string
           role: string
+          subscription_tier: string
           updated_at: string | null
         }
         Insert: {
@@ -217,6 +218,7 @@ export type Database = {
           full_name?: string | null
           id: string
           role?: string
+          subscription_tier?: string
           updated_at?: string | null
         }
         Update: {
@@ -226,9 +228,45 @@ export type Database = {
           full_name?: string | null
           id?: string
           role?: string
+          subscription_tier?: string
           updated_at?: string | null
         }
         Relationships: []
+      }
+      usage_stats: {
+        Row: {
+          created_at: string | null
+          id: string
+          prompt_count: number
+          updated_at: string | null
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          prompt_count?: number
+          updated_at?: string | null
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          prompt_count?: number
+          updated_at?: string | null
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       promotions: {
         Row: {

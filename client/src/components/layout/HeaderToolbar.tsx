@@ -13,6 +13,7 @@ import { dataService } from '@/services/dataService';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { readPreferences } from '@/lib/preferences';
+import { CustomerSupportButton } from './CustomerSupportButton';
 
 interface AppNotification {
   id: string;
@@ -230,6 +231,8 @@ export function HeaderToolbar({ className }: { className?: string }) {
           </div>
         )}
       </div>
+
+      <CustomerSupportButton />
 
       {user ? (
         <div ref={profileRef} className="relative">

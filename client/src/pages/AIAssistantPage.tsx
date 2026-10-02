@@ -24,6 +24,12 @@ import { useAuth } from '@/context/AuthContext';
 
 import { savedGuidesService } from '@/services/savedGuidesService';
 
+import { usePromptLimit } from '@/hooks/usePromptLimit';
+
+import { UpgradeModal } from '@/components/ui/UpgradeModal';
+
+import { PromptCounter } from '@/components/ui/PromptCounter';
+
 import {
 
   getStoredAiOrigin,
@@ -252,6 +258,12 @@ export default function AIAssistantPage() {
 
   const [savedGuideIds, setSavedGuideIds] = useState<Set<string>>(new Set());
 
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+
+
+  const { remainingPrompts, totalPrompts, isPremium, refreshUsage, usage } = usePromptLimit();
+
 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -309,6 +321,21 @@ export default function AIAssistantPage() {
     setInput('');
 
     await sendAI(msg);
+
+    // Refresh usage after sending a prompt
+    setTimeout(() => {
+
+      refreshUsage();
+
+      // Show upgrade modal if limit is reached (for free accounts)
+
+      if (!isPremium && remainingPrompts <= 0) {
+
+        setShowUpgradeModal(true);
+
+      }
+
+    }, 1000);
 
     inputRef.current?.focus();
 
@@ -701,6 +728,15 @@ export default function AIAssistantPage() {
 
 
       <footer className="shrink-0 border-t border-lacvay-green/8 bg-white/95 px-4 py-3 backdrop-blur pb-20 sm:px-6 md:px-8 lg:px-10 lg:pb-4">
+        {!isPremium && usage && (
+          <div className="mb-3">
+            <PromptCounter
+              remaining={remainingPrompts}
+              total={totalPrompts}
+              isPremium={isPremium}
+            />
+          </div>
+        )}
 
         <form
 
@@ -753,6 +789,18 @@ export default function AIAssistantPage() {
         </form>
 
       </footer>
+
+      <UpgradeModal
+
+        open={showUpgradeModal}
+
+        onClose={() => setShowUpgradeModal(false)}
+
+        remaining_prompts={remainingPrompts}
+
+        total_prompts={totalPrompts}
+
+      />
 
     </div>
 

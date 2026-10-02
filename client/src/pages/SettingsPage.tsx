@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, LogOut, Trash2, Mail } from 'lucide-react';
+import { Loader2, LogOut, Trash2, Mail, Zap } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Input, Select } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
+import { usePromptLimit } from '@/hooks/usePromptLimit';
 import { supabase } from '@/lib/supabase';
 import { updateUserMetadata } from '@/lib/userMetadata';
 import { Modal } from '@/components/ui/Modal';
@@ -18,6 +19,7 @@ import {
 
 export default function SettingsPage() {
   const { user, profile, signOut, refreshProfile } = useAuth();
+  const { isPremium, remainingPrompts, totalPrompts } = usePromptLimit();
   const [name, setName] = useState(user?.user_metadata?.full_name || user?.email?.split('@')[0] || '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [language, setLanguage] = useState<'en'>('en');
@@ -192,7 +194,44 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        <Card className="flex h-full flex-col gap-3">
+        <Card className="flex h-full flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-lacvay-green" />
+            <h3 className="text-base font-bold text-gray-900">Subscription & Limits</h3>
+          </div>
+          <div className="space-y-3">
+            <div className="rounded-lg bg-gray-50 p-3">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Account Type</p>
+              <p className="mt-1 text-sm font-bold text-gray-900">
+                {isPremium ? '✨ Premium' : '🆓 Free'}
+              </p>
+            </div>
+            {!isPremium && (
+              <div className="rounded-lg bg-lacvay-green/5 p-3">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Weekly AI Prompts</p>
+                <p className="mt-1 flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-lacvay-green">{remainingPrompts}</span>
+                  <span className="text-xs text-gray-600">of {totalPrompts} remaining</span>
+                </p>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-200">
+                  <div
+                    className="h-full bg-lacvay-green"
+                    style={{ width: `${(remainingPrompts / totalPrompts) * 100}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-500">Resets every Monday at 12:00 AM</p>
+              </div>
+            )}
+            <button
+              type="button"
+              className="w-full rounded-lg border-2 border-lacvay-green bg-transparent px-3 py-2 text-sm font-semibold text-lacvay-green transition hover:bg-lacvay-green hover:text-white"
+            >
+              {isPremium ? 'Manage Subscription' : 'Upgrade to Premium'}
+            </button>
+          </div>
+        </Card>
+
+        <Card className="flex h-full flex-col gap-4">
           <div className="flex items-center gap-2 text-lacvay-green">
             <Mail className="h-5 w-5 shrink-0" />
             <h3 className="text-base font-bold text-gray-900">Partner & Advertising Inquiries</h3>
@@ -208,7 +247,9 @@ export default function SettingsPage() {
             partners@lacvay.ph
           </a>
         </Card>
+      </div>
 
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card className="flex h-full flex-col gap-3">
           <h3 className="text-base font-bold text-gray-900">Privacy & Account</h3>
           <div className="flex flex-1 flex-col gap-2">
