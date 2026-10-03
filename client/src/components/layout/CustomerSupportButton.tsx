@@ -6,7 +6,7 @@ const SOCIAL_LINKS = [
   {
     id: 'facebook',
     name: 'Facebook',
-    url: 'https://www.facebook.com/profile.php?id=61594786597906',
+    url: 'https://www.facebook.com/share/1CEcGe3Cxo/',
     icon: Facebook,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
