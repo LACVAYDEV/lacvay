@@ -73,17 +73,17 @@ export default function TouristSpotDetailPage() {
   };
 
   return (
-    <div className="w-full space-y-5">
+    <div className="w-full space-y-4">
       <button
         type="button"
         onClick={() => navigate('/tourist-spots')}
-        className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-semibold text-lacvay-green shadow-soft transition hover:bg-lacvay-blush"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-100 bg-white px-3.5 py-2 text-sm font-semibold text-lacvay-green shadow-sm transition hover:bg-lacvay-blush"
       >
         <ChevronLeft className="h-4 w-4" />
         Back to Tourist Spots
       </button>
 
-      <div className={`relative overflow-hidden rounded-3xl shadow-card ${isNavigating ? 'tourist-spot-image-out' : incomingTransition ? 'tourist-spot-image-in' : ''}`}>
+      <div className={`relative overflow-hidden rounded-lg border border-gray-100 shadow-sm ${isNavigating ? 'tourist-spot-image-out' : incomingTransition ? 'tourist-spot-image-in' : ''}`}>
           {isVideoMediaUrl(spot.imageUrl) ? (
             <video
               src={spot.imageUrl}
@@ -99,13 +99,13 @@ export default function TouristSpotDetailPage() {
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/25" />
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5 sm:p-7">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="border-0 bg-white/95 text-lacvay-green shadow-sm backdrop-blur">
+              <Badge className="border-0 rounded-md bg-white/95 text-lacvay-green shadow-sm backdrop-blur">
                 {spot.categoryLabel ?? spot.category}
               </Badge>
               {spot.isFeatured && (
-                <Badge variant="yellow" className="font-bold shadow-sm backdrop-blur">
+                <Badge variant="yellow" className="rounded-md font-bold shadow-sm backdrop-blur">
                   ★ Promoted
                 </Badge>
               )}
@@ -124,34 +124,34 @@ export default function TouristSpotDetailPage() {
             type="button"
             onClick={() => previousSpot && navigateToSpot(previousSpot, 'previous')}
             disabled={!previousSpot || isNavigating}
-            className="absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-lg transition hover:scale-105 hover:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/70 disabled:cursor-not-allowed disabled:opacity-40 sm:left-6 sm:h-12 sm:w-12"
+            className="absolute left-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-sm transition hover:scale-105 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lacvay-lime/70 disabled:cursor-not-allowed disabled:opacity-40 sm:left-5 sm:h-10 sm:w-10"
             aria-label={previousSpot ? `View previous destination: ${previousSpot.name}` : 'No previous destination'}
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             type="button"
             onClick={() => nextSpot && navigateToSpot(nextSpot, 'next')}
             disabled={!nextSpot || isNavigating}
-            className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-lg transition hover:scale-105 hover:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/70 disabled:cursor-not-allowed disabled:opacity-40 sm:right-6 sm:h-12 sm:w-12"
+            className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-sm transition hover:scale-105 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lacvay-lime/70 disabled:cursor-not-allowed disabled:opacity-40 sm:right-5 sm:h-10 sm:w-10"
             aria-label={nextSpot ? `View next destination: ${nextSpot.name}` : 'No next destination'}
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-5 w-5" />
           </button>
       </div>
 
-      <div className={`tourist-spot-details grid gap-5 lg:grid-cols-3 lg:items-start ${isNavigating ? 'tourist-spot-details-out' : incomingTransition ? 'tourist-spot-details-in' : ''}`}>
+      <div className={`tourist-spot-details grid gap-4 lg:grid-cols-3 lg:items-start ${isNavigating ? 'tourist-spot-details-out' : incomingTransition ? 'tourist-spot-details-in' : ''}`}>
         <Card className="space-y-4 lg:col-span-2">
           <h2 className="text-base font-bold text-gray-900">About this place</h2>
           <p className="leading-relaxed text-gray-600">{spot.description}</p>
         </Card>
 
-        <div className="space-y-5">
+        <div className="space-y-4">
           <Card className="space-y-4">
             <h2 className="text-base font-bold text-gray-900">Visit details</h2>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {spot.openingHours && (
-                <div className="flex items-start gap-3 rounded-2xl bg-lacvay-cream px-3.5 py-3">
+                <div className="flex items-start gap-3 rounded-lg bg-lacvay-cream px-3 py-2.5">
                   <Clock className="mt-0.5 h-4 w-4 shrink-0 text-lacvay-green" />
                   <div className="min-w-0">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Opening hours</p>
@@ -160,7 +160,7 @@ export default function TouristSpotDetailPage() {
                 </div>
               )}
               {spot.coordinates && (
-                <div className="flex items-start gap-3 rounded-2xl bg-lacvay-cream px-3.5 py-3">
+                <div className="flex items-start gap-3 rounded-lg bg-lacvay-cream px-3 py-2.5">
                   <Compass className="mt-0.5 h-4 w-4 shrink-0 text-lacvay-green" />
                   <div className="min-w-0">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Coordinates</p>

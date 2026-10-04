@@ -19,13 +19,13 @@ export function SearchField({ value, onChange, placeholder, label, className }: 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-full border border-gray-200 bg-lacvay-cream/60 py-3 pl-11 pr-11 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-lacvay-green focus:bg-white focus:ring-2 focus:ring-lacvay-green/15"
+        className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-11 pr-11 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-lacvay-green focus:bg-white focus:ring-2 focus:ring-lacvay-green/15"
       />
       {value && (
         <button
           type="button"
           onClick={() => onChange('')}
-          className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+          className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
           aria-label="Clear search"
         >
           <X className="h-4 w-4" />
@@ -52,9 +52,9 @@ export function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'shrink-0 rounded-full px-3.5 py-2 text-[12.5px] font-semibold transition',
+        'shrink-0 rounded-md px-3 py-1.5 text-[12.5px] font-semibold transition',
         active
-          ? 'bg-lacvay-green text-white shadow-soft'
+          ? 'bg-lacvay-green text-white shadow-sm'
           : 'bg-lacvay-cream text-gray-600 hover:bg-lacvay-blush hover:text-lacvay-green',
         className,
       )}

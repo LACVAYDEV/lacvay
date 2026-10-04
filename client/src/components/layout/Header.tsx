@@ -15,7 +15,6 @@ const PAGE_TITLES: Array<{ match: (path: string) => boolean; title: string }> = 
   { match: (p) => /^\/tourist-spots\/.+/.test(p), title: 'Tourist Spot' },
   { match: (p) => p === '/tourist-spots', title: 'Tourist Spots' },
   { match: (p) => p === '/restaurants', title: 'Restaurants & Eateries' },
-  { match: (p) => p === '/promotions', title: 'Promotions & Offers' },
   { match: (p) => p === '/saved' || p === '/saved-places', title: 'Saved Trips' },
   { match: (p) => p === '/settings', title: 'Settings' },
 ];

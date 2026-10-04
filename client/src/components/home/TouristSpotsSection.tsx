@@ -23,7 +23,7 @@ export function TouristSpotsSection() {
         action={<SectionLink label="View all" onClick={() => navigate('/tourist-spots')} />}
       />
 
-      <div className="grid grid-cols-2 items-start gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 items-start gap-3 sm:gap-4 lg:grid-cols-4">
         {featured.map((spot) => (
           <button
             key={spot.id}
@@ -31,7 +31,7 @@ export function TouristSpotsSection() {
             onClick={() => navigate(`/tourist-spots/${spot.id}`)}
             className="group flex flex-col text-left"
           >
-            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-gray-100 flex-shrink-0">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-gray-100 flex-shrink-0">
               <img
                 src={spot.imageUrl}
                 alt={spot.name}
@@ -39,7 +39,7 @@ export function TouristSpotsSection() {
                 className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
               />
               {spot.isFeatured && (
-                <span className="absolute left-2 top-2 rounded-full bg-amber-400/95 px-2 py-0.5 text-[9.5px] font-bold text-amber-950 shadow-sm backdrop-blur">
+                <span className="absolute left-2 top-2 rounded-md bg-amber-400/95 px-2 py-0.5 text-[9.5px] font-bold text-amber-950 shadow-sm backdrop-blur">
                   ★ Promoted
                 </span>
               )}

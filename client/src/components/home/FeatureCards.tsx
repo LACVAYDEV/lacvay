@@ -35,20 +35,20 @@ export function FeatureCards() {
   const navigate = useNavigate();
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
       {features.map((f) => (
         <button
           key={f.title}
           type="button"
           onClick={() => navigate(f.path)}
-          className="group relative flex flex-col overflow-hidden rounded-[22px] border border-lacvay-green/5 bg-white p-4 text-left shadow-card transition duration-200 hover:-translate-y-1 hover:border-lacvay-green/20 hover:shadow-lg"
+          className="group relative flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white p-3 sm:p-4 text-left shadow-sm transition duration-200 hover:border-lacvay-green/30"
         >
           <span
             aria-hidden="true"
             className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-lacvay-blush/70 opacity-0 transition duration-300 group-hover:opacity-100"
           />
-          <div className="relative mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-lacvay-blush transition group-hover:bg-lacvay-yellow/30">
-            <img src={f.image} alt="" className="h-9 w-9 object-contain mix-blend-multiply" />
+          <div className="relative mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-lacvay-blush transition group-hover:bg-lacvay-yellow/30">
+            <img src={f.image} alt="" className="h-7 w-7 object-contain mix-blend-multiply" />
           </div>
           <h3 className="relative text-[14px] font-bold text-gray-900 transition group-hover:text-lacvay-green">
             {f.title}

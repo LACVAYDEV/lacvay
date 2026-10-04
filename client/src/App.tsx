@@ -9,7 +9,6 @@ import { LoadingState } from '@/components/ui/States';
 import { requestUserLocation } from '@/lib/userLocation';
 import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog';
 import { ToastHost } from '@/components/ui/ToastHost';
-import { LoginAdManager } from '@/components/ads/LoginAdManager';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
@@ -24,7 +23,6 @@ const TouristSpotDetailPage = lazy(() => import('@/pages/TouristSpotDetailPage')
 const AIAssistantPage = lazy(() => import('@/pages/AIAssistantPage'));
 const RestaurantsPage = lazy(() => import('@/pages/RestaurantsPage'));
 const RestaurantDetailPage = lazy(() => import('@/pages/RestaurantDetailPage'));
-const PromotionsPage = lazy(() => import('@/pages/PromotionsPage'));
 const SavedPage = lazy(() => import('@/pages/SavedPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const AdminLayout = lazy(() => import('@/components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout })));
@@ -65,7 +63,6 @@ function AppShellRoutes() {
           <Route path="/assistant" element={<AIAssistantPage />} />
           <Route path="/restaurants" element={<RestaurantsPage />} />
           <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
-          <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/saved" element={<SavedPage />} />
           <Route path="/saved-places" element={<SavedPage defaultTab="places" />} />
           <Route path="/settings" element={<SettingsPage />} />
@@ -110,7 +107,6 @@ export default function App() {
         <AppProvider>
           <ConfirmDialogProvider>
             <ToastHost />
-            <LoginAdManager />
             <Suspense fallback={<AppSplash />}>
               <Routes>
               {/* Root URL: LandingPage for visitors; User AppShell for signed-in commuters */}

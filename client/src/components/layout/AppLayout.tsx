@@ -21,6 +21,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
   const location = useLocation();
   const isAssistant = location.pathname.startsWith('/ai-assistant');
   const isHome = location.pathname === '/';
+  const isMap = location.pathname === '/map';
   const [showBanner, setShowBanner] = useState(true);
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
   }, [setSidebarOpen, sidebarOpen]);
 
   return (
-    <div className="flex min-h-screen bg-lacvay-cream">
+    <div className="flex min-h-screen bg-gray-50">
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex">
         <Sidebar />
       </div>
@@ -83,7 +84,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
             role="dialog"
             aria-modal="true"
             aria-label="Main navigation"
-            className="absolute inset-y-0 left-0 shadow-xl"
+            className="absolute inset-y-0 left-0 shadow-lg"
           >
             <button
               type="button"
@@ -101,30 +102,30 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
       <div
         className={cn(
           'flex min-w-0 flex-1 flex-col lg:pl-[248px]',
-          isAssistant && 'h-screen overflow-hidden',
+          (isAssistant || isMap) && 'h-screen overflow-hidden',
         )}
         inert={sidebarOpen ? true : undefined}
       >
         {isHome && (
-          <div className="flex shrink-0 items-center gap-3 border-b border-lacvay-green/10 bg-white px-4 py-2.5 lg:hidden">
+          <div className="flex shrink-0 items-center gap-3 border-b border-gray-100 bg-white px-3.5 py-2.5 lg:hidden">
             <button
               ref={menuButtonRef}
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-lacvay-green hover:bg-lacvay-blush"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-lacvay-green hover:bg-lacvay-blush"
               aria-label="Open menu"
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="h-5 w-5" />
             </button>
-            <LogoMark className="size-9" />
+            <LogoMark className="size-8" />
             <span className="text-[17px] font-extrabold text-lacvay-green">LACVAY</span>
           </div>
         )}
 
         <Header menuButtonRef={menuButtonRef} onMenuClick={() => setSidebarOpen(true)} />
         <LocationPermissionBar />
-        {showBanner && (
-          <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-7">
+        {showBanner && !isMap && (
+          <div className="px-3 py-2 sm:px-5 sm:py-3 lg:px-6">
             <AdvertisementBanner onClose={() => setShowBanner(false)} />
           </div>
         )}
@@ -133,7 +134,9 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
             'flex-1 min-h-0',
             isAssistant
               ? 'flex flex-col overflow-hidden p-0 pt-1.5'
-              : cn('px-4 pb-6 md:px-6 lg:px-7', !isHome && 'pt-1.5 md:pt-2'),
+              : isMap
+                ? 'flex flex-col overflow-hidden p-1.5 md:p-2.5 lg:px-4 lg:pt-1.5 lg:pb-2.5'
+                : cn('px-3 pb-5 md:px-5 lg:px-6', !isHome && 'pt-1.5 md:pt-2'),
           )}
         >
           {children}
@@ -143,7 +146,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
 
         <nav
           aria-label="Primary"
-          className="pb-safe fixed bottom-0 left-0 right-0 z-40 border-t border-lacvay-green/10 bg-white/95 px-2 pt-1.5 backdrop-blur lg:hidden"
+          className="pb-safe fixed bottom-0 left-0 right-0 z-40 border-t border-gray-100 bg-white/95 px-2 pt-1 backdrop-blur lg:hidden"
         >
           <div className="flex justify-around">
             {mobileNavItems.map(({ to, label, shortLabel, icon: Icon, end }) => (
@@ -154,7 +157,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
                 aria-label={label}
                 className={({ isActive }) =>
                   cn(
-                    'flex min-h-[48px] min-w-[56px] flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1 text-[10.5px] font-semibold transition',
+                    'flex min-h-[46px] min-w-[52px] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1 text-[10.5px] font-semibold transition',
                     isActive ? 'bg-lacvay-blush text-lacvay-green' : 'text-gray-500 hover:text-lacvay-green',
                   )
                 }
@@ -165,7 +168,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
             ))}
           </div>
         </nav>
-        {!isAssistant && <div className="h-20 lg:hidden" />}
+        {!isAssistant && !isMap && <div className="h-20 lg:hidden" />}
       </div>
     </div>
   );

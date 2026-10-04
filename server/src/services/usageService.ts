@@ -46,7 +46,7 @@ export async function getUserPromptUsage(userId: string): Promise<PromptUsageInf
     }
 
     // Get current week's usage
-    const { data: usage, error: usageError } = await supabase.rpc(
+    const { data: usage, error: usageError } = await (supabase.rpc as any)(
       'get_or_create_weekly_usage',
       { user_id: userId },
     );
@@ -99,7 +99,7 @@ export async function incrementPromptCount(userId: string): Promise<PromptUsageI
     }
 
     // Increment count using RPC function
-    const { data: result, error: incrementError } = await supabase.rpc(
+    const { data: result, error: incrementError } = await (supabase.rpc as any)(
       'increment_prompt_count',
       { user_id: userId },
     );

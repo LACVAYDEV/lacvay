@@ -211,7 +211,7 @@ function PlanGuideView({
           <button
             type="button"
             onClick={() => navigate('/ai-assistant')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:border-lacvay-green hover:text-lacvay-green"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:border-lacvay-green hover:text-lacvay-green"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to chat
@@ -219,22 +219,22 @@ function PlanGuideView({
           <button
             type="button"
             onClick={onClear}
-            className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 shadow-sm hover:bg-gray-50"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 shadow-sm hover:bg-gray-50"
           >
             Clear plan
           </button>
         </div>
       </div>
 
-      <Card className="p-4 sm:p-5">
+      <Card className="p-3 sm:p-4">
         <h3 className="mb-3 text-sm font-bold text-gray-900">Quick Book a Ride</h3>
         <TransportBar variant="horizontal" />
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <Card className="space-y-3 p-4 sm:p-5">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <Card className="space-y-3 p-3 sm:p-4">
           <h3 className="text-sm font-bold text-gray-900">Step-by-step actions</h3>
-          <ol className="space-y-3">
+          <ol className="space-y-2.5">
             {displayLegs.map((leg) => {
               const isActive = activeLeg === leg.order;
               return (
@@ -242,7 +242,7 @@ function PlanGuideView({
                   <button
                     type="button"
                     onClick={() => setActiveLeg(isActive ? null : leg.order)}
-                    className={`w-full rounded-2xl border p-3.5 text-left transition ${
+                    className={`w-full rounded-lg border p-3 text-left transition ${
                       isActive
                         ? 'border-lacvay-green bg-lacvay-blush/60 ring-1 ring-lacvay-green/30'
                         : 'border-gray-100 bg-gray-50 hover:border-gray-200'
@@ -560,7 +560,7 @@ export default function CommutePage() {
           <button
             type="button"
             onClick={() => navigate('/ai-assistant')}
-            className="inline-flex items-center gap-2 rounded-full bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-lacvay-green-dark"
+            className="inline-flex items-center gap-2 rounded-lg bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-lacvay-green-dark"
           >
             <Sparkles className="h-4 w-4" />
             Ask LACVAY AI
@@ -571,9 +571,9 @@ export default function CommutePage() {
   }
 
   return (
-    <div className="w-full space-y-5">
-      <div className="grid gap-5 lg:grid-cols-[340px_1fr] lg:gap-6">
-        <div className="space-y-3">
+    <div className="w-full space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
+        <div className="space-y-2.5">
           {guides.map((g) => {
             const segments: TransportSegment[] = Array.isArray(g.transport_segments)
               ? g.transport_segments
@@ -584,8 +584,8 @@ export default function CommutePage() {
                 key={g.id}
                 className={`cursor-pointer border transition duration-200 ${
                   selected?.id === g.id
-                    ? 'border-lacvay-green/40 ring-2 ring-lacvay-green/30'
-                    : 'border-lacvay-green/5 hover:-translate-y-0.5 hover:shadow-lg'
+                    ? 'border-lacvay-green/40 ring-1 ring-lacvay-green/30'
+                    : 'border-gray-100 hover:border-gray-200'
                 }`}
                 onClick={() => setSelected(g)}
               >
@@ -653,7 +653,7 @@ export default function CommutePage() {
             </div>
 
             {selected.summary && (
-              <p className="text-sm text-gray-600 leading-relaxed bg-lacvay-blush/50 border border-lacvay-green/10 p-3 rounded-xl">
+              <p className="text-sm text-gray-600 leading-relaxed bg-lacvay-blush/50 border border-lacvay-green/10 p-3 rounded-lg">
                 {selected.summary}
               </p>
             )}
@@ -667,7 +667,7 @@ export default function CommutePage() {
                   {(selected.transport_segments as TransportSegment[]).map((seg, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between rounded-xl bg-gray-50 p-3 border border-gray-100"
+                      className="flex items-center justify-between rounded-lg bg-gray-50 p-2.5 border border-gray-100"
                     >
                       <div className="flex items-center gap-2.5">
                         {seg.color && (
@@ -693,14 +693,14 @@ export default function CommutePage() {
             )}
 
             {Array.isArray(selected.steps) && selected.steps.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Step-by-Step Directions
                 </h4>
-                <ol className="space-y-3">
+                <ol className="space-y-2.5">
                   {selected.steps.map((step) => (
-                    <li key={step.order} className="flex gap-3 rounded-2xl bg-gray-50 p-4">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lacvay-green text-sm font-bold text-white">
+                    <li key={step.order} className="flex gap-3 rounded-lg bg-gray-50 p-3 sm:p-3.5 border border-gray-100">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lacvay-green text-xs font-bold text-white">
                         {step.order}
                       </span>
                       <div>
@@ -718,7 +718,7 @@ export default function CommutePage() {
               </div>
             )}
 
-            <Button onClick={() => handleViewRoute(selected)} className="w-full gap-2">
+            <Button onClick={() => handleViewRoute(selected)} className="w-full h-10 gap-2">
               <ArrowRight className="h-4 w-4" />
               View on Map & Routes
             </Button>

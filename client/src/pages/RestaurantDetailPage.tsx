@@ -63,12 +63,12 @@ export default function RestaurantDetailPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-4">
       <button type="button" onClick={() => navigate('/restaurants')} className="text-sm font-semibold text-lacvay-green hover:underline">
         ← Back to Restaurants
       </button>
 
-      <div className={`relative overflow-hidden rounded-3xl ${isNavigating ? 'restaurant-image-out' : incomingTransition ? 'restaurant-image-in' : ''}`}>
+      <div className={`relative overflow-hidden rounded-lg border border-gray-100 shadow-sm ${isNavigating ? 'restaurant-image-out' : incomingTransition ? 'restaurant-image-in' : ''}`}>
           {isVideoMediaUrl(restaurant.imageUrl) ? (
             <video
               src={restaurant.imageUrl}
@@ -87,19 +87,19 @@ export default function RestaurantDetailPage() {
             type="button"
             onClick={() => previousRestaurant && navigateToRestaurant(previousRestaurant, 'previous')}
             disabled={!previousRestaurant || isNavigating}
-            className="absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-lg transition hover:scale-105 hover:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/70 disabled:cursor-not-allowed disabled:opacity-40 sm:left-6 sm:h-12 sm:w-12"
+            className="absolute left-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-sm transition hover:scale-105 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lacvay-lime/70 disabled:cursor-not-allowed disabled:opacity-40 sm:left-5 sm:h-10 sm:w-10"
             aria-label={previousRestaurant ? `View previous restaurant: ${previousRestaurant.name}` : 'No previous restaurant'}
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             type="button"
             onClick={() => nextRestaurant && navigateToRestaurant(nextRestaurant, 'next')}
             disabled={!nextRestaurant || isNavigating}
-            className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-lg transition hover:scale-105 hover:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-lacvay-lime/70 disabled:cursor-not-allowed disabled:opacity-40 sm:right-6 sm:h-12 sm:w-12"
+            className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-sm transition hover:scale-105 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lacvay-lime/70 disabled:cursor-not-allowed disabled:opacity-40 sm:right-5 sm:h-10 sm:w-10"
             aria-label={nextRestaurant ? `View next restaurant: ${nextRestaurant.name}` : 'No next restaurant'}
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-5 w-5" />
           </button>
       </div>
 

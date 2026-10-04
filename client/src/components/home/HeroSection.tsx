@@ -16,7 +16,7 @@ export function HeroSection({ className = '' }: { className?: string }) {
   return (
     <section
       className={cn(
-        'home-hero relative h-[420px] overflow-hidden rounded-[22px] bg-lacvay-cream shadow-card sm:h-[380px] sm:rounded-[26px] lg:h-[380px]',
+        'home-hero relative h-[420px] overflow-hidden rounded-lg bg-lacvay-cream shadow-sm sm:h-[380px] sm:rounded-lg lg:h-[380px]',
         className,
       )}
       style={heroBackground}
@@ -25,7 +25,7 @@ export function HeroSection({ className = '' }: { className?: string }) {
 
       <div className="relative z-10 flex h-full items-center px-5 py-7 min-[375px]:px-6 sm:px-8 sm:py-8 lg:px-10">
         <div className="max-w-[19rem] sm:max-w-[23rem]">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 font-montserrat text-[10px] font-semibold uppercase tracking-wide text-lacvay-green shadow-soft backdrop-blur">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-white/80 px-2.5 py-1 font-montserrat text-[10px] font-semibold uppercase tracking-wide text-lacvay-green shadow-sm backdrop-blur">
             <MapPin className="h-3 w-3" strokeWidth={3} />
             BATANGAS CITY
           </span>
@@ -44,7 +44,7 @@ export function HeroSection({ className = '' }: { className?: string }) {
           <div className="mt-5 flex flex-col items-start gap-2.5 min-[430px]:flex-row min-[430px]:flex-wrap min-[430px]:items-center sm:gap-3">
             <Button
               onClick={() => navigate('/map')}
-              className="min-h-11 rounded-full px-5 py-2.5 font-montserrat font-bold shadow-md transition hover:-translate-y-0.5"
+              className="min-h-10 rounded-lg px-4 py-2 font-montserrat font-bold shadow-sm transition hover:-translate-y-0.5"
             >
               <MapPin className="h-4 w-4" strokeWidth={2.5} />
               Plan My Route
@@ -52,7 +52,7 @@ export function HeroSection({ className = '' }: { className?: string }) {
             <Button
               variant="secondary"
               onClick={() => navigate('/tourist-spots')}
-              className="min-h-11 rounded-full border-0 px-5 py-2.5 font-signature text-lg font-normal shadow-md transition hover:-translate-y-0.5"
+              className="min-h-10 rounded-lg border-0 px-4 py-2 font-signature text-lg font-normal shadow-sm transition hover:-translate-y-0.5"
             >
               See more of Batangas
               <ArrowRight className="h-4 w-4" strokeWidth={2.5} />

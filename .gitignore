@@ -23,3 +23,17 @@ server/dist/
 *.log
 .DS_Store
 .tools/
+
+# Temporary & Local Documents
+*.docx
+*.doc
+*.xlsx
+*.pptx
+
+# Supabase CLI Local Cache
+supabase/.temp/
+
+# Tool Outputs
+repomix-output.*
+
+

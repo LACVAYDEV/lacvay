@@ -47,15 +47,24 @@ export default function AdminPromotionFormPage() {
     }
     setSaving(true);
     try {
+      const payload = {
+        ...form,
+        validUntil: form.validUntil && form.validUntil.trim() ? form.validUntil.trim() : null,
+        promoCode: form.promoCode && form.promoCode.trim() ? form.promoCode.trim() : null,
+        discount: form.discount && form.discount.trim() ? form.discount.trim() : null,
+        imageUrl: form.imageUrl && form.imageUrl.trim() ? form.imageUrl.trim() : null,
+      };
+
       if (isEditing && id) {
-        await adminService.updatePromotion({ ...form, id } as Promotion);
+        await adminService.updatePromotion({ ...payload, id } as Promotion);
         showToast('Ad updated');
       } else {
-        await adminService.createPromotion(form);
+        await adminService.createPromotion(payload);
         showToast('Ad created');
       }
       navigate('/admin/promotions');
     } catch (err) {
+      console.error('Error saving promotion:', err);
       showToast(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setSaving(false);

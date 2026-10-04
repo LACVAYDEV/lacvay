@@ -74,22 +74,12 @@ export function AdminLayout() {
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-lacvay-green/70">Administration</p>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={switchToTraveler}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-[12.5px] font-semibold text-gray-700 shadow-soft transition hover:bg-gray-50 hover:text-lacvay-green"
-            >
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Switch to traveler</span>
-              <span className="sm:hidden">Traveler</span>
-            </button>
-
             <div ref={profileRef} className="relative">
               <button
                 type="button"
                 onClick={() => setProfileOpen(!profileOpen)}
                 aria-expanded={profileOpen}
-                className="flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-2.5 shadow-soft hover:bg-gray-50"
+                className="flex items-center gap-2 rounded-lg border border-gray-100 bg-white py-1 pl-1 pr-2.5 shadow-sm hover:bg-gray-50"
               >
                 <img
                   src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
@@ -101,7 +91,7 @@ export function AdminLayout() {
               </button>
 
               {profileOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-gray-100 bg-white py-1.5 shadow-card">
+                <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-lg border border-gray-100 bg-white py-1.5 shadow-sm">
                   <div className="border-b border-gray-100 px-4 pb-2 pt-1">
                     <p className="truncate text-[12.5px] font-semibold text-gray-900">{fullName}</p>
                     <p className="truncate text-[11px] text-gray-500">{user?.email}</p>

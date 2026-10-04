@@ -417,3 +417,25 @@ body {
     animation: none;
   }
 }
+
+/* Compact styling for route fare matrix balloon popup */
+.route-fare-balloon .leaflet-popup-content-wrapper {
+  border-radius: 1rem;
+  padding: 0;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.route-fare-balloon .leaflet-popup-content {
+  margin: 10px 12px;
+  line-height: 1.35;
+}
+
+.route-fare-balloon .leaflet-popup-close-button {
+  top: 8px !important;
+  right: 8px !important;
+  color: #9ca3af !important;
+}
+
+.route-fare-balloon .leaflet-popup-close-button:hover {
+  color: #374151 !important;
+}

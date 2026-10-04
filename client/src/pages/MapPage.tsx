@@ -8,15 +8,14 @@ import {
   Bus,
   Tag,
   Info,
-  X,
   Camera,
   Utensils,
 } from 'lucide-react';
 import type { Place } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { isVideoMediaUrl } from '@/lib/mediaUtils';
+import { formatCurrency } from '@/lib/utils';
 
-import { Card } from '@/components/ui/Card';
 import {
   transitAdminService,
   type TransitRouteRow,
@@ -389,73 +388,7 @@ export default function MapPage() {
     return parsedRoutes.find((r) => r.route.id === routeIdParam) || null;
   }, [routeIdParam, parsedRoutes]);
 
-  // Compute fares specifically for the selected route
-  const selectedRouteFares = useMemo<{
-    standardRegular: number;
-    standardDiscounted: number;
-    extendedRegular: number;
-    extendedDiscounted: number;
-  }>(() => {
-    if (!selectedRouteItem) {
-      return {
-        standardRegular: 13,
-        standardDiscounted: 11,
-        extendedRegular: 15,
-        extendedDiscounted: 12,
-      };
-    }
-    const route = selectedRouteItem.route;
-    const embedded = transitAdminService.extractRouteFares(route);
-    if (
-      embedded &&
-      (embedded.regular != null ||
-        embedded.discounted != null ||
-        embedded.extraDistance != null ||
-        embedded.extraDistanceDiscounted != null)
-    ) {
-      return {
-        standardRegular: embedded.regular ?? 13,
-        standardDiscounted: embedded.discounted ?? 11,
-        extendedRegular: embedded.extraDistance ?? 15,
-        extendedDiscounted: embedded.extraDistanceDiscounted ?? 12,
-      };
-    }
-
-    const routeSpecificFares = faresList.filter(
-      (f) =>
-        f.route_id === route.id ||
-        f.origin_landmark === route.id ||
-        f.origin_landmark === route.route_name ||
-        f.origin_landmark?.toLowerCase() === route.route_name?.toLowerCase(),
-    );
-
-    if (routeSpecificFares.length > 0) {
-      const standard = routeSpecificFares.find(
-        (f) => f.destination_landmark === 'Standard Trip' || f.destination_landmark === 'Base Fare',
-      );
-      const extended = routeSpecificFares.find(
-        (f) => f.destination_landmark === 'Extended Trip' || f.destination_landmark === 'Extra Distance',
-      );
-
-      if (standard || extended) {
-        return {
-          standardRegular: standard?.regular_fare ?? 13,
-          standardDiscounted: standard?.discounted_fare ?? 11,
-          extendedRegular: extended?.regular_fare ?? 15,
-          extendedDiscounted: extended?.discounted_fare ?? 12,
-        };
-      }
-    }
-
-    return {
-      standardRegular: globalPricing?.regular ?? 13,
-      standardDiscounted: globalPricing?.discounted ?? 11,
-      extendedRegular: globalPricing?.extraDistance ?? 15,
-      extendedDiscounted: globalPricing?.extraDistanceDiscounted ?? 12,
-    };
-  }, [selectedRouteItem, faresList, globalPricing]);
-
-  const handleSelectRouteFilter = (routeId: string) => {
+  const setSelectedRouteId = (routeId: string) => {
     if (!routeId) {
       params.delete('routeId');
       setParams(params);
@@ -466,15 +399,15 @@ export default function MapPage() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col h-full w-full gap-2 min-h-0">
       {/* Explorer Controls Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-3 border border-gray-100 shadow-soft">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white px-2.5 py-1.5 border border-gray-100 shadow-xs shrink-0">
         {/* Category Filter Pills */}
-        <div className="no-scrollbar -mx-1 flex min-w-0 max-w-full items-center gap-1.5 overflow-x-auto px-1 sm:flex-wrap">
+        <div className="no-scrollbar -mx-0.5 flex min-w-0 max-w-full items-center gap-1 overflow-x-auto px-0.5 sm:flex-wrap">
           <button
             type="button"
             onClick={() => setSelectedCategory('all')}
-            className={`shrink-0 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+            className={`shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
               selectedCategory === 'all'
                 ? 'bg-lacvay-green text-white shadow-xs'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -491,7 +424,7 @@ export default function MapPage() {
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`shrink-0 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                   selectedCategory.toLowerCase() === cat.toLowerCase()
                     ? 'bg-lacvay-green text-white shadow-xs'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -504,12 +437,12 @@ export default function MapPage() {
         </div>
 
         {/* Route Filter Dropdown & Toggle */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           {parsedRoutes.length > 0 && (
             <select
               value={selectedRouteItem?.route.id || ''}
-              onChange={(e) => handleSelectRouteFilter(e.target.value)}
-              className="rounded-xl border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-xs focus:border-lacvay-green focus:outline-none"
+              onChange={(e) => setSelectedRouteId(e.target.value)}
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-700 shadow-xs focus:border-lacvay-green focus:outline-none"
             >
               <option value="">All Transit Corridors</option>
               {parsedRoutes.map(({ route, colorMeta }) => (
@@ -523,21 +456,21 @@ export default function MapPage() {
           <button
             type="button"
             onClick={() => setShowRoutes((v) => !v)}
-            className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold border transition ${
+            className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold border transition ${
               showRoutes
                 ? 'bg-lacvay-blush border-lacvay-green/20 text-lacvay-green'
                 : 'bg-gray-50 border-gray-200 text-gray-500'
             }`}
           >
             <Bus className="h-3 w-3" />
-            {showRoutes ? 'Routes Visible' : 'Routes Hidden'}
+            {showRoutes ? 'Routes' : 'Hidden'}
           </button>
         </div>
       </div>
 
-      {/* Full-Width Explorer Map Container */}
-      <Card padding="sm" className="relative overflow-hidden p-0 rounded-3xl shadow-card">
-        <div className="w-full h-[calc(100vh-4rem)] relative overflow-hidden">
+      {/* Full-Width Explorer Map Container - Fills remaining height cleanly */}
+      <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-lg shadow-sm border border-gray-100 bg-white">
+        <div className="w-full h-full relative overflow-hidden">
           <MapContainer
             center={initialView.center}
             zoom={initialView.zoom}
@@ -574,6 +507,39 @@ export default function MapPage() {
                 .filter(({ route }) => !routeIdParam || routeIdParam === 'all' || route.id === routeIdParam)
                 .map(({ route, coords, isWhite, colorMeta }) => {
                 const isSelected = selectedRouteItem?.route.id === route.id;
+
+                const {
+                  regular_fare,
+                  discounted_fare,
+                  extended_fare,
+                  extended_discounted_fare,
+                } = route;
+
+                // Fallback for regular fare & standard discounted fare (20% for Student/Senior/PWD)
+                const routeSpecificFares = faresList.filter(
+                  (f) =>
+                    f.route_id === route.id ||
+                    f.origin_landmark === route.id ||
+                    f.origin_landmark === route.route_name ||
+                    f.origin_landmark?.toLowerCase() === route.route_name?.toLowerCase(),
+                );
+                const standardFareRow = routeSpecificFares.find(
+                  (f) => f.destination_landmark === 'Standard Trip' || f.destination_landmark === 'Base Fare',
+                );
+
+                const regularFare = regular_fare ?? standardFareRow?.regular_fare ?? globalPricing?.regular ?? 13;
+                const discountedFare =
+                  discounted_fare ?? standardFareRow?.discounted_fare ?? globalPricing?.discounted ?? (regularFare === 13 ? 11 : Math.round(regularFare * 0.8));
+
+                // Extended Trip: ONLY if extended_fare exists and is greater than regular_fare
+                const hasExtendedTrip =
+                  typeof extended_fare === 'number' &&
+                  extended_fare > (regular_fare ?? regularFare);
+
+                const extendedDiscountedFare =
+                  extended_discounted_fare ??
+                  (hasExtendedTrip && extended_fare ? Math.round(extended_fare * 0.8) : null);
+
                 return (
                   <Fragment key={route.id}>
                     {/* Bottom Layer: Thicker Black Outline */}
@@ -597,20 +563,101 @@ export default function MapPage() {
                         lineCap: 'round',
                         lineJoin: 'round',
                       }}
+                      eventHandlers={{
+                        click: () => setSelectedRouteId(route.id),
+                      }}
                     >
-                      <Popup>
-                        <div className="p-1 text-xs">
-                          <p className="font-bold text-gray-900">{route.route_name}</p>
-                          <p className="text-[11px] text-gray-500 mt-0.5">{route.vehicle_type || 'Jeepney'}</p>
-                          <span
-                            className={`mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
-                              isWhite
-                                ? 'bg-black text-white'
-                                : `${colorMeta.bgClass} ${colorMeta.textClass}`
-                            }`}
-                          >
-                            {colorMeta.label} Line
-                          </span>
+                      <Popup minWidth={240} maxWidth={290} className="route-fare-balloon">
+                        <div className="p-0.5 text-xs text-left">
+                          {/* Route Title & Badges */}
+                          <div className="pr-4">
+                            <p className="font-bold text-xs text-gray-900 leading-snug">
+                              {route.route_name}
+                            </p>
+                            <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                              <span className="rounded bg-lacvay-blush px-1.5 py-0.2 text-[9px] font-bold text-lacvay-green border border-lacvay-green/20">
+                                {route.vehicle_type || 'Jeepney'}
+                              </span>
+                              <span
+                                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.2 text-[9px] font-bold ${
+                                  isWhite
+                                    ? 'bg-black text-white'
+                                    : `${colorMeta.bgClass} ${colorMeta.textClass}`
+                                }`}
+                              >
+                                {colorMeta.label} Line
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Fixed Fare Matrix */}
+                          <div className="mt-2 pt-2 border-t border-gray-100">
+                            <div className="flex items-center gap-1 mb-1.5">
+                              <Tag className="h-3 w-3 text-lacvay-green" />
+                              <span className="text-[10px] font-bold text-gray-800">Fixed Fare Matrix</span>
+                            </div>
+
+                            <div className={`grid ${hasExtendedTrip ? 'grid-cols-2' : 'grid-cols-1'} gap-1.5`}>
+                              {/* Standard Trip */}
+                              <div className="rounded-lg border border-lacvay-green/15 bg-lacvay-blush/40 p-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[8px] font-bold uppercase tracking-wider text-lacvay-green">
+                                    Standard
+                                  </span>
+                                  <span className="rounded bg-lacvay-blush px-1 py-0.2 text-[8px] font-semibold text-lacvay-green-dark border border-lacvay-green/20">
+                                    Base
+                                  </span>
+                                </div>
+                                <div className="mt-1 flex items-baseline justify-between gap-1">
+                                  <div>
+                                    <p className="text-[8px] text-gray-500">Regular</p>
+                                    <p className="text-xs font-extrabold text-gray-900">
+                                      {formatCurrency(regularFare)}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-[8px] text-gray-500">Disc (20%)</p>
+                                    <p className="text-xs font-bold text-lacvay-green">
+                                      {formatCurrency(discountedFare)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Extended Trip */}
+                              {hasExtendedTrip && (
+                                <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 p-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[8px] font-bold uppercase tracking-wider text-amber-800">
+                                      Extended
+                                    </span>
+                                    <span className="rounded bg-amber-100 px-1 py-0.2 text-[8px] font-semibold text-amber-900 border border-amber-200">
+                                      Total
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 flex items-baseline justify-between gap-1">
+                                    <div>
+                                      <p className="text-[8px] text-gray-500">Regular</p>
+                                      <p className="text-xs font-extrabold text-gray-900">
+                                        {formatCurrency(extended_fare!)}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-[8px] text-gray-500">Discount</p>
+                                      <p className="text-xs font-bold text-amber-800">
+                                        {extendedDiscountedFare != null ? formatCurrency(extendedDiscountedFare) : '—'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="mt-1.5 flex items-start gap-1 text-[8.5px] text-gray-500 leading-tight">
+                              <Info className="h-2.5 w-2.5 shrink-0 text-lacvay-green mt-0.5" />
+                              <span>Discounted fares apply to students, senior citizens, and PWDs with valid IDs.</span>
+                            </div>
+                          </div>
                         </div>
                       </Popup>
                     </Polyline>
@@ -638,7 +685,7 @@ export default function MapPage() {
                   <Popup>
                     <div className="p-1 max-w-[220px] text-left">
                       {p.image_url && (
-                        <div className="mb-2 overflow-hidden rounded-xl bg-gray-100 shadow-sm">
+                        <div className="mb-2 overflow-hidden rounded-lg bg-gray-100 shadow-sm">
                           {isVideo ? (
                             <video
                               src={p.image_url}
@@ -714,123 +761,8 @@ export default function MapPage() {
               panOnFirstFix={!selectedRouteItem && !exploreCoord && !initialView.fromSession}
             />
           </MapContainer>
-
-          {/* Floating Fare Matrix Card for Selected Route */}
-          {selectedRouteItem && (
-            <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:w-[380px] z-[1000] pointer-events-auto animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <div className="rounded-2xl border border-gray-100 bg-white/95 p-4 shadow-xl backdrop-blur-md">
-                {/* Header: Route Name, Vehicle Badge, Color Pill, Close button */}
-                <div className="flex items-start justify-between gap-2 border-b border-gray-100 pb-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-sm font-bold text-gray-900 truncate">
-                        {selectedRouteItem.route.route_name}
-                      </h3>
-                      <span className="rounded-md bg-lacvay-blush px-2 py-0.5 text-[10px] font-bold text-lacvay-green border border-lacvay-green/20">
-                        {selectedRouteItem.route.vehicle_type || 'Jeepney'}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <span className="text-[11px] text-gray-500">Route Color:</span>
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          selectedRouteItem.isWhite
-                            ? 'border border-black bg-white text-black shadow-xs'
-                            : `${selectedRouteItem.colorMeta.bgClass} ${selectedRouteItem.colorMeta.textClass} shadow-xs`
-                        }`}
-                      >
-                        <span
-                          className={`h-2 w-2 rounded-full ${
-                            selectedRouteItem.isWhite ? 'bg-white border border-black' : 'bg-white/80'
-                          }`}
-                        />
-                        {selectedRouteItem.colorMeta.label}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectRouteFilter('')}
-                    className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
-                    title="Close fare matrix"
-                    aria-label="Close route fare details"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {/* Fare Matrix: Standard Trip vs Extended Trip */}
-                <div className="mt-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Tag className="h-3.5 w-3.5 text-lacvay-green" />
-                    <span className="text-xs font-bold text-gray-800">Fixed Fare Matrix</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Standard Trip */}
-                    <div className="rounded-xl border border-lacvay-green/10 bg-lacvay-blush/50 p-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-lacvay-green">
-                          Standard Trip
-                        </span>
-                        <span className="rounded bg-lacvay-blush px-1.5 py-0.5 text-[9px] font-semibold text-lacvay-green-dark">
-                          Base
-                        </span>
-                      </div>
-                      <div className="mt-1.5 flex items-baseline justify-between">
-                        <div>
-                          <p className="text-[10px] text-gray-500">Regular</p>
-                          <p className="text-base font-extrabold text-gray-900">
-                            ₱{selectedRouteFares.standardRegular.toFixed(2)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-gray-500">Discount</p>
-                          <p className="text-sm font-bold text-lacvay-green">
-                            ₱{selectedRouteFares.standardDiscounted.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Extended Trip */}
-                    <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
-                          Extended Trip
-                        </span>
-                        <span className="rounded bg-amber-100 px-1.5 py-0.2 text-[9px] font-semibold text-amber-900">
-                          Total
-                        </span>
-                      </div>
-                      <div className="mt-1.5 flex items-baseline justify-between">
-                        <div>
-                          <p className="text-[10px] text-gray-500">Regular</p>
-                          <p className="text-base font-extrabold text-gray-900">
-                            ₱{selectedRouteFares.extendedRegular.toFixed(2)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-gray-500">Discount</p>
-                          <p className="text-sm font-bold text-amber-700">
-                            ₱{selectedRouteFares.extendedDiscounted.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Commuter policy notice */}
-                <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-gray-500">
-                  <Info className="h-3 w-3 shrink-0 text-lacvay-green" />
-                  <span>Fixed fare policy. 20% discount for Students, Seniors & PWD.</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

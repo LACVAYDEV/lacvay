@@ -82,8 +82,8 @@ export default function TouristSpotsPage() {
   const hasFilters = filter !== 'All' || query.trim() !== '';
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-3 rounded-3xl border border-lacvay-green/5 bg-white p-3 shadow-soft sm:p-4">
+    <div className="space-y-4">
+      <div className="space-y-3 rounded-lg border border-gray-100 bg-white p-3 shadow-sm sm:p-4">
         <SearchField
           label="Search tourist spots"
           value={query}
@@ -119,7 +119,7 @@ export default function TouristSpotsPage() {
                   setFilter('All');
                   setQuery('');
                 }}
-                className="rounded-full bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-lacvay-green-dark"
+                className="rounded-lg bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-lacvay-green-dark"
               >
                 Clear filters
               </button>
@@ -127,7 +127,7 @@ export default function TouristSpotsPage() {
           }
         />
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
           {[...visibleSpots]
             .sort((a, b) => {
               const aFav = favoriteIds.has(a.id) || isSaved(a.id);

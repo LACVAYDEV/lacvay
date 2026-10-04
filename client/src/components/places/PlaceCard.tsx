@@ -102,7 +102,7 @@ export function PlaceCard({
     <Card
       padding="sm"
       className={cn(
-        'group relative flex flex-col overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-card',
+        'group relative flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white p-0 shadow-sm transition-colors duration-200 hover:border-gray-200',
         className,
       )}
     >
@@ -128,7 +128,7 @@ export function PlaceCard({
             src={imageUrl}
             alt={place.name}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
           />
         )}
 
@@ -136,11 +136,11 @@ export function PlaceCard({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
 
         {/* Top-Left Badges: Open/Closed for restaurants, Category for tourist spots */}
-        <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5 z-10">
+        <div className="absolute left-2.5 top-2.5 flex flex-wrap items-center gap-1.5 z-10">
           {isRestaurant ? (
             <span
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold shadow-sm backdrop-blur',
+                'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-bold shadow-sm backdrop-blur',
                 place.isOpen
                   ? 'bg-emerald-500/90 text-white'
                   : 'bg-rose-500/90 text-white',
@@ -151,13 +151,13 @@ export function PlaceCard({
             </span>
           ) : (
             place.category && (
-              <Badge className="border-0 bg-lacvay-green/90 text-white shadow-sm backdrop-blur-md">
+              <Badge className="border-0 rounded-md bg-lacvay-green/90 text-white shadow-sm backdrop-blur-md">
                 {place.category}
               </Badge>
             )
           )}
           {(place.is_featured || place.isFeatured) && (
-            <Badge variant="yellow" className="backdrop-blur-md shadow-sm font-bold">
+            <Badge variant="yellow" className="rounded-md backdrop-blur-md shadow-sm font-bold">
               ★ Promoted
             </Badge>
           )}
@@ -169,11 +169,11 @@ export function PlaceCard({
           aria-label={favorited ? 'Remove from bookmarks' : 'Add to bookmarks'}
           onClick={handleHeartClick}
           className={cn(
-            'absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-md transition-all duration-200',
+            'absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full border shadow-sm backdrop-blur-md transition-all duration-200',
             favorited
-              ? 'border-rose-300 bg-rose-50/95 text-rose-500 shadow-rose-200/50 hover:bg-rose-100'
-              : 'border-white/40 bg-white/80 text-gray-600 hover:scale-105 hover:bg-white hover:text-rose-500',
-            isPulsing && 'scale-125',
+              ? 'border-rose-300 bg-rose-50/95 text-rose-500'
+              : 'border-white/40 bg-white/80 text-gray-600 hover:bg-white hover:text-rose-500',
+            isPulsing && 'scale-110',
           )}
         >
           <Heart
@@ -185,16 +185,16 @@ export function PlaceCard({
         </button>
 
         {/* Bottom Bar on image: Rating / Price Range */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white pointer-events-none">
+        <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-white pointer-events-none">
           {place.rating ? (
-            <span className="flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs font-semibold backdrop-blur-sm">
+            <span className="flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-xs font-semibold backdrop-blur-sm">
               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
               {place.rating}
             </span>
           ) : <span />}
 
           {place.priceRange && (
-            <span className="rounded-full bg-white/95 px-2.5 py-0.5 text-xs font-bold text-lacvay-green shadow-sm">
+            <span className="rounded-md bg-white/95 px-2.5 py-0.5 text-xs font-bold text-lacvay-green shadow-sm">
               {place.priceRange}
             </span>
           )}
@@ -202,7 +202,7 @@ export function PlaceCard({
       </div>
 
       {/* Place Details */}
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-3 sm:p-3.5">
         <h3
           onClick={handleCardClick}
           className={cn(
@@ -221,20 +221,20 @@ export function PlaceCard({
         )}
 
         {place.openingHours && (
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
+          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500">
             <Clock className="h-3.5 w-3.5 text-lacvay-green shrink-0" />
             <span>{place.openingHours}</span>
           </div>
         )}
 
         {place.description && (
-          <p className="mt-2 line-clamp-2 text-[12.5px] leading-relaxed text-gray-600">
+          <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-gray-600">
             {place.description}
           </p>
         )}
 
         {/* Bottom Action Buttons */}
-        <div className="mt-auto pt-4 flex items-center gap-2">
+        <div className="mt-auto pt-3 flex items-center gap-2">
           {/* Primary Button ("Directions") */}
           <button
             type="button"
@@ -242,7 +242,7 @@ export function PlaceCard({
               e.stopPropagation();
               navigate('/ai-assistant?prompt=How+to+get+to+' + encodeURIComponent(place.name));
             }}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-lacvay-green py-2.5 px-3 text-xs font-bold text-white shadow-soft transition hover:bg-lacvay-green-dark"
+            className="flex h-10 w-full flex-1 items-center justify-center gap-1.5 rounded-lg bg-lacvay-green px-3 text-xs font-bold text-white transition hover:bg-lacvay-green-dark"
           >
             <Navigation className="h-3.5 w-3.5" />
             Directions
@@ -259,7 +259,7 @@ export function PlaceCard({
                   : '/map'
               );
             }}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white py-2.5 px-3 text-xs font-bold text-gray-700 shadow-soft transition hover:border-lacvay-green hover:text-lacvay-green"
+            className="flex h-10 w-full flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-700 transition hover:border-lacvay-green hover:text-lacvay-green"
           >
             <Map className="h-3.5 w-3.5" />
             Explore

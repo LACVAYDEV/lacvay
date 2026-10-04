@@ -100,8 +100,8 @@ export default function RestaurantsPage() {
   const hasFilters = openNowOnly || searchQuery !== '';
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 rounded-3xl border border-lacvay-green/5 bg-white p-3 shadow-soft sm:flex-row sm:items-center sm:p-4">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-lg border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:p-4">
         <SearchField
           label="Search restaurants"
           value={rawSearch}
@@ -113,7 +113,7 @@ export default function RestaurantsPage() {
         <FilterChip
           active={openNowOnly}
           onClick={() => setOpenNowOnly((prev) => !prev)}
-          className="flex items-center justify-center gap-1.5 px-4 py-3"
+          className="flex items-center justify-center gap-1.5 px-3 py-2"
         >
           <span
             className={`h-2 w-2 rounded-full ${openNowOnly ? 'animate-pulse bg-white' : 'bg-emerald-500'}`}
@@ -143,7 +143,7 @@ export default function RestaurantsPage() {
                   setOpenNowOnly(false);
                   setSearch('');
                 }}
-                className="rounded-full bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-lacvay-green-dark"
+                className="rounded-lg bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-lacvay-green-dark"
               >
                 Clear filters
               </button>
@@ -151,7 +151,7 @@ export default function RestaurantsPage() {
           }
         />
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
           {sortedRestaurants.map((r) => (
             <PlaceCard
               key={r.id}

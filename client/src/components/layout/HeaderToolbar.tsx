@@ -82,7 +82,7 @@ export function HeaderToolbar({ className }: { className?: string }) {
             id: `promotion-${promotion.id}`,
             title: promotion.title,
             message: promotion.description,
-            path: '/promotions',
+            path: '/',
             kind: 'promotion' as const,
           })),
         ]);

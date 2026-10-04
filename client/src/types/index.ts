@@ -212,11 +212,11 @@ export interface Promotion {
   id: string;
   title: string;
   description: string;
-  promoCode?: string;
-  discount?: string;
+  promoCode?: string | null;
+  discount?: string | null;
   /** Ad creative — image or video URL shown to travelers. */
-  imageUrl?: string;
-  validUntil?: string;
+  imageUrl?: string | null;
+  validUntil?: string | null;
   /** When false, hidden from traveler-facing pages. */
   isActive?: boolean;
 }

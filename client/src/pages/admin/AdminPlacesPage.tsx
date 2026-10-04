@@ -215,26 +215,6 @@ export default function AdminPlacesPage() {
     }
   };
 
-  const handleWipeAll = async () => {
-    const confirmed = await confirm({
-      title: 'Delete all destinations?',
-      description: `All ${places.length} destinations will be permanently deleted from the database. This action cannot be undone.`,
-      confirmLabel: 'Delete all',
-    });
-    if (!confirmed) return;
-    setLoading(true);
-    try {
-      await adminService.clearAllPlaces();
-      setSelectedSpot(null);
-      await refresh();
-      showToast('All destinations have been wiped from the database');
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Wipe failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (loading) return <LoadingState />;
 
   return (
@@ -243,22 +223,10 @@ export default function AdminPlacesPage() {
         title="Tourist Spots"
         description="Browse destinations in a catalog view. Add new spots or open one for full details."
         actions={
-          <div className="flex items-center gap-2">
-            {places.length > 0 && (
-              <Button
-                variant="outline"
-                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
-                onClick={() => void handleWipeAll()}
-              >
-                <Trash2 className="h-4 w-4" />
-                Wipe all ({places.length})
-              </Button>
-            )}
-            <Button onClick={() => navigate('/admin/places/new')}>
-              <Plus className="h-4 w-4" />
-              Add spot
-            </Button>
-          </div>
+          <Button onClick={() => navigate('/admin/places/new')}>
+            <Plus className="h-4 w-4" />
+            Add spot
+          </Button>
         }
       />
 

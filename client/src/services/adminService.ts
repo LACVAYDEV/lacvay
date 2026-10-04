@@ -27,7 +27,6 @@ export const adminService = {
   clearAllPlaces: () => contentRepository.clearAllPlaces(),
   clearAllPromotions: () => contentRepository.clearAllPromotions(),
   getStats: () => contentRepository.getStats(),
-  isUsingSupabase: () => contentRepository.isUsingSupabase(),
 
   async listUsers(): Promise<UserProfile[]> {
     const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
