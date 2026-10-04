@@ -105,13 +105,6 @@ export function LoginPopupAd({ isOpen, onClose }: LoginPopupAdProps) {
                     Get My 20% Off
                   </button>
                 </form>
-
-                <button
-                  onClick={handleClose}
-                  className="w-full mt-3 py-2 text-sm text-gray-600 hover:text-gray-800 transition font-medium"
-                >
-                  Continue Shopping
-                </button>
               </>
             ) : (
               <div className="text-center py-4">
