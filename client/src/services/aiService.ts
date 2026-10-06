@@ -1,13 +1,14 @@
 import type { AIMessage, CommuteGuidePlan } from '@/types';
 import { generateId } from '@/lib/utils';
 import { getStoredGeo, requestUserLocation, GEO_ORIGIN_MANUAL_KEY } from '@/lib/userLocation';
+import { supabase } from '@/lib/supabase';
+import { getEnhancedMockResponse } from '@/lib/mockCommuteReplies';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 export const AI_ORIGIN_STORAGE_KEY = 'lacvay-ai-origin';
 export const ACTIVE_COMMUTE_PLAN_KEY = 'lacvay-active-commute-plan';
 
 const MOCK_RESPONSES: Record<string, string> = {
-  'monte maria': 'Take the Dela Paz/Ilijan - Batangas jeepney. From San Isidro, wait at the road-side stop — the route passes the church and serves Monte Maria. Extended fare about ₱23, roughly 30–45 min. Alight at Monte Maria; a short walk to the shrine is usually enough. Do NOT board Libjo/San Isidro (goes to Batangas City). TNVS is optional.',
   'sm batangas': 'From Batangas City Grand Terminal to SM City Batangas, the documented regular fare is ₱32 across two jeepney legs. From Batangas Pier to SM City Batangas, the regular fare is ₱14.',
   'tourist': 'Top spots near Batangas City include Taal Volcano, Basilica of the Immaculate Conception, Anilao for diving, and Laiya Beach for a weekend getaway.',
   'fare': "Jeepney fares use LACVAY's documented matrix. For places off the jeepney line, book Angkas, Grab, or iDOL Taxi and check the fare in the app. Tricycle TODA fares are not listed — look for the nearest TODA and ask locals.",
@@ -16,13 +17,22 @@ const MOCK_RESPONSES: Record<string, string> = {
   'tricycle': 'LACVAY does not currently list tricycle TODA terminals or fares. For remote spots, book Angkas, Grab, or iDOL Taxi. You can also look for the nearest tricycle TODA and ask locals for directions.',
 };
 
-function getMockResponse(message: string): string {
+function getMockResponse(message: string, originHint?: string, expandedMessage?: string): string {
+  const rich =
+    getEnhancedMockResponse(message, originHint) ??
+    (expandedMessage && expandedMessage !== message
+      ? getEnhancedMockResponse(expandedMessage, originHint)
+      : null);
+  if (rich) return rich;
+
   const lower = message.toLowerCase();
   const match = Object.entries(MOCK_RESPONSES)
     .filter(([key]) => lower.includes(key))
     .sort((a, b) => b[0].length - a[0].length)[0];
-  return match?.[1]
-    ?? "I'm LACVAY AI, your Batangas City travel buddy! I can help with routes, fares, tourist spots, and restaurant recommendations. Try asking how to get to Monte Maria from SM Batangas.";
+  return (
+    match?.[1] ??
+    "I'm LACVAY AI, your Batangas City travel buddy! I can help with routes, fares, tourist spots, and restaurant recommendations. Try: **How do I get from CLB to Monte Maria?** (Set **From** in the header for accurate map routes.)"
+  );
 }
 
 export function getStoredAiOrigin(): string {
@@ -123,12 +133,25 @@ export async function sendAIMessage(
     ? geo!.label
     : typed || (geo ? geo.label : 'SM Batangas');
 
+  const trimmedMsg = message.trim();
+  const apiMessage =
+    /^(monte maria|montemaria|mnte maria)$/i.test(trimmedMsg) ||
+    (/monte maria|montemaria/i.test(trimmedMsg) && !/\b(from|to|→)\b/i.test(trimmedMsg))
+      ? `How do I get from ${origin} to Monte Maria?`
+      : trimmedMsg;
+
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+
     const res = await fetch(`${API_URL}/ai/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
-        message,
+        message: apiMessage,
         origin,
         // Only attach GPS when From matches current location — otherwise named place (CLB) wins
         originLat: usingGps ? geo!.lat : undefined,
@@ -141,10 +164,25 @@ export async function sendAIMessage(
       return {
         id: generateId(),
         role: 'assistant',
-        content: data.reply ?? getMockResponse(message),
+        content: data.reply ?? getMockResponse(message, origin, apiMessage),
         timestamp: new Date().toISOString(),
         plan: data.plan ?? null,
       };
+    }
+
+    if (res.status === 401) {
+      console.warn('[aiService] /ai/chat returned 401 — sign in for live routing.');
+    } else if (res.status === 429) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      return {
+        id: generateId(),
+        role: 'assistant',
+        content: body?.error ?? 'Weekly free prompt limit reached.',
+        timestamp: new Date().toISOString(),
+        plan: null,
+      };
+    } else {
+      console.warn(`[aiService] /ai/chat returned ${res.status} — using offline route text.`);
     }
   } catch {
     // fall through to mock
@@ -153,7 +191,7 @@ export async function sendAIMessage(
   return {
     id: generateId(),
     role: 'assistant',
-    content: getMockResponse(message),
+    content: getMockResponse(message, origin, apiMessage),
     timestamp: new Date().toISOString(),
     plan: null,
   };

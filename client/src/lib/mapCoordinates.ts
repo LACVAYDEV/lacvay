@@ -289,7 +289,11 @@ export function rebuildPlanPaths<
     let to: LatLngTuple;
     let outMode = mode;
 
-    if (isWalk && index === 0) {
+    if (isWalk && plan.legs.length === 1) {
+      // Single-leg fallback: full trip line (never clip to 12% first-mile stub)
+      from = originT;
+      to = destT;
+    } else if (isWalk && index === 0) {
       from = originT;
       to = boardStop;
       // Keep first-mile walk short on the map (board at nearest stop)

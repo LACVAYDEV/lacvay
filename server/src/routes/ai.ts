@@ -28,10 +28,19 @@ aiRouter.post('/chat', requireUser, async (req, res) => {
 
   try {
     // Increment prompt count and get usage info
-    const usageInfo = await incrementPromptCount(req.authUser.id);
-    
-    if (!usageInfo) {
-      res.status(500).json({ error: 'Failed to track usage' });
+    const usageInfo =
+      (await incrementPromptCount(req.authUser.id)) ?? {
+        remaining_prompts: 3,
+        total_prompts: 3,
+        limit_reached: false,
+        subscription_tier: 'free',
+      };
+
+    if (usageInfo.limit_reached) {
+      res.status(429).json({
+        error: 'Weekly free prompt limit reached. Upgrade or try again next week.',
+        usage: usageInfo,
+      });
       return;
     }
 

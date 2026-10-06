@@ -1,11 +1,16 @@
 import { buildTransitBriefing, getRouteMatchesForPoints, type ChatLocationContext } from './transitContext.js';
-import { buildCommuteGuidePlan, type CommuteGuidePlan } from './commuteGuidePlan.js';
+import {
+  buildCommuteGuidePlan,
+  parseResolvedPoint,
+  type CommuteGuidePlan,
+} from './commuteGuidePlan.js';
+import { geminiMaxOutputTokens } from './aiTokenLimits.js';
 import { completeWithGroq } from './groqClient.js';
+import { getEnhancedMockResponse } from './mockCommuteReplies.js';
 import { normalizeAiResponse } from './normalizeAiResponse.js';
 
 const MOCK_RESPONSES: Record<string, string> = {
   'sm batangas': 'From Batangas City Grand Terminal to SM City Batangas, the documented regular fare is ₱32 across two jeepney legs. From Batangas Pier to SM City Batangas, the regular fare is ₱14.',
-  'monte maria': 'Take the Dela Paz/Ilijan - Batangas jeepney (signboard: Dela Paz, Ilijan, or Pagkilatan). Board at the Ilijan Jeepney Terminal on SM City Batangas parking/outskirts (or at San Isidro if you are already on that corridor). From CLB/city: jeepney to SM first, then Ilijan terminal. From Batangas Pier, Dela Paz/Ilijan does NOT pass beside the pier — take Sta. Clara/Pier to SM/Ilijan terminal first. Extended fare about ₱23 (discounted ₱19). Alight at Monte Maria — short walk usually enough. Do NOT board Libjo/San Isidro for Monte Maria or Alangilan–Batangas (goes north).',
   'tourist': 'Top spots near Batangas City include Taal Volcano, Basilica of the Immaculate Conception, Anilao for diving, and Laiya Beach for a weekend getaway.',
   'restaurant': 'Try Lomi King for authentic Batangas lomi, Café Laguna at SM for Filipino comfort food, or Batangas Seafood Bay for fresh grilled seafood.',
   'fare': "Jeepney fares follow LACVAY's documented matrix (standard and extended trips, with student/senior/PWD discounts). For places off the jeepney line, use Angkas, Grab, or iDOL Taxi and check the fare in the app. Tricycle TODA fares are not listed here — look for the nearest TODA and ask locals.",
@@ -19,13 +24,18 @@ const MOCK_RESPONSES: Record<string, string> = {
   'idol': 'iDOL Taxi is a Batangas metered-taxi option, useful for groups or luggage when the destination is away from jeepney routes.',
 };
 
-function getMockResponse(message: string): string {
+function getMockResponse(message: string, originHint?: string): string {
+  const rich = getEnhancedMockResponse(message, originHint);
+  if (rich) return rich;
+
   const lower = message.toLowerCase();
   const match = Object.entries(MOCK_RESPONSES)
     .filter(([key]) => lower.includes(key))
     .sort((a, b) => b[0].length - a[0].length)[0];
-  return match?.[1]
-    ?? "I'm LACVAY AI, your Batangas City travel buddy! I can help with routes, fares, tourist spots, and restaurant recommendations. Try asking how to get to Monte Maria from SM Batangas.";
+  return (
+    match?.[1] ??
+    "I'm LACVAY AI, your Batangas City travel buddy! I can help with routes, fares, tourist spots, and restaurant recommendations. Try asking how to get to Monte Maria from SM Batangas."
+  );
 }
 
 function extractNumberedSteps(briefing: string, sectionHeader: string): string[] {
@@ -76,15 +86,18 @@ function replyFromBriefing(briefing: string): string | null {
     ].join('\n');
   }
 
-  // Extract clean numbered steps from SELECTED COMMUTE PLAN
-  const planSection = briefing.split(/SELECTED COMMUTE PLAN:|COMMUTE STEPS:/i)[1];
+  // Header may be "SELECTED COMMUTE PLAN (optimized …):" — not only "SELECTED COMMUTE PLAN:"
+  const planSection = briefing.split(/SELECTED COMMUTE PLAN[^:\n]*:|COMMUTE STEPS:/i)[1];
   if (planSection) {
-    const steps = planSection
+    const stopAt = planSection.search(/\n[A-Z][A-Z &]+:/);
+    const slice = stopAt >= 0 ? planSection.slice(0, stopAt) : planSection;
+    const steps = slice
       .split('\n')
       .map((l) => l.trim())
       .filter((l) => /^\d+\.\s+\*\*/.test(l));
     if (steps.length) {
-      return steps.join('\n');
+      const header = origin && dest ? `**${origin} → ${dest}**\n\n` : '';
+      return header + steps.join('\n');
     }
   }
 
@@ -101,25 +114,26 @@ function replyFromBriefing(briefing: string): string | null {
   return null;
 }
 
-const SYSTEM_INSTRUCTION = `You are LACVAY Transit Assistant. Output ONLY clean, numbered commute steps following this rule:
+const SYSTEM_INSTRUCTION = `You are LACVAY Transit Assistant for Batangas City jeepney commuters.
 
-When a direct single jeepney is unavailable, prioritize a TWO- OR THREE-JEEPNEY TRANSFER over TNVS. Local commuters prefer transferring between jeepneys because fares are substantially cheaper (₱13–₱15 per leg vs. ₱100+ for TNVS).
+Output ONLY numbered commute steps. Follow SELECTED COMMUTE PLAN / COMMUTE STEPS in the briefing — it is already optimized (shortest walks between route lines, correct transfers).
 
-Format your response as sequential, numbered steps matching the route requirements:
-- For Direct Trips:
-  1. **Walk / Tricycle** — [First-mile access to stop]
-  2. **Jeepney** — Board [Route 1] ([Color]). Alight at [Stop]. Fare: ₱[Amount].
-  3. **Walk** — [Final walk to destination]
+DETAIL RULES (every step must be specific):
+- **First mile (200–300 m when possible):** Say walk ~Xm to a **real street/road** where the route **passes**, **wait at the roadside**, and **flag down** the jeepney when the **signboard matches** (e.g. Dela Paz/Ilijan, Libjo/San Isidro). Mention tricycle/TNVS only if the briefing says the walk is >1.2 km.
+- **Jeepney legs:** Route name + color if given, corridor (from ↔ to), **where to board**, **where to get off** (street/landmark/terminal), fare ₱X.
+- **Transfers:** Step 1 — get off Route A at [street/landmark]. Step 2 — **Transfer Walk** ~X min (~Xm) to where **Route B** passes; wait and flag. Step 3 — board Route B. Use 2–3 jeepneys when the briefing does — cheaper than TNVS.
+- **Last mile:** Short walk from alight point to destination with street name when known.
 
-- For Transfer Trips (Two or More Jeepneys):
-  1. **Walk / Tricycle** — [First-mile access to first stop]
-  2. **Jeepney** — Board [Route 1] ([Color]). Alight at [Transfer Hub / Landmark, e.g., City Hall, Evangelista, or SM Ilijan Terminal]. Fare: ₱[Amount].
-  3. **Transfer Walk** — Walk ~[X] min to [Next Route Stop / Street].
-  4. **Jeepney** — Board [Route 2] ([Color]). Alight at [Next Transfer Hub or near Destination]. Fare: ₱[Amount].
-  (If a 3rd jeepney is required, continue with 5. **Transfer Walk** and 6. **Jeepney**, etc.)
-  N. **Walk** — [Short final walk to destination]
+Format:
+1. **Walk / Tricycle** — …
+2. **Jeepney** — …
+3. **Transfer Walk** — … (only if transfer)
+4. **Jeepney** — …
+N. **Walk** — …
 
-DO NOT explain why other routes were rejected. DO NOT add conversational preamble or unnecessary travel warnings. Keep it strictly directional.`;
+Prefer **multi-jeepney transfers** over TNVS unless the traveler asked for Angkas/Grab/iDOL or the briefing says TNVS.
+
+No preamble, no rejected-route essay, no markdown tables. Strictly directional.`;
 
 function geminiModelCandidates(): string[] {
   const preferred = (process.env.GEMINI_MODEL ?? '').trim();
@@ -142,6 +156,10 @@ async function callGemini(message: string, briefing: string): Promise<string | n
   const payload = {
     system_instruction: {
       parts: [{ text: SYSTEM_INSTRUCTION }],
+    },
+    generationConfig: {
+      maxOutputTokens: geminiMaxOutputTokens(),
+      temperature: 0.3,
     },
     contents: [{
       role: 'user',
@@ -185,6 +203,11 @@ async function callGroq(message: string, briefing: string): Promise<string | nul
   );
 }
 
+function isWeakCommuteReply(text: string): boolean {
+  const numbered = text.split('\n').filter((line) => /^\s*\d+\.\s+\*\*/.test(line.trim()));
+  return numbered.length < 2;
+}
+
 function finalizeReply(text: string): string {
   return normalizeAiResponse(text);
 }
@@ -199,31 +222,22 @@ export async function chatWithAI(
   location: ChatLocationContext = {},
 ): Promise<ChatAiResult> {
   const briefing = await buildTransitBriefing(message, location);
+  const briefingReply = replyFromBriefing(briefing);
   const groqReply = await callGroq(message, briefing);
   const geminiReply = groqReply ? null : await callGemini(message, briefing);
+  let modelReply = groqReply ?? geminiReply;
+  if (modelReply && briefingReply && isWeakCommuteReply(modelReply)) {
+    modelReply = briefingReply;
+  }
   const reply = finalizeReply(
-    groqReply ?? geminiReply ?? replyFromBriefing(briefing) ?? getMockResponse(message),
+    modelReply ?? briefingReply ?? getMockResponse(message, location.origin),
   );
 
   let plan: CommuteGuidePlan | null = null;
   try {
-    const originMatch = briefing.match(
-      /RESOLVED ORIGIN:\s*([^\n(]+?)\s*\((\d+\.\d+)\s*,\s*(\d+\.\d+)\)/,
-    );
-    const destMatch = briefing.match(
-      /RESOLVED DESTINATION:\s*([^\n(]+?)\s*\((\d+\.\d+)\s*,\s*(\d+\.\d+)\)/,
-    );
-    if (originMatch && destMatch && !/^unknown/i.test(destMatch[1].trim())) {
-      const origin = {
-        label: originMatch[1].trim(),
-        lat: Number(originMatch[2]),
-        lng: Number(originMatch[3]),
-      };
-      const destination = {
-        label: destMatch[1].trim(),
-        lat: Number(destMatch[2]),
-        lng: Number(destMatch[3]),
-      };
+    const origin = parseResolvedPoint(briefing, 'ORIGIN');
+    const destination = parseResolvedPoint(briefing, 'DESTINATION');
+    if (origin && destination) {
       const matches = await getRouteMatchesForPoints(origin, destination);
       plan = buildCommuteGuidePlan({ briefing, reply, matches });
     }

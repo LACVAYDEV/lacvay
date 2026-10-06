@@ -201,19 +201,21 @@ function nearestPoints(
   return { onA, onB };
 }
 
-function parseResolvedPoint(
+/** Parse RESOLVED ORIGIN/DESTINATION lines; coords are always the last (lat, lng) pair on the line. */
+export function parseResolvedPoint(
   briefing: string,
   kind: 'ORIGIN' | 'DESTINATION',
 ): { label: string; lat: number; lng: number } | null {
-  const re = new RegExp(
-    `RESOLVED ${kind}:\\s*([^\\n(]+?)\\s*\\((\\d+\\.\\d+)\\s*,\\s*(\\d+\\.\\d+)\\)`,
-  );
-  const m = briefing.match(re);
-  if (!m) return null;
-  const label = m[1].trim();
-  if (/^unknown/i.test(label)) return null;
-  let lat = Number(m[2]);
-  let lng = Number(m[3]);
+  const prefix = `RESOLVED ${kind}:`;
+  const line = briefing.split('\n').find((l) => l.startsWith(prefix));
+  if (!line) return null;
+  const rest = line.slice(prefix.length).trim();
+  const coordMatch = rest.match(/\((\d+\.\d+)\s*,\s*(\d+\.\d+)\)\s*$/);
+  if (!coordMatch || coordMatch.index == null) return null;
+  const label = rest.slice(0, coordMatch.index).trim();
+  if (!label || /^unknown/i.test(label)) return null;
+  let lat = Number(coordMatch[1]);
+  let lng = Number(coordMatch[2]);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   // Fix swapped GeoJSON-style pairs (lng, lat)
   if (lat > 50 && lng < 50) {

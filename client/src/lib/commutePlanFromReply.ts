@@ -158,16 +158,55 @@ export function buildFallbackCommutePlan(
   }
 
   if (!legs.length) {
-    legs.push({
-      order: 1,
-      mode: 'walk',
-      title: 'Walk',
-      description: `From ${origin.label} toward ${destination.label}`,
-      path: [
-        [origin.lat, origin.lng],
-        [destination.lat, destination.lng],
-      ],
-    });
+    const jeepneyLine = content.match(/\b([A-Za-z0-9/.\s]+?)\s*-\s*Batangas\b/i);
+    const mentionsJeepney = /\bjeepney\b/i.test(content);
+    if (mentionsJeepney && jeepneyLine) {
+      const routeName = jeepneyLine[0].replace(/\s+/g, ' ').trim();
+      legs.push(
+        {
+          order: 1,
+          mode: 'walk',
+          title: 'Walk',
+          description: `From ${origin.label} toward the ${routeName} corridor`,
+          path: [
+            [origin.lat, origin.lng],
+            [origin.lat + (destination.lat - origin.lat) * 0.15, origin.lng + (destination.lng - origin.lng) * 0.15],
+          ],
+        },
+        {
+          order: 2,
+          mode: 'jeepney',
+          title: 'Jeepney',
+          description: content.replace(/[*_]/g, '').slice(0, 240),
+          routeName,
+          path: [
+            [origin.lat + (destination.lat - origin.lat) * 0.15, origin.lng + (destination.lng - origin.lng) * 0.15],
+            [destination.lat + (origin.lat - destination.lat) * 0.08, destination.lng + (origin.lng - destination.lng) * 0.08],
+          ],
+        },
+        {
+          order: 3,
+          mode: 'walk',
+          title: 'Walk',
+          description: `Alight and walk to ${destination.label}`,
+          path: [
+            [destination.lat + (origin.lat - destination.lat) * 0.08, destination.lng + (origin.lng - destination.lng) * 0.08],
+            [destination.lat, destination.lng],
+          ],
+        },
+      );
+    } else {
+      legs.push({
+        order: 1,
+        mode: 'walk',
+        title: 'Walk',
+        description: `From ${origin.label} toward ${destination.label}`,
+        path: [
+          [origin.lat, origin.lng],
+          [destination.lat, destination.lng],
+        ],
+      });
+    }
   }
 
   return {

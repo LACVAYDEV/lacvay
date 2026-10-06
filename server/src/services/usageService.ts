@@ -11,6 +11,36 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
+async function resolveSubscriptionTier(userId: string): Promise<'free' | 'premium' | null> {
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('subscription_tier')
+    .eq('id', userId)
+    .single();
+
+  if (!profileError && profile) {
+    return profile.subscription_tier === 'premium' ? 'premium' : 'free';
+  }
+
+  // Column missing or profile row missing — do not block AI
+  if (profileError?.code === '42703' || profileError?.message?.includes('subscription_tier')) {
+    console.warn('[usageService] subscription_tier missing; treating user as free tier');
+    return 'free';
+  }
+
+  if (profileError?.code === 'PGRST116') {
+    console.warn('[usageService] no profile row for user', userId);
+    return 'free';
+  }
+
+  if (profileError) {
+    console.error('Error fetching profile:', profileError);
+    return null;
+  }
+
+  return 'free';
+}
+
 export interface PromptUsageInfo {
   remaining_prompts: number;
   total_prompts: number;
@@ -18,25 +48,22 @@ export interface PromptUsageInfo {
   subscription_tier: string;
 }
 
+const DEFAULT_FREE_USAGE: PromptUsageInfo = {
+  remaining_prompts: 3,
+  total_prompts: 3,
+  limit_reached: false,
+  subscription_tier: 'free',
+};
+
 /**
  * Get the current week's prompt usage for a user
  */
 export async function getUserPromptUsage(userId: string): Promise<PromptUsageInfo | null> {
   try {
-    // Get user's profile to check subscription tier
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('subscription_tier')
-      .eq('id', userId)
-      .single();
+    const tier = await resolveSubscriptionTier(userId);
+    if (tier === null) return null;
 
-    if (profileError || !profile) {
-      console.error('Error fetching profile:', profileError);
-      return null;
-    }
-
-    // Premium users have unlimited prompts
-    if (profile.subscription_tier === 'premium') {
+    if (tier === 'premium') {
       return {
         remaining_prompts: 999,
         total_prompts: 999,
@@ -45,13 +72,16 @@ export async function getUserPromptUsage(userId: string): Promise<PromptUsageInf
       };
     }
 
-    // Get current week's usage
     const { data: usage, error: usageError } = await (supabase.rpc as any)(
       'get_or_create_weekly_usage',
       { user_id: userId },
     );
 
     if (usageError) {
+      if (usageError.code === 'PGRST202' || usageError.message?.includes('usage_stats')) {
+        console.warn('[usageService] usage RPC unavailable; returning default quota');
+        return { ...DEFAULT_FREE_USAGE };
+      }
       console.error('Error fetching usage stats:', usageError);
       return null;
     }
@@ -76,20 +106,10 @@ export async function getUserPromptUsage(userId: string): Promise<PromptUsageInf
  */
 export async function incrementPromptCount(userId: string): Promise<PromptUsageInfo | null> {
   try {
-    // Get user's profile to check subscription tier
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('subscription_tier')
-      .eq('id', userId)
-      .single();
+    const tier = await resolveSubscriptionTier(userId);
+    if (tier === null) return { ...DEFAULT_FREE_USAGE };
 
-    if (profileError || !profile) {
-      console.error('Error fetching profile:', profileError);
-      return null;
-    }
-
-    // Premium users have unlimited prompts - just return usage info
-    if (profile.subscription_tier === 'premium') {
+    if (tier === 'premium') {
       return {
         remaining_prompts: 999,
         total_prompts: 999,
@@ -98,15 +118,22 @@ export async function incrementPromptCount(userId: string): Promise<PromptUsageI
       };
     }
 
-    // Increment count using RPC function
     const { data: result, error: incrementError } = await (supabase.rpc as any)(
       'increment_prompt_count',
       { user_id: userId },
     );
 
     if (incrementError) {
+      if (
+        incrementError.code === 'PGRST202' ||
+        incrementError.message?.includes('increment_prompt_count') ||
+        incrementError.message?.includes('usage_stats')
+      ) {
+        console.warn('[usageService] increment RPC unavailable; allowing prompt');
+        return { ...DEFAULT_FREE_USAGE };
+      }
       console.error('Error incrementing prompt count:', incrementError);
-      return null;
+      return { ...DEFAULT_FREE_USAGE };
     }
 
     const newCount = result?.[0]?.new_count ?? 0;

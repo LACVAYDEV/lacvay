@@ -205,6 +205,33 @@ function formatStreetAtlas(): string {
   return REAL_STREET_ATLAS.join('\n');
 }
 
+const COMMUTER_DETAIL_RULES: string[] = [
+  'COMMUTER DETAIL RULES (optimized plan — expand every step for travelers):',
+  '- Jeepneys are **loops**: riders usually walk **200–300 meters** (or less when possible) to the **nearest point where the route line passes**, then **wait at the roadside** and **flag down** the jeepney when the **signboard matches**.',
+  '- **First mile:** state approximate **meters**, a **real street/road name** from REAL STREETS, which **route signboard** to look for, and that they should **wait at the curb** (not inside a mall unless the briefing says so).',
+  '- **Transfers:** say **where to get off** (street, landmark, or terminal), **walk ~X min / ~Xm** to where the **next route passes**, then **wait and flag** the next jeepney. Prefer the **shortest walk** between route lines (already optimized in SELECTED COMMUTE PLAN).',
+  '- **Last mile:** after alighting, give a **short walk** to the exact destination (shrine entrance, campus gate, etc.) with street name when known.',
+  '- Use **2 or 3 jeepneys** when that is cheaper/faster than TNVS; only suggest TNVS for long gaps (>1.2 km) or when the traveler asked for it.',
+  '- Do NOT invent street names — use REAL STREETS & ROADS below.',
+];
+
+function streetHintForLabel(label: string): string | null {
+  const n = label.toLowerCase();
+  if (/clb|colegio|sports coliseum|arrieta/.test(n)) return 'Arrieta Rd';
+  if (/pier|ppa|port of batangas|batangas port/.test(n)) return 'Ferry Road / Pier access';
+  if (/city hall|plaza mabini|basilica|burgos/.test(n)) return 'P. Burgos St';
+  if (/evangelista/.test(n)) return 'A. Evangelista St';
+  if (/grand terminal|alangilan|batstateu|pablo borbon/.test(n)) {
+    return /grand terminal/.test(n) ? 'Diversion Rd / National Road (Grand Terminal area)' : 'National Road (Alangilan corridor)';
+  }
+  if (/sm city|sm batangas|ilijan terminal/.test(n)) return 'SM parking / PPA coastal side (Ilijan terminal)';
+  if (/sto\.?\s*nino|santo nino|tabangao|monte maria|pagkilatan|ilijan|san isidro/.test(n)) {
+    return 'Batangas–Tabangao–Lobo Road (N439)';
+  }
+  if (/rizal|citimart|bay mall|lawas/.test(n)) return 'Rizal Avenue';
+  return null;
+}
+
 interface KnownTransfer {
   originAliases: string[];
   destinationAliases: string[];
@@ -1858,34 +1885,55 @@ export async function buildTransitBriefing(
   const itinerary = buildOptimizedItinerary(originPt, destPt, matchesInput);
 
   const steps: string[] = [];
+  const originStreet = streetHintForLabel(origin.label);
+  const destStreet = streetHintForLabel(destination.label);
   if (itinerary && itinerary.legs.length) {
     const isTransfer = itinerary.planType === 'transfer';
     itinerary.legs.forEach((leg, index) => {
       const stepNum = index + 1;
+      const nextJeepney = itinerary.legs.slice(index + 1).find((l) => l.mode === 'jeepney');
+
       if (leg.mode === 'walk') {
-        if (index === 0) {
-          steps.push(`${stepNum}. **Walk / Tricycle** — ${leg.summary}.`);
-        } else if (isTransfer && itinerary.legs.slice(index + 1).some((l) => l.mode === 'jeepney')) {
-          steps.push(`${stepNum}. **Transfer Walk** — ${leg.summary}.`);
-        } else {
-          steps.push(`${stepNum}. **Walk** — ${leg.summary}.`);
+        const title =
+          index === 0
+            ? 'Walk / Tricycle'
+            : leg.title === 'Transfer Walk' || (isTransfer && nextJeepney)
+              ? 'Transfer Walk'
+              : 'Walk';
+        let detail = leg.summary.replace(/\*\*/g, '');
+        if (index === 0 && originStreet && !detail.includes(originStreet)) {
+          detail += ` Head toward **${originStreet}** where jeepneys pass.`;
         }
+        if (index === itinerary.legs.length - 1 && destStreet && !detail.includes(destStreet)) {
+          detail += ` Continue on **${destStreet}** to reach ${destination.label}.`;
+        }
+        steps.push(`${stepNum}. **${title}** — ${detail.endsWith('.') ? detail : `${detail}.`}`);
       } else if (leg.mode === 'tnvs') {
-        steps.push(`${stepNum}. **Walk / Tricycle** — ${leg.summary}.`);
+        steps.push(`${stepNum}. **Tricycle / TNVS** — ${leg.summary.replace(/\*\*/g, '')}.`);
       } else if (leg.mode === 'jeepney') {
         const matched = tripRoutes.find(
           (r) => r.route.route_name.toLowerCase() === leg.routeName?.toLowerCase(),
         );
         const color = matched?.ends.color ? ` (${matched.ends.color})` : '';
         const fare = leg.fareRegular != null ? ` Fare: ₱${leg.fareRegular}.` : '';
-        const subsequentJeepney = itinerary.legs.slice(index + 1).find((l) => l.mode === 'jeepney');
-        if (isTransfer && subsequentJeepney) {
+        const corridor = matched
+          ? ` Corridor: ${matched.ends.from} ↔ ${matched.ends.to}.`
+          : '';
+        const boardHint =
+          index === 0 && originStreet
+            ? ` From **${originStreet}**, walk to where this route passes (often 200–300 m), wait roadside, flag signboard **${leg.routeName}**.`
+            : ` Wait roadside and flag signboard **${leg.routeName}**.`;
+        if (nextJeepney) {
+          const alightHint = ` Get off at the nearest safe stop where you can reach the **${nextJeepney.routeName}** line (see **Transfer Walk** next).`;
           steps.push(
-            `${stepNum}. **Jeepney** — Board ${leg.routeName ?? 'jeepney'}${color}. Alight at transfer hub/stop for ${subsequentJeepney.routeName ?? 'next jeepney'}.${fare}`,
+            `${stepNum}. **Jeepney** — Board **${leg.routeName ?? 'jeepney'}**${color}.${boardHint}${corridor}${alightHint}${fare}`,
           );
         } else {
+          const alightHint = destStreet
+            ? ` Alight on **${destStreet}** or the nearest stop to ${destination.label}, then finish on foot if needed.`
+            : ` Alight at the nearest stop to ${destination.label}.`;
           steps.push(
-            `${stepNum}. **Jeepney** — Board ${leg.routeName ?? 'jeepney'}${color}. Alight near ${destination.label}.${fare}`,
+            `${stepNum}. **Jeepney** — Board **${leg.routeName ?? 'jeepney'}**${color}.${boardHint}${corridor}${alightHint}${fare}`,
           );
         }
       }
@@ -1914,11 +1962,18 @@ export async function buildTransitBriefing(
     `RESOLVED ORIGIN: ${origin.label} (${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)})`,
     `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
     '',
+    ...COMMUTER_DETAIL_RULES,
+    '',
+    formatStreetAtlas(),
+    '',
     'SELECTED ROUTE DETAILS:',
     winningDetails.length ? winningDetails.join('\n') : `- Mode: ${itinerary?.planType ?? 'direct'}`,
     otherDirect.length ? `- Alternative Direct Routes: ${otherDirect.join(', ')}` : '',
     '',
-    'SELECTED COMMUTE PLAN:',
+    'SELECTED COMMUTE PLAN (optimized — expand each line with street names, meters, wait/flag, and transfer landmarks):',
+    ...steps,
+    '',
+    'COMMUTE STEPS:',
     ...steps,
   ];
 

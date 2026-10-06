@@ -9,6 +9,20 @@ export interface PromptUsageInfo {
   subscription_tier: string;
 }
 
+/** PostgREST: table/view missing (migration not applied on this Supabase project). */
+function isUsageSchemaMissing(error: { code?: string } | null): boolean {
+  return error?.code === 'PGRST205';
+}
+
+function defaultFreeUsage(): PromptUsageInfo {
+  return {
+    remaining_prompts: 3,
+    total_prompts: 3,
+    limit_reached: false,
+    subscription_tier: 'free',
+  };
+}
+
 /**
  * Hook to track user's prompt usage and subscription status
  */
@@ -53,10 +67,16 @@ export function usePromptLimit() {
           .gte('week_start', weekStartDate)
           .single();
 
-        if (usageError && usageError.code !== 'PGRST116') {
-          console.error('Error fetching usage:', usageError);
-          setError('Failed to fetch usage info');
-          return;
+        if (usageError) {
+          if (isUsageSchemaMissing(usageError)) {
+            setUsage(defaultFreeUsage());
+            return;
+          }
+          if (usageError.code !== 'PGRST116') {
+            console.error('Error fetching usage:', usageError);
+            setError('Failed to fetch usage info');
+            return;
+          }
         }
 
         const promptCount = usage?.prompt_count ?? 0;
@@ -91,9 +111,15 @@ export function usePromptLimit() {
         .gte('week_start', getWeekStart().toISOString().split('T')[0])
         .single();
 
-      if (usageError && usageError.code !== 'PGRST116') {
-        console.error('Error refreshing usage:', usageError);
-        return;
+      if (usageError) {
+        if (isUsageSchemaMissing(usageError)) {
+          setUsage(defaultFreeUsage());
+          return;
+        }
+        if (usageError.code !== 'PGRST116') {
+          console.error('Error refreshing usage:', usageError);
+          return;
+        }
       }
 
       const promptCount = usage?.prompt_count ?? 0;
