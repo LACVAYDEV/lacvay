@@ -6,7 +6,8 @@ import { Header } from './Header';
 import { LocationPermissionBar } from './LocationPermissionBar';
 import { AIFloatingButton } from './AIFloatingButton';
 import { LogoMark } from '@/components/ui/Logo';
-import { AdvertisementBanner } from '@/components/ads/AdvertisementBanner';
+import { HeaderToolbar } from '@/components/layout/HeaderToolbar';
+import { AdvertisementBanner, isAdBannerDismissed } from '@/components/ads/AdvertisementBanner';
 import { cn } from '@/lib/utils';
 
 interface AppLayoutProps {
@@ -22,7 +23,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
   const isAssistant = location.pathname.startsWith('/ai-assistant');
   const isHome = location.pathname === '/';
   const isMap = location.pathname === '/map';
-  const [showBanner, setShowBanner] = useState(true);
+  const [showBanner, setShowBanner] = useState(() => !isAdBannerDismissed());
 
   useEffect(() => {
     if (!sidebarOpen) return;
@@ -107,18 +108,21 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
         inert={sidebarOpen ? true : undefined}
       >
         {isHome && (
-          <div className="flex shrink-0 items-center gap-3 border-b border-gray-100 bg-white px-3.5 py-2.5 lg:hidden">
-            <button
-              ref={menuButtonRef}
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-lacvay-green hover:bg-lacvay-blush"
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <LogoMark className="size-8" />
-            <span className="text-[17px] font-extrabold text-lacvay-green">LACVAY</span>
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-100 bg-white px-3 py-2.5 lg:hidden">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <button
+                ref={menuButtonRef}
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lacvay-green hover:bg-lacvay-blush"
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <LogoMark className="size-8 shrink-0" />
+              <span className="truncate text-[17px] font-extrabold text-lacvay-green">LACVAY</span>
+            </div>
+            <HeaderToolbar className="shrink-0 gap-1.5" />
           </div>
         )}
 

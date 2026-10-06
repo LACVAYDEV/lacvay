@@ -13,7 +13,7 @@ export default function HomePage() {
     <div className="space-y-4 w-full pb-10">
       <div className="relative -mx-4 mt-2 md:-mx-6 md:mt-3 lg:mx-0 lg:mt-2">
         <HeroSection className="rounded-none sm:rounded-lg lg:rounded-lg" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-3 pt-4 min-[375px]:p-4 min-[375px]:pt-5 sm:p-5 sm:pt-6 lg:p-6">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden justify-end p-3 pt-4 min-[375px]:p-4 min-[375px]:pt-5 sm:p-5 sm:pt-6 lg:flex lg:p-6">
           <HeaderToolbar className="pointer-events-auto" />
         </div>
       </div>

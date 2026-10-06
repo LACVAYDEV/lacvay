@@ -1,6 +1,7 @@
 export const transportApps = {
   angkas: {
     name: 'Angkas',
+    logoUrl: '/images/Angkas.jpg',
     scheme: 'angkas://open',
     androidPackage: 'com.angkas.customer',
     iosAppId: 'id6464280697',
@@ -9,6 +10,7 @@ export const transportApps = {
   },
   grab: {
     name: 'Grab',
+    logoUrl: '/images/Grab.jpg',
     scheme: 'grab://open',
     androidPackage: 'com.grabtaxi.passenger',
     iosAppId: 'id647268330',
@@ -17,6 +19,7 @@ export const transportApps = {
   },
   idolTaxi: {
     name: 'iDOL Taxi',
+    logoUrl: '/images/IdolTaxi.jpeg',
     scheme: 'idolbooking://',
     androidPackage: 'com.alphamovers.alphamoversuser',
     iosAppId: 'id6744593753',

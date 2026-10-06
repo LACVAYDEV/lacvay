@@ -37,7 +37,7 @@ export function HeroSection({ className = '' }: { className?: string }) {
               with LACVAY
             </span>
           </h2>
-          <p className="mt-2.5 max-w-[17rem] font-montserrat text-[11px] font-medium leading-[1.55] text-lacvay-green-dark/80 min-[375px]:text-[12px] sm:max-w-[19rem]">
+          <p className="mt-2.5 max-w-[17rem] font-montserrat text-[11px] font-medium leading-[1.55] text-white/95 drop-shadow-sm min-[375px]:text-[12px] sm:max-w-[19rem]">
             Find the best routes, check fares, book rides, and discover local spots — all in one
             place.
           </p>
