@@ -13,6 +13,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { useAdminNavTitle } from '@/context/AdminNavTitleContext';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -94,6 +95,13 @@ export default function AdminTransitPage() {
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
+
+  useAdminNavTitle(
+    currentView === 'form' ? (editingRoute ? 'Edit transit route' : 'Add transit route') : null,
+    currentView === 'form'
+      ? 'Configure route name, primary color, path coordinates, and fixed fare pricing.'
+      : null,
+  );
 
   // Open the Form to Add a New Route
   const handleOpenCreateForm = () => {
@@ -352,12 +360,12 @@ export default function AdminTransitPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-20">
+    <div className="mx-auto w-full min-w-0 max-w-7xl space-y-4 pb-16 sm:space-y-6 sm:pb-20">
       {/* Toast Notification */}
       {notification && (
         <div
           className={cn(
-            'fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-medium shadow-xl transition-all animate-in fade-in slide-in-from-bottom-5',
+            'fixed bottom-5 left-4 right-4 z-50 flex items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-medium shadow-xl transition-all animate-in fade-in slide-in-from-bottom-5 sm:left-auto sm:right-5 sm:max-w-md',
             notification.type === 'success'
               ? 'bg-lacvay-green text-white shadow-lacvay-green/30'
               : 'bg-red-600 text-white shadow-red-600/30',
@@ -374,30 +382,32 @@ export default function AdminTransitPage() {
 
       {/* VIEW 1: ROUTES LIST (The first thing to see!) */}
       {currentView === 'list' && (
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-3">
           <AdminPageHeader
             title="Transit Routes"
-            description="Browse Batangas City jeepney transit routes. Add new routes or open one to edit."
+            stackActionsOnMobile
             actions={
-              <div className="flex items-center gap-2">
+              <>
                 <Button
                   variant="secondary"
+                  size="sm"
                   onClick={loadInitialData}
                   disabled={loading}
-                  className="gap-1.5"
+                  className="min-w-0 flex-1 gap-1.5 sm:flex-none"
                 >
-                  <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+                  <RefreshCw className={cn('h-4 w-4 shrink-0', loading && 'animate-spin')} />
                   Refresh
                 </Button>
                 <Button
                   variant="primary"
+                  size="sm"
                   onClick={handleOpenCreateForm}
-                  className="gap-1.5 bg-lacvay-green text-white hover:bg-lacvay-green-dark"
+                  className="min-w-0 flex-1 gap-1.5 bg-lacvay-green text-white hover:bg-lacvay-green-dark sm:flex-none"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4 shrink-0" />
                   Add route
                 </Button>
-              </div>
+              </>
             }
           />
 
@@ -417,13 +427,13 @@ export default function AdminTransitPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
               {routes.map((route) => {
                 const white = isWhiteColor(route.color_code);
                 return (
                   <div
                     key={route.id}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-gray-200/80 bg-white p-5 shadow-card transition hover:border-lacvay-green/30 hover:shadow-lg"
+                    className="group relative flex min-w-0 max-w-full flex-col justify-between overflow-hidden rounded-2xl border border-gray-200/80 bg-white p-4 shadow-card transition sm:rounded-3xl sm:p-5 hover:border-lacvay-green/30 hover:shadow-lg"
                   >
                     <div>
                       {/* Color Header Indicator */}
@@ -480,14 +490,24 @@ export default function AdminTransitPage() {
                         const routeFares = transitAdminService.extractRouteFares(route);
                         if (routeFares && (routeFares.regular != null || routeFares.extraDistance != null)) {
                           return (
-                            <div className="mt-3 rounded-2xl bg-gray-50/80 p-2.5 text-[11px] border border-gray-100">
-                              <div className="flex items-center justify-between text-gray-700 font-semibold">
-                                <span className="text-gray-500 font-medium">Standard Trip:</span>
-                                <span>₱{routeFares.regular?.toFixed(2) ?? '13.00'} <span className="text-lacvay-green text-[10px] font-normal">(Disc: ₱{routeFares.discounted?.toFixed(2) ?? '11.00'})</span></span>
+                            <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50/80 p-2.5 text-[11px]">
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+                                <span className="font-medium text-gray-500">Standard trip</span>
+                                <span className="font-semibold tabular-nums text-gray-800">
+                                  ₱{routeFares.regular?.toFixed(2) ?? '13.00'}
+                                  <span className="ml-1 text-[10px] font-normal text-lacvay-green">
+                                    disc ₱{routeFares.discounted?.toFixed(2) ?? '11.00'}
+                                  </span>
+                                </span>
                               </div>
-                              <div className="mt-1 flex items-center justify-between font-semibold text-amber-800">
-                                <span className="text-amber-700 font-medium">Extended Trip:</span>
-                                <span>₱{routeFares.extraDistance?.toFixed(2) ?? '15.00'} <span className="text-amber-600 text-[10px] font-normal">(Disc: ₱{routeFares.extraDistanceDiscounted?.toFixed(2) ?? '12.00'})</span></span>
+                              <div className="mt-1.5 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+                                <span className="font-medium text-amber-700">Extended trip</span>
+                                <span className="font-semibold tabular-nums text-amber-800">
+                                  ₱{routeFares.extraDistance?.toFixed(2) ?? '15.00'}
+                                  <span className="ml-1 text-[10px] font-normal text-amber-600">
+                                    disc ₱{routeFares.extraDistanceDiscounted?.toFixed(2) ?? '12.00'}
+                                  </span>
+                                </span>
                               </div>
                             </div>
                           );
@@ -518,8 +538,8 @@ export default function AdminTransitPage() {
       {currentView === 'form' && (
         <form onSubmit={handleSaveAll} className="space-y-6">
           {/* Header with Back Button */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4">
-            <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-col gap-4 border-b border-gray-200 pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
                 onClick={handleBackToList}
@@ -529,7 +549,7 @@ export default function AdminTransitPage() {
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div>
-                <h1 className="text-xl font-extrabold text-gray-900 sm:text-2xl">
+                <h1 className="sr-only">
                   {editingRoute ? 'Edit Transit Route' : 'Add New Transit Route'}
                 </h1>
                 <p className="text-xs text-gray-500 mt-0.5">
@@ -538,14 +558,16 @@ export default function AdminTransitPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="secondary" onClick={handleBackToList}>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Button type="button" variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={handleBackToList}>
                 Cancel
               </Button>
               {editingRoute && (
                 <Button
                   type="button"
                   variant="danger"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
                   onClick={() => setDeleteModalRoute(editingRoute)}
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
@@ -555,9 +577,10 @@ export default function AdminTransitPage() {
               <Button
                 type="submit"
                 disabled={actionLoading}
-                className="bg-lacvay-green text-white hover:bg-lacvay-green-dark gap-1.5"
+                size="sm"
+                className="min-w-0 flex-1 gap-1.5 bg-lacvay-green text-white hover:bg-lacvay-green-dark sm:flex-none"
               >
-                <Save className="h-4 w-4" />
+                <Save className="h-4 w-4 shrink-0" />
                 {actionLoading ? 'Saving...' : 'Save Route'}
               </Button>
             </div>

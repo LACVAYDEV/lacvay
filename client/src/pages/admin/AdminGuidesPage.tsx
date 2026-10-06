@@ -11,7 +11,6 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -484,11 +483,6 @@ export default function AdminGuidesPage() {
   if (currentView === 'list') {
     return (
       <div className="space-y-6">
-        <AdminPageHeader
-          title="Commute Guides"
-          description="Manage global commute guides published for all LACVAY users"
-        />
-
         {notification && (
           <div
             className={cn(

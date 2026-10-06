@@ -93,9 +93,7 @@ export default function AdminPlaceFormPage() {
       </Link>
 
       <div>
-        <h1 className="text-[22px] font-extrabold leading-tight tracking-tight text-lacvay-green-dark sm:text-[26px]">
-          {isEditing ? 'Edit tourist spot' : 'Add tourist spot'}
-        </h1>
+        <h1 className="sr-only">{isEditing ? 'Edit tourist spot' : 'Add tourist spot'}</h1>
         <p className="mt-1.5 text-[13px] text-gray-500">
           {isEditing ? 'Update destination details shown to travelers.' : 'Create a new destination for the app.'}
         </p>
