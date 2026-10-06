@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Plus, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState, LoadingState } from '@/components/ui/States';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { AdminCatalogSearch } from '@/components/admin/AdminCatalogSearch';
 import { adminService } from '@/services/adminService';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
@@ -171,6 +171,26 @@ export default function AdminPlacesPage() {
   const [places, setPlaces] = useState<TouristSpot[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSpot, setSelectedSpot] = useState<TouristSpot | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredPlaces = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return places;
+    return places.filter((spot) => {
+      const haystack = [
+        spot.name,
+        spot.category,
+        spot.categoryLabel,
+        spot.location,
+        spot.shortDescription,
+        spot.description,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [places, searchQuery]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -215,20 +235,55 @@ export default function AdminPlacesPage() {
     }
   };
 
+  const handleWipeAll = async () => {
+    const confirmed = await confirm({
+      title: 'Delete all destinations?',
+      description: `All ${places.length} destinations will be permanently deleted from the database. This action cannot be undone.`,
+      confirmLabel: 'Delete all',
+    });
+    if (!confirmed) return;
+    setLoading(true);
+    try {
+      await adminService.clearAllPlaces();
+      setSelectedSpot(null);
+      await refresh();
+      showToast('All destinations have been wiped from the database');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Wipe failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <LoadingState />;
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Tourist Spots"
-        description="Browse destinations in a catalog view. Add new spots or open one for full details."
-        actions={
-          <Button onClick={() => navigate('/admin/places/new')}>
-            <Plus className="h-4 w-4" />
-            Add spot
-          </Button>
-        }
-      />
+    <div className="space-y-3">
+      {places.length > 0 && (
+        <AdminCatalogSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search spots by name, category, or location…"
+          aria-label="Search tourist spots"
+          trailing={
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden gap-1 border-red-200 px-2.5 text-red-600 hover:border-red-300 hover:bg-red-50 sm:inline-flex"
+                onClick={() => void handleWipeAll()}
+              >
+                <Trash2 className="h-4 w-4" />
+                Wipe all
+              </Button>
+              <Button size="sm" className="gap-1 whitespace-nowrap px-3" onClick={() => navigate('/admin/places/new')}>
+                <Plus className="h-4 w-4" />
+                Add spot
+              </Button>
+            </div>
+          }
+        />
+      )}
 
       {places.length === 0 ? (
         <div className="space-y-4">
@@ -243,6 +298,11 @@ export default function AdminPlacesPage() {
             </Button>
           </div>
         </div>
+      ) : filteredPlaces.length === 0 ? (
+        <EmptyState
+          title="No matching spots"
+          description="Try a different name, category, or location."
+        />
       ) : (
         <div
           className={cn(
@@ -250,7 +310,7 @@ export default function AdminPlacesPage() {
             'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
           )}
         >
-          {places.map((spot) => (
+          {filteredPlaces.map((spot) => (
             <SpotGridCard key={spot.id} spot={spot} onSelect={() => setSelectedSpot(spot)} />
           ))}
         </div>

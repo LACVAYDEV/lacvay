@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Plus, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState, LoadingState } from '@/components/ui/States';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { AdminCatalogSearch } from '@/components/admin/AdminCatalogSearch';
 import { adminService } from '@/services/adminService';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
@@ -194,6 +194,25 @@ export default function AdminRestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredRestaurants = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return restaurants;
+    return restaurants.filter((restaurant) => {
+      const haystack = [
+        restaurant.name,
+        restaurant.location,
+        restaurant.description,
+        restaurant.priceRange,
+        ...(restaurant.cuisine ?? []),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [restaurants, searchQuery]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -238,20 +257,59 @@ export default function AdminRestaurantsPage() {
     }
   };
 
+  const handleWipeAll = async () => {
+    const confirmed = await confirm({
+      title: 'Delete all eateries?',
+      description: `All ${restaurants.length} eateries will be permanently deleted from the database. This action cannot be undone.`,
+      confirmLabel: 'Delete all',
+    });
+    if (!confirmed) return;
+    setLoading(true);
+    try {
+      await adminService.clearAllPlaces();
+      setSelectedRestaurant(null);
+      await refresh();
+      showToast('All eateries have been wiped from the database');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Wipe failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <LoadingState />;
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Eateries"
-        description="Browse restaurants in a catalog view. Add new listings or open one for full details."
-        actions={
-          <Button onClick={() => navigate('/admin/restaurants/new')}>
-            <Plus className="h-4 w-4" />
-            Add eatery
-          </Button>
-        }
-      />
+    <div className="space-y-3">
+      {restaurants.length > 0 && (
+        <AdminCatalogSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search eateries by name, cuisine, or location…"
+          aria-label="Search eateries"
+          trailing={
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden gap-1 border-red-200 px-2.5 text-red-600 hover:border-red-300 hover:bg-red-50 sm:inline-flex"
+                onClick={() => void handleWipeAll()}
+              >
+                <Trash2 className="h-4 w-4" />
+                Wipe all
+              </Button>
+              <Button
+                size="sm"
+                className="gap-1 whitespace-nowrap px-3"
+                onClick={() => navigate('/admin/restaurants/new')}
+              >
+                <Plus className="h-4 w-4" />
+                Add eatery
+              </Button>
+            </div>
+          }
+        />
+      )}
 
       {restaurants.length === 0 ? (
         <div className="space-y-4">
@@ -266,6 +324,11 @@ export default function AdminRestaurantsPage() {
             </Button>
           </div>
         </div>
+      ) : filteredRestaurants.length === 0 ? (
+        <EmptyState
+          title="No matching eateries"
+          description="Try a different name, cuisine, or location."
+        />
       ) : (
         <div
           className={cn(
@@ -273,7 +336,7 @@ export default function AdminRestaurantsPage() {
             'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
           )}
         >
-          {restaurants.map((restaurant) => (
+          {filteredRestaurants.map((restaurant) => (
             <EateryGridCard
               key={restaurant.id}
               restaurant={restaurant}

@@ -84,9 +84,7 @@ export default function AdminPromotionFormPage() {
       </Link>
 
       <div>
-        <h1 className="text-[22px] font-extrabold leading-tight tracking-tight text-lacvay-green-dark sm:text-[26px]">
-          {isEditing ? 'Edit ad' : 'Create ad'}
-        </h1>
+        <h1 className="sr-only">{isEditing ? 'Edit ad' : 'Create ad'}</h1>
         <p className="mt-1.5 text-[13px] text-gray-500">
           Promotions are ads shown to travelers on the home page and promotions screen. Add an image or video creative.
         </p>

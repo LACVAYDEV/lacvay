@@ -34,6 +34,24 @@ export const adminService = {
     return (data ?? []) as UserProfile[];
   },
 
+  async fetchActivitySourceRows() {
+    const [places, promotions, transitRoutes] = await Promise.all([
+      supabase.from('places').select('id, name, created_at, metadata'),
+      supabase.from('promotions').select('id, title, created_at, updated_at, is_active'),
+      supabase.from('transit_routes').select('id, route_name, created_at'),
+    ]);
+
+    if (places.error) throw places.error;
+    if (promotions.error) throw promotions.error;
+    if (transitRoutes.error) throw transitRoutes.error;
+
+    return {
+      places: places.data ?? [],
+      promotions: promotions.data ?? [],
+      transitRoutes: transitRoutes.data ?? [],
+    };
+  },
+
   async updateUserProfile(
     id: string,
     patch: { full_name?: string; avatar_url?: string; role?: UserRole },

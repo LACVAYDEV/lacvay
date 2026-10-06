@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, KeyRound, Search, Shield, ShieldOff, Trash2 } from 'lucide-react';
+import { ChevronDown, KeyRound, RefreshCw, Shield, ShieldOff, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LoadingState, EmptyState } from '@/components/ui/States';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { AdminCatalogSearch } from '@/components/admin/AdminCatalogSearch';
 import { adminService } from '@/services/adminService';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
@@ -164,30 +164,31 @@ export default function AdminUsersPage() {
     );
   }
 
+  const formatJoined = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Users"
-        description="Manage registered accounts and grant or revoke admin access."
-        actions={
-          <Button variant="secondary" onClick={() => void load()}>Refresh</Button>
-        }
-      />
+    <Card className="space-y-3 sm:space-y-4">
+        <AdminCatalogSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search by name or email..."
+          aria-label="Search users by name or email"
+          trailing={
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-9 shrink-0 gap-1 px-2.5 sm:px-3"
+              aria-label="Refresh user list"
+              onClick={() => void load()}
+            >
+              <RefreshCw className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+          }
+        />
 
-      <Card className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name or email..."
-            aria-label="Search users by name or email"
-            className="w-full rounded-full border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-[12.5px] outline-none transition placeholder:text-gray-400 focus:border-lacvay-green focus:bg-white focus:ring-2 focus:ring-lacvay-green/15"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
+        <div className="-mx-1 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {roleFilters.map(({ value, label }) => {
             const count = value === 'all' ? users.length : value === 'admin' ? adminCount : travelerCount;
             return (
@@ -196,7 +197,7 @@ export default function AdminUsersPage() {
                 type="button"
                 onClick={() => setRoleFilter(value)}
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold transition',
+                  'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition sm:gap-2 sm:px-4 sm:py-2 sm:text-[12.5px]',
                   roleFilter === value
                     ? 'bg-lacvay-green text-white shadow-soft'
                     : 'border border-gray-100 bg-white text-gray-600 shadow-soft hover:bg-gray-50',
@@ -244,30 +245,36 @@ export default function AdminUsersPage() {
                   <button
                     type="button"
                     onClick={() => toggleExpanded(user.id)}
-                    className="flex w-full items-center gap-3 p-4 text-left"
+                    className="flex w-full items-start gap-2.5 p-3 text-left sm:gap-3 sm:p-4"
                     aria-expanded={isExpanded}
                   >
                     <img
                       src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
                       alt=""
-                      className="h-12 w-12 shrink-0 rounded-full bg-gray-100 ring-2 ring-white"
+                      className="h-10 w-10 shrink-0 rounded-full bg-gray-100 ring-2 ring-white sm:h-11 sm:w-11"
                     />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-bold text-gray-900">{user.full_name || 'Unnamed user'}</p>
-                      <p className="truncate text-[12.5px] text-gray-500">{user.email}</p>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {isAdmin ? <Badge>Admin</Badge> : <Badge variant="gray">Traveler</Badge>}
+                    <div className="min-w-0 flex-1 pr-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-[13.5px] font-bold leading-snug text-gray-900 sm:text-[14px]">
+                          {user.full_name || 'Unnamed user'}
+                        </p>
+                        <ChevronDown
+                          className={cn(
+                            'mt-0.5 h-4 w-4 shrink-0 text-gray-400 transition-transform sm:h-5 sm:w-5',
+                            isExpanded && 'rotate-180 text-lacvay-green',
+                          )}
+                        />
+                      </div>
+                      <p className="mt-0.5 break-all text-[11.5px] leading-snug text-gray-500 sm:text-[12.5px]">
+                        {user.email}
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500">
+                        {isAdmin ? <Badge className="py-0">Admin</Badge> : <Badge variant="gray" className="py-0">Traveler</Badge>}
                         {user.created_at && (
-                          <Badge variant="gray">Joined {new Date(user.created_at).toLocaleDateString()}</Badge>
+                          <span className="whitespace-nowrap">Joined {formatJoined(user.created_at)}</span>
                         )}
                       </div>
                     </div>
-                    <ChevronDown
-                      className={cn(
-                        'h-5 w-5 shrink-0 text-gray-400 transition-transform',
-                        isExpanded && 'rotate-180 text-lacvay-green',
-                      )}
-                    />
                   </button>
 
                   {isExpanded && (
@@ -406,7 +413,6 @@ export default function AdminUsersPage() {
             })}
           </div>
         )}
-      </Card>
-    </div>
+    </Card>
   );
 }
