@@ -315,8 +315,8 @@ export interface CommuteGuideLeg {
 
 export interface CommuteGuidePlan {
   title: string;
-  origin: { label: string; lat: number; lng: number };
-  destination: { label: string; lat: number; lng: number };
+  origin: { label: string; lat: number; lng: number; outOfBounds?: boolean };
+  destination: { label: string; lat: number; lng: number; outOfBounds?: boolean };
   planType: string;
   legs: CommuteGuideLeg[];
   totalMinutes: number | null;

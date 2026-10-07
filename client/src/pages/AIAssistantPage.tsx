@@ -410,26 +410,35 @@ export default function AIAssistantPage() {
 
 
     if (!raw || !raw.legs?.length) {
-
       showToast('No map route for this reply yet — ask for a place-to-place commute.');
-
       return;
+    }
 
+    if (raw.origin?.outOfBounds || raw.destination?.outOfBounds) {
+      showToast('Cannot plot route: Location is outside Batangas City.');
+      return;
     }
 
     const plan = rebuildPlanPaths(raw);
 
+    if (plan.origin?.outOfBounds || plan.destination?.outOfBounds || !plan.legs.length) {
+      showToast('Cannot plot route: Location is outside Batangas City.');
+      return;
+    }
+
     storeActiveCommutePlan(plan);
-
     navigate('/commute', { state: { plan } });
-
   };
 
-
-
-  const canViewOnGuide = (msg: AIMessage) =>
-
-    Boolean(msg.plan?.legs?.length) || looksLikeCommuteReply(msg.content);
+  const canViewOnGuide = (msg: AIMessage) => {
+    if (msg.plan?.origin?.outOfBounds || msg.plan?.destination?.outOfBounds) {
+      return false;
+    }
+    if (/out of bounds|outside batangas/i.test(msg.content)) {
+      return false;
+    }
+    return Boolean(msg.plan?.legs?.length) || looksLikeCommuteReply(msg.content);
+  };
 
 
 

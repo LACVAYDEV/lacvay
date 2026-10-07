@@ -86,20 +86,90 @@ function detectMode(line: string): GuideLegMode | null {
 
 /** True when the assistant reply looks like a numbered commute itinerary. */
 export function looksLikeCommuteReply(content: string): boolean {
+  if (/out of bounds|outside batangas/i.test(content)) return false;
   const hasSteps = /^\s*\d+[.)]\s+/m.test(content);
-  const hasModes = /\b(Walk|Jeepney|TNVS|Angkas|Grab)\b/i.test(content);
-  const hasArrow = /→|->|to\b/i.test(content);
-  return (hasSteps && hasModes) || (hasModes && hasArrow && content.length > 80);
+  const hasModes = /\b(Walk|Jeepney|TNVS|Transfer Walk|Angkas|Grab|iDOL)\b/i.test(content);
+  return hasSteps && hasModes;
+}
+
+/** Strictly parse numbered commute steps from reply text. Returns empty array if none found. */
+export function parseReplyLegs(
+  content: string,
+  origin: { label: string; lat: number; lng: number },
+  destination: { label: string; lat: number; lng: number },
+): CommuteGuideLeg[] {
+  const lines = content.split('\n').map((l) => l.trim()).filter(Boolean);
+  const legs: CommuteGuideLeg[] = [];
+  let order = 1;
+
+  for (const line of lines) {
+    // Strictly look for numbered list steps with transit modes
+    const stepWithMode = line.match(/^\s*\d+[.)]\s+\*\*(Walk|Jeepney|TNVS|Transfer Walk)[^*]*\*\*\s*[—:-]?\s*(.*)/i);
+    const plainWithMode = line.match(/^\s*\d+[.)]\s+(Walk|Jeepney|TNVS|Transfer Walk)\b[—:-]?\s*(.*)/i);
+    const hit = stepWithMode ?? plainWithMode;
+
+    let mode: GuideLegMode | null = null;
+    let description = '';
+    let title = '';
+
+    if (hit) {
+      const modeRaw = hit[1].toLowerCase();
+      mode = modeRaw.includes('walk') ? 'walk' : modeRaw.startsWith('jeep') ? 'jeepney' : 'tnvs';
+      title = /transfer\s+walk/i.test(hit[1])
+        ? 'Transfer Walk'
+        : mode === 'walk'
+          ? 'Walk'
+          : mode === 'jeepney'
+            ? 'Jeepney'
+            : 'TNVS';
+      description = (hit[2] || '').replace(/[*_]/g, '').trim();
+    } else {
+      const genericNum = line.match(/^\s*\d+[.)]\s+(.+)/);
+      if (!genericNum) continue;
+      const detected = detectMode(genericNum[1]);
+      if (!detected) continue;
+      mode = detected;
+      title = detected === 'walk' ? 'Walk' : detected === 'jeepney' ? 'Jeepney' : 'TNVS';
+      description = genericNum[1].replace(/[*_]/g, '').trim();
+    }
+
+    if (!mode) continue;
+
+    const t0 = (order - 1) / Math.max(3, order + 1);
+    const t1 = order / Math.max(3, order + 1);
+    legs.push({
+      order: order++,
+      mode,
+      title: title || (mode === 'walk' ? 'Walk' : mode === 'jeepney' ? 'Jeepney' : 'TNVS'),
+      description: description || line,
+      path: [
+        [
+          origin.lat + (destination.lat - origin.lat) * t0,
+          origin.lng + (destination.lng - origin.lng) * t0,
+        ],
+        [
+          origin.lat + (destination.lat - origin.lat) * t1,
+          origin.lng + (destination.lng - origin.lng) * t1,
+        ],
+      ],
+    });
+  }
+
+  return legs;
 }
 
 /**
  * Build a map-ready plan from reply text when the API did not attach `plan`.
- * Uses known landmark coordinates so the Commute Guide page still opens.
+ * Strictly requires numbered commute steps with recognized modes; returns null if none found.
  */
 export function buildFallbackCommutePlan(
   content: string,
   originHint?: string,
 ): CommuteGuidePlan | null {
+  if (!looksLikeCommuteReply(content)) {
+    return null;
+  }
+
   const arrow =
     content.match(/\*\*([^*]+?)\s*→\s*([^*]+?)\*\*/) ||
     content.match(/([^\n→]+?)\s*→\s*([^\n]+)/);
@@ -128,85 +198,10 @@ export function buildFallbackCommutePlan(
           lng: 121.0583,
         };
 
-  const lines = content.split('\n').map((l) => l.trim()).filter(Boolean);
-  const legs: CommuteGuideLeg[] = [];
-  let order = 1;
-  for (const line of lines) {
-    const num = line.match(/^\d+[.)]\s+(.+)/);
-    if (!num) continue;
-    const mode = detectMode(num[1]) ?? detectMode(line);
-    if (!mode) continue;
-    const description = num[1].replace(/[*_]/g, '').trim();
-    const t0 = (order - 1) / Math.max(3, order + 1);
-    const t1 = order / Math.max(3, order + 1);
-    legs.push({
-      order: order++,
-      mode,
-      title: mode === 'walk' ? 'Walk' : mode === 'jeepney' ? 'Jeepney' : 'TNVS',
-      description,
-      path: [
-        [
-          origin.lat + (destination.lat - origin.lat) * t0,
-          origin.lng + (destination.lng - origin.lng) * t0,
-        ],
-        [
-          origin.lat + (destination.lat - origin.lat) * t1,
-          origin.lng + (destination.lng - origin.lng) * t1,
-        ],
-      ],
-    });
-  }
+  const legs = parseReplyLegs(content, origin, destination);
 
   if (!legs.length) {
-    const jeepneyLine = content.match(/\b([A-Za-z0-9/.\s]+?)\s*-\s*Batangas\b/i);
-    const mentionsJeepney = /\bjeepney\b/i.test(content);
-    if (mentionsJeepney && jeepneyLine) {
-      const routeName = jeepneyLine[0].replace(/\s+/g, ' ').trim();
-      legs.push(
-        {
-          order: 1,
-          mode: 'walk',
-          title: 'Walk',
-          description: `From ${origin.label} toward the ${routeName} corridor`,
-          path: [
-            [origin.lat, origin.lng],
-            [origin.lat + (destination.lat - origin.lat) * 0.15, origin.lng + (destination.lng - origin.lng) * 0.15],
-          ],
-        },
-        {
-          order: 2,
-          mode: 'jeepney',
-          title: 'Jeepney',
-          description: content.replace(/[*_]/g, '').slice(0, 240),
-          routeName,
-          path: [
-            [origin.lat + (destination.lat - origin.lat) * 0.15, origin.lng + (destination.lng - origin.lng) * 0.15],
-            [destination.lat + (origin.lat - destination.lat) * 0.08, destination.lng + (origin.lng - destination.lng) * 0.08],
-          ],
-        },
-        {
-          order: 3,
-          mode: 'walk',
-          title: 'Walk',
-          description: `Alight and walk to ${destination.label}`,
-          path: [
-            [destination.lat + (origin.lat - destination.lat) * 0.08, destination.lng + (origin.lng - destination.lng) * 0.08],
-            [destination.lat, destination.lng],
-          ],
-        },
-      );
-    } else {
-      legs.push({
-        order: 1,
-        mode: 'walk',
-        title: 'Walk',
-        description: `From ${origin.label} toward ${destination.label}`,
-        path: [
-          [origin.lat, origin.lng],
-          [destination.lat, destination.lng],
-        ],
-      });
-    }
+    return null;
   }
 
   return {

@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js';
 import type { Database, Json } from '../types/database.types.js';
-import { resolveGpsOrigin } from './reverseGeocode.js';
+import { resolveGpsOrigin, resolveLocation, isInBatangas } from './reverseGeocode.js';
 import { buildOptimizedItinerary, type RouteMatchInput } from './itineraryPlanner.js';
 
 type TransitRoute = Database['public']['Tables']['transit_routes']['Row'];
@@ -1779,54 +1779,97 @@ export async function buildTransitBriefing(
 
   const tnvsPreference = wantsTnvsPreference(message);
   const parsed = parseTrip(message, location.origin);
-  const destination = resolveDestination(message, parsed.destination, live.places);
-  let origin: { label: string; lat?: number; lng?: number } | null = null;
+
+  // 1. Resolve Destination using 3-step rule (DB POI -> geocode -> isInBatangas)
+  let destination: { label: string; lat?: number; lng?: number; outOfBounds?: boolean } | null = null;
+  const legacyDest = resolveDestination(message, parsed.destination, live.places);
+  if (legacyDest?.lat != null && legacyDest?.lng != null) {
+    destination = { label: legacyDest.label, lat: legacyDest.lat, lng: legacyDest.lng, outOfBounds: false };
+  } else if (parsed.destination?.trim() || legacyDest?.label) {
+    const rawDestQuery = parsed.destination?.trim() || legacyDest?.label || '';
+    const res = await resolveLocation(rawDestQuery, { places: live.places });
+    destination = {
+      label: res.label,
+      lat: res.lat ?? undefined,
+      lng: res.lng ?? undefined,
+      outOfBounds: res.outOfBounds,
+    };
+  }
+
+  // 2. Resolve Origin using 3-step rule (Exact GPS -> DB POI -> geocode -> isInBatangas)
+  let origin: { label: string; lat?: number; lng?: number; outOfBounds?: boolean } | null = null;
   let originAssumed = false;
 
-  const originExplicitInMessage = parsed.originExplicit;
+  const originQuery = parsed.originExplicit
+    ? parsed.origin
+    : (location.origin?.trim() || parsed.origin);
 
-  // From-field landmark (e.g. typed "CLB") that differs from GPS — respect From
-  const fromFieldKnown = location.origin?.trim() ? findPoint(location.origin) : null;
-  const fromFieldDiffersFromGps =
-    Boolean(fromFieldKnown) &&
-    hasGps &&
-    haversineKm(location.originLat!, location.originLng!, fromFieldKnown!.lat, fromFieldKnown!.lng) > 0.6;
-
-  // Prefer live GPS only when From is not a different named landmark
-  if (hasGps && !originExplicitInMessage && !fromFieldDiffersFromGps) {
-    const gps = await resolveGpsOrigin(
-      location.originLat!,
-      location.originLng!,
-      live.places,
-      location.origin,
-    );
-    origin = { label: gps.label, lat: gps.lat, lng: gps.lng };
-  } else if (fromFieldKnown && (originExplicitInMessage || fromFieldDiffersFromGps || !hasGps)) {
-    origin = { label: fromFieldKnown.name, lat: fromFieldKnown.lat, lng: fromFieldKnown.lng };
-  } else if (parsed.origin) {
-    origin = resolveNamedPlace(parsed.origin, live.places);
-    if (origin && origin.lat == null && hasGps) {
-      origin = { label: origin.label, lat: location.originLat, lng: location.originLng };
+  if (hasGps && (!parsed.originExplicit || /^(my location|your current location|current location|here)$/i.test(originQuery || ''))) {
+    if (!isInBatangas(location.originLat!, location.originLng!)) {
+      origin = {
+        label: location.origin || 'Your location',
+        lat: location.originLat,
+        lng: location.originLng,
+        outOfBounds: true,
+      };
+    } else {
+      const gps = await resolveGpsOrigin(
+        location.originLat!,
+        location.originLng!,
+        live.places,
+        location.origin,
+      );
+      // Exact GPS priority: raw coordinates preserved
+      origin = { label: gps.label, lat: location.originLat, lng: location.originLng, outOfBounds: false };
     }
+  } else if (originQuery) {
+    const res = await resolveLocation(originQuery, {
+      rawLat: hasGps ? location.originLat : undefined,
+      rawLng: hasGps ? location.originLng : undefined,
+      places: live.places,
+    });
+    origin = {
+      label: res.label,
+      lat: res.lat ?? undefined,
+      lng: res.lng ?? undefined,
+      outOfBounds: res.outOfBounds,
+    };
   } else if (hasGps) {
-    const gps = await resolveGpsOrigin(
-      location.originLat!,
-      location.originLng!,
-      live.places,
-      location.origin,
-    );
-    origin = { label: gps.label, lat: gps.lat, lng: gps.lng };
+    if (!isInBatangas(location.originLat!, location.originLng!)) {
+      origin = { label: 'Your location', lat: location.originLat, lng: location.originLng, outOfBounds: true };
+    } else {
+      const gps = await resolveGpsOrigin(
+        location.originLat!,
+        location.originLng!,
+        live.places,
+        location.origin,
+      );
+      origin = { label: gps.label, lat: location.originLat, lng: location.originLng, outOfBounds: false };
+    }
   }
 
-  // Prefer resolving bare labels like "CLB" / "pablo borbon" via KNOWN_POINTS
-  if (origin?.lat == null && parsed.origin) {
-    const known = findPoint(parsed.origin);
-    if (known) origin = { label: known.name, lat: known.lat, lng: known.lng };
-  }
-
-  if (destination?.lat != null && !origin) {
-    origin = resolveNamedPlace('SM City Batangas', live.places);
+  if (destination?.lat != null && !origin && !destination.outOfBounds) {
+    origin = { label: 'SM City Batangas', lat: 13.7594, lng: 121.0722, outOfBounds: false };
     originAssumed = true;
+  }
+
+  // 3. Strict Out of Bounds Rejection
+  if (origin?.outOfBounds) {
+    return [
+      `RESOLVED ORIGIN: ${origin.label} (OUT OF BOUNDS — outside Batangas City)`,
+      destination ? `RESOLVED DESTINATION: ${destination.label}` : 'RESOLVED DESTINATION: unknown',
+      '',
+      `LOCATION WARNING: Starting point "${origin.label}" is outside Batangas City. LACVAY only provides public transit guides within Batangas City. Please specify a location inside Batangas City.`,
+    ].join('\n');
+  }
+
+  if (destination?.outOfBounds) {
+    return [
+      origin ? `RESOLVED ORIGIN: ${origin.label}` : 'RESOLVED ORIGIN: unknown',
+      `RESOLVED DESTINATION: ${destination.label} (OUT OF BOUNDS — outside Batangas City)`,
+      '',
+      `LOCATION WARNING: Destination "${destination.label}" is outside Batangas City. LACVAY only provides public transit guides within Batangas City. Please specify a destination inside Batangas City.`,
+    ].join('\n');
   }
 
   if (!destination || destination.lat == null || destination.lng == null) {
@@ -1970,7 +2013,7 @@ export async function buildTransitBriefing(
     winningDetails.length ? winningDetails.join('\n') : `- Mode: ${itinerary?.planType ?? 'direct'}`,
     otherDirect.length ? `- Alternative Direct Routes: ${otherDirect.join(', ')}` : '',
     '',
-    'SELECTED COMMUTE PLAN (optimized — expand each line with street names, meters, wait/flag, and transfer landmarks):',
+    'SELECTED COMMUTE PLAN:',
     ...steps,
     '',
     'COMMUTE STEPS:',

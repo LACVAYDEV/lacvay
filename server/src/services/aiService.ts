@@ -6,15 +6,12 @@ import {
 } from './commuteGuidePlan.js';
 import { geminiMaxOutputTokens } from './aiTokenLimits.js';
 import { completeWithGroq } from './groqClient.js';
-import { getEnhancedMockResponse } from './mockCommuteReplies.js';
 import { normalizeAiResponse } from './normalizeAiResponse.js';
 
 const MOCK_RESPONSES: Record<string, string> = {
-  'sm batangas': 'From Batangas City Grand Terminal to SM City Batangas, the documented regular fare is ₱32 across two jeepney legs. From Batangas Pier to SM City Batangas, the regular fare is ₱14.',
   'tourist': 'Top spots near Batangas City include Taal Volcano, Basilica of the Immaculate Conception, Anilao for diving, and Laiya Beach for a weekend getaway.',
   'restaurant': 'Try Lomi King for authentic Batangas lomi, Café Laguna at SM for Filipino comfort food, or Batangas Seafood Bay for fresh grilled seafood.',
   'fare': "Jeepney fares follow LACVAY's documented matrix (standard and extended trips, with student/senior/PWD discounts). For places off the jeepney line, use Angkas, Grab, or iDOL Taxi and check the fare in the app. Tricycle TODA fares are not listed here — look for the nearest TODA and ask locals.",
-  'jeepney': 'Jeepneys are the main public transport in Batangas City. Look for route signboards at the Grand Terminal and major roads. Match the signboard to your destination corridor — Alangilan is north, Ilijan/Pagkilatan is south toward Monte Maria.',
   'tricycle': 'LACVAY does not currently list tricycle TODA terminals or fares. For barangays and spots away from jeepney routes, book Angkas, Grab, or iDOL Taxi. You can also look for the nearest tricycle TODA and ask locals for directions.',
   'motorcycle': 'For remote or off-route trips, book Angkas in the app. Wear a helmet and travel light. Grab or iDOL Taxi are better if you have luggage or are traveling as a group.',
   'habal': 'App-based motorcycle taxis such as Angkas are the practical option for solo trips off the jeepney line. Book in the app so the fare is shown before you ride.',
@@ -24,17 +21,14 @@ const MOCK_RESPONSES: Record<string, string> = {
   'idol': 'iDOL Taxi is a Batangas metered-taxi option, useful for groups or luggage when the destination is away from jeepney routes.',
 };
 
-function getMockResponse(message: string, originHint?: string): string {
-  const rich = getEnhancedMockResponse(message, originHint);
-  if (rich) return rich;
-
+function getMockResponse(message: string): string {
   const lower = message.toLowerCase();
   const match = Object.entries(MOCK_RESPONSES)
     .filter(([key]) => lower.includes(key))
     .sort((a, b) => b[0].length - a[0].length)[0];
   return (
     match?.[1] ??
-    "I'm LACVAY AI, your Batangas City travel buddy! I can help with routes, fares, tourist spots, and restaurant recommendations. Try asking how to get to Monte Maria from SM Batangas."
+    "I'm LACVAY AI, your Batangas City travel buddy! I can help with routes, fares, tourist spots, and restaurant recommendations."
   );
 }
 
@@ -86,8 +80,7 @@ function replyFromBriefing(briefing: string): string | null {
     ].join('\n');
   }
 
-  // Header may be "SELECTED COMMUTE PLAN (optimized …):" — not only "SELECTED COMMUTE PLAN:"
-  const planSection = briefing.split(/SELECTED COMMUTE PLAN[^:\n]*:|COMMUTE STEPS:/i)[1];
+  const planSection = briefing.split(/SELECTED COMMUTE PLAN:|COMMUTE STEPS:/i)[1];
   if (planSection) {
     const stopAt = planSection.search(/\n[A-Z][A-Z &]+:/);
     const slice = stopAt >= 0 ? planSection.slice(0, stopAt) : planSection;
@@ -230,7 +223,7 @@ export async function chatWithAI(
     modelReply = briefingReply;
   }
   const reply = finalizeReply(
-    modelReply ?? briefingReply ?? getMockResponse(message, location.origin),
+    modelReply ?? briefingReply ?? getMockResponse(message),
   );
 
   let plan: CommuteGuidePlan | null = null;

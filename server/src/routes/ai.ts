@@ -55,7 +55,8 @@ aiRouter.post('/chat', requireUser, async (req, res) => {
       plan,
       usage: usageInfo,
     });
-  } catch {
+  } catch (err) {
+    console.error('[aiRouter] AI chat error:', err);
     res.status(500).json({ error: 'AI service unavailable' });
   }
 });

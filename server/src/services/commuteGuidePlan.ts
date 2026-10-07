@@ -63,13 +63,17 @@ function modeTitle(mode: GuideLegMode): string {
 
 function findRoutePath(matches: RouteMatchInput[], routeName?: string): [number, number][] {
   if (!routeName) return [];
-  const n = routeName.toLowerCase();
-  const hit = matches.find(
-    (m) =>
-      m.route.route_name.toLowerCase() === n ||
-      m.route.route_name.toLowerCase().includes(n) ||
-      n.includes(m.route.route_name.toLowerCase()),
-  );
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[\u2010-\u2015\u2212]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const n = norm(routeName);
+  const hit = matches.find((m) => {
+    const mn = norm(m.route.route_name);
+    return mn === n || mn.includes(n) || n.includes(mn);
+  });
   const raw = hit?.path ?? [];
   // Keep only Batangas land corridor points (drop ferry / bay outliers)
   return raw.filter(
@@ -78,7 +82,7 @@ function findRoutePath(matches: RouteMatchInput[], routeName?: string): [number,
       Number.isFinite(lng) &&
       lat >= 13.58 &&
       lat <= 13.92 &&
-      lng >= 121.025 &&
+      lng >= 120.98 &&
       lng <= 121.22,
   );
 }
@@ -303,28 +307,7 @@ export function buildCommuteGuidePlan(opts: {
 
   const replyLegs = parseReplyLegs(opts.reply, origin, destination);
   if (!replyLegs.length) {
-    return {
-      title: `${origin.label} → ${destination.label}`,
-      origin,
-      destination,
-      planType: 'from_reply',
-      legs: [
-        {
-          order: 1,
-          mode: 'walk',
-          title: 'Walk',
-          description: `Head from ${origin.label} toward ${destination.label}`,
-          path: [
-            [origin.lat, origin.lng],
-            [destination.lat, destination.lng],
-          ],
-        },
-      ],
-      totalMinutes: null,
-      totalFareRegular: null,
-      totalFareDiscounted: null,
-      sourceReply: opts.reply,
-    };
+    return null;
   }
 
   return {

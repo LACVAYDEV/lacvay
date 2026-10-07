@@ -23,7 +23,7 @@ import { MotorcycleIcon } from '@/components/ui/TransportIcons';
 import { TransportBar } from '@/components/home/TransportBar';
 import { launchTransportApp, type TransportAppKey } from '@/lib/transportApps';
 import { CurrentLocationMarker } from '@/components/map/CurrentLocationMarker';
-import { rebuildPlanPaths, sanitizePath } from '@/lib/mapCoordinates';
+import { rebuildPlanPaths, sanitizePath, isInBatangas } from '@/lib/mapCoordinates';
 import {
   fetchRoadPathsForLegs,
   pathLengthKm,
@@ -187,6 +187,15 @@ function PlanGuideView({
 
   return (
     <div className="space-y-5">
+      {(plan.origin?.outOfBounds || plan.destination?.outOfBounds) && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <p className="font-semibold">Location Outside Batangas City</p>
+          <p className="mt-1 text-xs text-red-700">
+            LACVAY transit navigation only supports destinations and origins located within Batangas City.
+            Routes cannot be plotted on the map.
+          </p>
+        </div>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           {PLAN_TYPE_LABELS[plan.planType] && (
@@ -359,26 +368,30 @@ function PlanGuideView({
               />
               <CurrentLocationMarker />
 
-              <Marker
-                position={[plan.origin.lat, plan.origin.lng]}
-                icon={originIcon}
-              >
-                <Popup>
-                  <strong>Origin (A)</strong>
-                  <br />
-                  {plan.origin.label}
-                </Popup>
-              </Marker>
-              <Marker
-                position={[plan.destination.lat, plan.destination.lng]}
-                icon={destIcon}
-              >
-                <Popup>
-                  <strong>Destination (B)</strong>
-                  <br />
-                  {plan.destination.label}
-                </Popup>
-              </Marker>
+              {!plan.origin?.outOfBounds && isInBatangas(plan.origin.lat, plan.origin.lng) && (
+                <Marker
+                  position={[plan.origin.lat, plan.origin.lng]}
+                  icon={originIcon}
+                >
+                  <Popup>
+                    <strong>Origin (A)</strong>
+                    <br />
+                    {plan.origin.label}
+                  </Popup>
+                </Marker>
+              )}
+              {!plan.destination?.outOfBounds && isInBatangas(plan.destination.lat, plan.destination.lng) && (
+                <Marker
+                  position={[plan.destination.lat, plan.destination.lng]}
+                  icon={destIcon}
+                >
+                  <Popup>
+                    <strong>Destination (B)</strong>
+                    <br />
+                    {plan.destination.label}
+                  </Popup>
+                </Marker>
+              )}
 
               {displayLegs.map((leg) => {
                 const positions = sanitizePath(leg.path);

@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronDown, LogOut, Menu, User, X } from 'lucide-react';
@@ -104,7 +104,7 @@ function AdminProfileMenu({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setProfileOpen((open) => !open)}
+        onClick={() => setProfileOpen(!profileOpen)}
         aria-expanded={profileOpen}
         aria-haspopup="menu"
         aria-label="Admin account menu"
