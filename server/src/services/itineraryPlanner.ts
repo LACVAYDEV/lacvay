@@ -36,9 +36,9 @@ export interface OptimizedItinerary {
   score: number;
 }
 
-const PATH_SERVE_KM = 1.8;
-const MAX_TRANSFER_WALK_KM = 3.5;
-const WALK_MIN_PER_KM = 12;
+const PATH_SERVE_KM = 0.4;
+const MAX_TRANSFER_WALK_KM = 0.2;
+const WALK_MIN_PER_KM = 15;
 const JEEPNEY_KMH = 18;
 const TNVS_LAST_MILE_MIN = 12;
 
@@ -232,7 +232,7 @@ export function buildOptimizedItinerary(
       if (leg1.route.id === leg2.route.id) continue;
       const gap = nearestPointsBetweenPaths(leg1.path, leg2.path);
       if (!gap || gap.walkKm > MAX_TRANSFER_WALK_KM) continue;
-      const score = (leg1.originKm ?? 0) * 2 + gap.walkKm + (leg2.destKm ?? 0);
+      const score = (leg1.originKm ?? 0) * 2 + (gap.walkKm * 8) + (leg2.destKm ?? 0);
       if (!bestTransfer || score < bestTransfer.score) {
         bestTransfer = { leg1, leg2, walkKm: gap.walkKm, score };
       }
@@ -301,7 +301,7 @@ export function buildOptimizedItinerary(
           const gap2 = nearestPointsBetweenPaths(mid.path, leg2.path);
           if (!gap2 || gap2.walkKm > MAX_TRANSFER_WALK_KM) continue;
 
-          const score = (leg1.originKm ?? 0) * 2 + gap1.walkKm + gap2.walkKm + (leg2.destKm ?? 0) + 1.0;
+          const score = (leg1.originKm ?? 0) * 2 + (gap1.walkKm * 8) + (gap2.walkKm * 8) + (leg2.destKm ?? 0) + 1.0;
           if (!best3Transfer || score < best3Transfer.score) {
             best3Transfer = {
               leg1,
@@ -478,17 +478,23 @@ export function buildOptimizedItinerary(
   }
 
   if (!candidates.length) return null;
+  
+  // Pure score-based sorting to STRICTLY MINIMIZE WALKING.
+  // Lowest score (least walking distance/hassle) always wins.
   return candidates.sort((a, b) => {
+    // If one route has significantly less walking (difference > 0.05 km), pick it immediately
+    if (Math.abs(a.score - b.score) > 0.05) {
+      return a.score - b.score;
+    }
+    
+    // Only use plan type as a tie-breaker if the walking distance is virtually identical
     const planPriority = (planType: string): number => {
       if (planType === 'direct') return 1;
       if (planType === 'transfer') return 2;
       if (planType === 'jeepney_tnvs') return 3;
       return 4; // tnvs_only
     };
-    const prioA = planPriority(a.planType);
-    const prioB = planPriority(b.planType);
-    if (prioA !== prioB) return prioA - prioB;
-    return a.score - b.score;
+    return planPriority(a.planType) - planPriority(b.planType);
   })[0];
 }
 
