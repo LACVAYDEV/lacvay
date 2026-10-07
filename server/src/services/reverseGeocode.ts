@@ -2,51 +2,8 @@ export interface ResolvedOrigin {
   label: string;
   lat: number;
   lng: number;
-  kind: 'landmark' | 'street' | 'barangay' | 'coords' | 'hub' | 'poi' | 'geocoded' | 'unknown';
-  outOfBounds?: boolean;
+  kind: 'landmark' | 'street' | 'barangay' | 'coords';
 }
-
-/** Batangas City bounding box — reject points that land in the bay or off-map. */
-export const BATANGAS_BOUNDS = {
-  minLat: 13.58,
-  maxLat: 13.92,
-  minLng: 120.98,
-  maxLng: 121.22,
-};
-
-export function isInBatangas(lat: number, lng: number): boolean {
-  return (
-    Number.isFinite(lat) &&
-    Number.isFinite(lng) &&
-    lat >= BATANGAS_BOUNDS.minLat &&
-    lat <= BATANGAS_BOUNDS.maxLat &&
-    lng >= BATANGAS_BOUNDS.minLng &&
-    lng <= BATANGAS_BOUNDS.maxLng
-  );
-}
-
-export interface HubPoint {
-  label: string;
-  lat: number;
-  lng: number;
-  aliases: string[];
-}
-
-export const HUB_POINTS: HubPoint[] = [
-  { label: 'SM City Batangas', lat: 13.7594, lng: 121.0722, aliases: ['sm batangas', 'sm city', 'sm city batangas', 'sm'] },
-  { label: 'Batangas City Grand Terminal', lat: 13.7818, lng: 121.0543, aliases: ['grand terminal', 'city terminal', 'batangas terminal', 'batangas grand terminal'] },
-  { label: 'Batangas Pier', lat: 13.754, lng: 121.043, aliases: ['pier', 'batangas pier', 'ppa', 'port of batangas', 'port'] },
-  { label: 'Ilijan Jeepney Terminal (near SM Batangas)', lat: 13.7578, lng: 121.0708, aliases: ['ilijan terminal', 'ilijan jeepney', 'sm parking', 'ilijan jeepney terminal', 'ilijan'] },
-  { label: 'Monte Maria', lat: 13.6422, lng: 121.0465, aliases: ['monte maria', 'montemaria', 'montemaria shrine', 'shrine'] },
-  { label: 'Barangay Sto. Niño', lat: 13.699, lng: 121.0941, aliases: ['sto nino', 'santo nino', 'barangay sto', 'brgy sto', 'barangay sto nino'] },
-  { label: 'San Isidro Labrador Parish Church', lat: 13.7333, lng: 121.0769, aliases: ['san isidro', 'san isidro church', 'san isidro parish', 'san isidro labrador'] },
-  { label: 'Minor Basilica of the Immaculate Conception', lat: 13.7544708430939, lng: 121.059210109643, aliases: ['basilica', 'minor basilica', 'immaculate conception'] },
-  { label: 'Plaza Mabini', lat: 13.7555009303031, lng: 121.05905733848, aliases: ['plaza mabini', 'mabini plaza', 'plaza'] },
-  { label: 'BatStateU Pablo Borbon Main Campus (Alangilan)', lat: 13.786, lng: 121.074, aliases: ['alangilan', 'pablo borbon', 'batstateu', 'main campus', 'bsu alangilan'] },
-  { label: 'Batangas City Hall', lat: 13.75578, lng: 121.05833, aliases: ['city hall', 'batangas city hall'] },
-  { label: 'Colegio ng Lungsod ng Batangas (CLB)', lat: 13.7539, lng: 121.05, aliases: ['clb', 'colegio', 'sports coliseum', 'arrieta'] },
-  { label: 'A. Evangelista Street', lat: 13.75786, lng: 121.05735, aliases: ['evangelista', 'a evangelista', 'evangelista street'] },
-];
 
 interface NamedLandmark {
   name: string;
@@ -399,26 +356,14 @@ export async function resolveGpsOrigin(
   places: { name: string; latitude: number; longitude: number }[] = [],
   clientLabel?: string,
 ): Promise<ResolvedOrigin> {
-  // Step 1: Exact GPS Priority & Batangas bounds check
-  if (!isInBatangas(lat, lng)) {
-    return {
-      label: clientLabel?.trim() || 'Your location (Outside Batangas City)',
-      lat,
-      lng,
-      kind: 'coords',
-      outOfBounds: true,
-    };
-  }
-
   const key = cacheKey(lat, lng);
   const cached = cache.get(key);
-  if (cached) return { ...cached, lat, lng, outOfBounds: false };
+  if (cached) return { ...cached, lat, lng };
 
   const atLandmark = exactLandmark(lat, lng) ?? exactPlace(lat, lng, places);
   if (atLandmark) {
-    const res: ResolvedOrigin = { ...atLandmark, lat, lng, outOfBounds: false };
-    cache.set(key, res);
-    return res;
+    cache.set(key, atLandmark);
+    return atLandmark;
   }
 
   const nominatim = await fetchJson(
@@ -430,9 +375,8 @@ export async function resolveGpsOrigin(
       ? fromNominatim(nominatim as Record<string, unknown>, lat, lng)
       : null;
   if (fromOsm) {
-    const res: ResolvedOrigin = { ...fromOsm, lat, lng, outOfBounds: false };
-    cache.set(key, res);
-    return res;
+    cache.set(key, fromOsm);
+    return fromOsm;
   }
 
   const photon = await fetchJson(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`);
@@ -441,327 +385,22 @@ export async function resolveGpsOrigin(
       ? fromPhoton(photon as Record<string, unknown>, lat, lng)
       : null;
   if (fromPhotonResult) {
-    const res: ResolvedOrigin = { ...fromPhotonResult, lat, lng, outOfBounds: false };
-    cache.set(key, res);
-    return res;
+    cache.set(key, fromPhotonResult);
+    return fromPhotonResult;
   }
 
   const trimmed = clientLabel?.trim() ?? '';
-
-  if (trimmed && trimmed.length > 3 && !GENERIC_ORIGIN.test(trimmed)) {
-    const explicitLandmark = EXACT_LANDMARKS.find(l => 
-      l.name.toLowerCase() === trimmed.toLowerCase() || 
-      l.name.toLowerCase().includes(trimmed.toLowerCase())
-    );
-    if (explicitLandmark) {
-      const res: ResolvedOrigin = { label: explicitLandmark.name, lat: explicitLandmark.lat, lng: explicitLandmark.lng, kind: 'landmark', outOfBounds: false };
-      cache.set(key, res);
-      return res;
-    }
-    
-    const explicitPlace = places.find(p => 
-      p.name.toLowerCase() === trimmed.toLowerCase() || 
-      p.name.toLowerCase().includes(trimmed.toLowerCase())
-    );
-    if (explicitPlace) {
-      const res: ResolvedOrigin = { label: explicitPlace.name, lat: explicitPlace.latitude, lng: explicitPlace.longitude, kind: 'landmark', outOfBounds: false };
-      cache.set(key, res);
-      return res;
-    }
-  }
-
   if (
     trimmed &&
     !GENERIC_ORIGIN.test(trimmed) &&
     clientLabelMatchesCoords(trimmed, lat, lng, places)
   ) {
-    const fallback: ResolvedOrigin = {
-      label: normalizeLandmarkLabel(trimmed, lat, lng),
-      lat,
-      lng,
-      kind: 'coords' as const,
-      outOfBounds: false,
-    };
+    const fallback = { label: normalizeLandmarkLabel(trimmed, lat, lng), lat, lng, kind: 'coords' as const };
     cache.set(key, fallback);
     return fallback;
   }
 
-  const coords: ResolvedOrigin = {
-    label: 'Your current location',
-    lat,
-    lng,
-    kind: 'coords' as const,
-    outOfBounds: false,
-  };
+  const coords = { label: 'Your current location', lat, lng, kind: 'coords' as const };
   cache.set(key, coords);
   return coords;
-}
-
-export async function forwardGeocode(
-  query: string,
-): Promise<{ label: string; lat: number; lng: number } | null> {
-  const trimmed = query.trim();
-  if (!trimmed) return null;
-
-  try {
-    const qWithBatangas = encodeURIComponent(`${trimmed}, Batangas, Philippines`);
-    let data = await fetchJson(
-      `https://nominatim.openstreetmap.org/search?q=${qWithBatangas}&format=jsonv2&limit=1&addressdetails=1`,
-      { 'User-Agent': NOMINATIM_UA, Accept: 'application/json' },
-    );
-    if (!Array.isArray(data) || data.length === 0) {
-      const qRaw = encodeURIComponent(`${trimmed}, Philippines`);
-      data = await fetchJson(
-        `https://nominatim.openstreetmap.org/search?q=${qRaw}&format=jsonv2&limit=1&addressdetails=1`,
-        { 'User-Agent': NOMINATIM_UA, Accept: 'application/json' },
-      );
-    }
-    if (Array.isArray(data) && data.length > 0) {
-      const item = data[0] as Record<string, unknown>;
-      const lat = Number(item.lat);
-      const lng = Number(item.lon);
-      if (Number.isFinite(lat) && Number.isFinite(lng)) {
-        const displayName =
-          typeof item.display_name === 'string'
-            ? item.display_name.split(',')[0].trim()
-            : trimmed;
-        return { label: displayName || trimmed, lat, lng };
-      }
-    }
-  } catch {
-    // fallback to photon
-  }
-
-  try {
-    const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(trimmed)}&limit=1&lat=13.7565&lon=121.0583`;
-    const photonData = (await fetchJson(photonUrl)) as {
-      features?: Array<{
-        geometry?: { coordinates?: [number, number] };
-        properties?: { name?: string; street?: string; city?: string };
-      }>;
-    } | null;
-    if (photonData?.features && photonData.features.length > 0) {
-      const feat = photonData.features[0];
-      const coords = feat.geometry?.coordinates;
-      if (coords && coords.length >= 2) {
-        const lng = Number(coords[0]);
-        const lat = Number(coords[1]);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          const name = feat.properties?.name || feat.properties?.street || trimmed;
-          return { label: name, lat, lng };
-        }
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  return null;
-}
-
-export interface PlacePoi {
-  name: string;
-  latitude: number;
-  longitude: number;
-  category?: string;
-}
-
-export interface ResolvedLocation {
-  label: string;
-  lat: number | null;
-  lng: number | null;
-  kind: 'coords' | 'hub' | 'poi' | 'geocoded' | 'landmark' | 'street' | 'barangay' | 'unknown';
-  outOfBounds: boolean;
-}
-
-/**
- * 3-Step Location Rule:
- * 1. Exact GPS Priority: Raw GPS coordinates are used exactly (never snapped or altered).
- * 2. Database POI Matching: Typed text checked against places (restaurants/tourist spots) and HUB_POINTS.
- * 3. Strict Batangas Geofencing: Custom unknown text geocoded and checked against BATANGAS_BOUNDS.
- *    If outside, rejected with outOfBounds: true.
- */
-export async function resolveLocation(
-  query?: string,
-  opts: {
-    rawLat?: number;
-    rawLng?: number;
-    places?: PlacePoi[];
-  } = {},
-): Promise<ResolvedLocation> {
-  const { rawLat, rawLng, places = [] } = opts;
-  const trimmed = query?.trim() ?? '';
-
-  // 1. EXACT GPS PRIORITY:
-  // If the frontend passes raw GPS coordinates, use those exact lat/lng values.
-  // Do not override them with a snapped street name if coordinates are valid.
-  if (
-    typeof rawLat === 'number' &&
-    Number.isFinite(rawLat) &&
-    typeof rawLng === 'number' &&
-    Number.isFinite(rawLng) &&
-    rawLat !== 0 &&
-    rawLng !== 0
-  ) {
-    if (!isInBatangas(rawLat, rawLng)) {
-      return {
-        label: trimmed || 'Your location (Outside Batangas City)',
-        lat: rawLat,
-        lng: rawLng,
-        kind: 'coords',
-        outOfBounds: true,
-      };
-    }
-
-    const isGenericOrigin =
-      !trimmed ||
-      /^(your current location|current location|my location|here|gps)$/i.test(trimmed);
-
-    if (isGenericOrigin) {
-      const rev = await resolveGpsOrigin(rawLat, rawLng, places, trimmed);
-      return {
-        label: rev.label || 'Your current location',
-        lat: rawLat, // EXACT GPS preserved
-        lng: rawLng, // EXACT GPS preserved
-        kind: 'coords',
-        outOfBounds: false,
-      };
-    }
-
-    return {
-      label: trimmed,
-      lat: rawLat, // EXACT GPS preserved
-      lng: rawLng, // EXACT GPS preserved
-      kind: 'coords',
-      outOfBounds: false,
-    };
-  }
-
-  if (!trimmed) {
-    return {
-      label: 'Unknown location',
-      lat: null,
-      lng: null,
-      kind: 'unknown',
-      outOfBounds: false,
-    };
-  }
-
-  // 3-STEP LOCATION RULE:
-  // Check explicit non-Batangas cities / areas first so queries like "SM Lipa"
-  // or "Bauan Market" are not falsely matched to Batangas hubs or places.
-  const normQuery = normalizePlaceToken(trimmed);
-  const nonBatangasCities = [
-    'manila', 'makati', 'quezon city', 'pasig', 'taguig', 'mandaluyong', 'cebu', 'davao',
-    'lipa', 'tanauan', 'sto tomas', 'santo tomas', 'tagaytay', 'bauan', 'san jose', 'alitagtag',
-    'cuenca', 'rosario', 'san juan', 'taysan', 'lobo', 'mabini', 'tingloy', 'nasugbu', 'calatagan',
-  ];
-  const isExplicitNonBatangas =
-    !normQuery.includes('plaza mabini') &&
-    nonBatangasCities.some((c) => {
-      const regex = new RegExp(`\\b${c}\\b`, 'i');
-      return regex.test(normQuery);
-    });
-
-  if (isExplicitNonBatangas) {
-    return {
-      label: trimmed,
-      lat: null,
-      lng: null,
-      kind: 'unknown',
-      outOfBounds: true,
-    };
-  }
-
-  // 2. DATABASE POI MATCHING:
-  // If the user types a text string, first check it against our places table (Restaurants and Tourist Spots)
-  // and our known HUB_POINTS. If it matches, use the exact coordinates from the database.
-  // Check known HUB_POINTS
-  for (const hub of HUB_POINTS) {
-    const normHub = normalizePlaceToken(hub.label);
-    const matchesLabel =
-      normQuery === normHub ||
-      (normQuery.length >= 4 && normHub.includes(normQuery)) ||
-      (normHub.length >= 4 && normQuery.includes(normHub));
-
-    const matchesAlias = hub.aliases.some((a) => {
-      const na = normalizePlaceToken(a);
-      if (normQuery === na) return true;
-      if (normQuery.length >= 3 && na.length >= 3) {
-        return normQuery.includes(na) || na.includes(normQuery);
-      }
-      return false;
-    });
-
-    if (matchesLabel || matchesAlias) {
-      return {
-        label: hub.label,
-        lat: hub.lat,
-        lng: hub.lng,
-        kind: 'hub',
-        outOfBounds: false,
-      };
-    }
-  }
-
-  // Check places table (Restaurants & Tourist Spots)
-  let bestPlace: PlacePoi | null = null;
-  let bestPlaceLen = 0;
-  for (const p of places) {
-    if (typeof p.latitude !== 'number' || typeof p.longitude !== 'number') continue;
-    const np = normalizePlaceToken(p.name);
-    if (!np) continue;
-    const isMatch =
-      normQuery === np ||
-      (normQuery.length >= 4 && np.includes(normQuery)) ||
-      (np.length >= 4 && normQuery.includes(np));
-    if (isMatch && np.length > bestPlaceLen) {
-      bestPlace = p;
-      bestPlaceLen = np.length;
-    }
-  }
-
-  if (bestPlace) {
-    return {
-      label: bestPlace.name,
-      lat: bestPlace.latitude,
-      lng: bestPlace.longitude,
-      kind: 'poi',
-      outOfBounds: false,
-    };
-  }
-
-  // 3. STRICT BATANGAS GEOFENCING:
-  // If the typed text is an unknown custom string, geocode it. However, you MUST pass the resulting
-  // coordinates through the isInBatangas check (using BATANGAS_BOUNDS).
-  // If the coordinates fall outside Batangas City, reject the point entirely and return a specific
-  // "out of bounds" flag so the AI can tell the user it is unsupported. Do not plot it.
-  const geocoded = await forwardGeocode(trimmed);
-  if (geocoded) {
-    if (!isInBatangas(geocoded.lat, geocoded.lng)) {
-      return {
-        label: geocoded.label || trimmed,
-        lat: geocoded.lat,
-        lng: geocoded.lng,
-        kind: 'geocoded',
-        outOfBounds: true,
-      };
-    }
-
-    return {
-      label: geocoded.label || trimmed,
-      lat: geocoded.lat,
-      lng: geocoded.lng,
-      kind: 'geocoded',
-      outOfBounds: false,
-    };
-  }
-
-  return {
-    label: trimmed,
-    lat: null,
-    lng: null,
-    kind: 'unknown',
-    outOfBounds: false,
-  };
 }

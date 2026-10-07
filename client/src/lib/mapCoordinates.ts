@@ -1,5 +1,5 @@
 /** Batangas City bounding box — reject / fix points that land in the bay or off-map. */
-export const BATANGAS_BOUNDS = {
+const BATANGAS_BOUNDS = {
   minLat: 13.58,
   maxLat: 13.92,
   minLng: 120.98,
@@ -30,38 +30,23 @@ const HUBS = {
   evangelista: { label: 'A. Evangelista Street', lat: 13.75786, lng: 121.05735 },
 } as const;
 
-export interface PlacePoi {
-  name: string;
-  latitude: number;
-  longitude: number;
-  category?: string;
-}
-
-export interface ResolvedMapPoint {
-  label: string;
-  lat: number;
-  lng: number;
-  outOfBounds: boolean;
-}
-
-export const HUB_POINTS = [
-  { ...HUBS.sm, aliases: ['sm batangas', 'sm city', 'sm city batangas', 'sm'] },
-  { ...HUBS.grandTerminal, aliases: ['grand terminal', 'city terminal', 'batangas terminal', 'batangas grand terminal'] },
-  { ...HUBS.pier, aliases: ['pier', 'batangas pier', 'ppa', 'port of batangas', 'port'] },
-  { ...HUBS.ilijanTerminal, aliases: ['ilijan terminal', 'ilijan jeepney', 'sm parking', 'ilijan jeepney terminal', 'ilijan'] },
-  { ...HUBS.monteMaria, aliases: ['monte maria', 'montemaria', 'montemaria shrine', 'shrine'] },
-  { ...HUBS.stoNino, aliases: ['sto nino', 'santo nino', 'barangay sto', 'brgy sto', 'barangay sto nino'] },
-  { ...HUBS.sanIsidro, aliases: ['san isidro', 'san isidro church', 'san isidro parish', 'san isidro labrador'] },
-  { ...HUBS.city, aliases: ['basilica', 'plaza mabini', 'city hall', 'city proper', 'minor basilica'] },
-  { ...HUBS.pabloBorbon, aliases: ['pablo borbon', 'batstateu', 'alangilan', 'main campus', 'bsu alangilan'] },
+/** Snap common place labels to trusted on-land coordinates. */
+const TRUSTED_POINTS: { label: string; lat: number; lng: number; aliases: string[] }[] = [
   { ...HUBS.clb, aliases: ['clb', 'colegio', 'sports coliseum', 'arrieta'] },
-  { ...HUBS.evangelista, aliases: ['evangelista', 'a evangelista', 'evangelista street'] },
+  { ...HUBS.stoNino, aliases: ['sto nino', 'santo nino', 'barangay sto'] },
+  { ...HUBS.sm, aliases: ['sm batangas', 'sm city', 'sm city batangas'] },
+  { ...HUBS.pier, aliases: ['pier', 'batangas pier', 'ppa', 'port of batangas'] },
+  { ...HUBS.monteMaria, aliases: ['monte maria', 'montemaria', 'montemaria shrine'] },
+  { ...HUBS.grandTerminal, aliases: ['grand terminal', 'city terminal'] },
+  { ...HUBS.pabloBorbon, aliases: ['pablo borbon', 'batstateu', 'alangilan', 'main campus'] },
+  { ...HUBS.city, aliases: ['basilica', 'plaza mabini', 'city hall', 'city proper'] },
+  { ...HUBS.ilijanTerminal, aliases: ['ilijan terminal', 'ilijan jeepney', 'sm parking'] },
   { ...HUBS.pagkilatan, aliases: ['pagkilatan'] },
   { ...HUBS.ilijan, aliases: ['ilijan'] },
+  { ...HUBS.sanIsidro, aliases: ['san isidro'] },
   { ...HUBS.tabangao, aliases: ['tabangao'] },
+  { ...HUBS.evangelista, aliases: ['evangelista'] },
 ];
-
-export const TRUSTED_POINTS = HUB_POINTS;
 
 function normalize(value: string): string {
   return value
@@ -96,64 +81,14 @@ export function sanitizeLatLng(lat: number, lng: number): LatLngTuple | null {
   return null;
 }
 
-/**
- * Database POI Matching:
- * Checks query against passed DB places (Restaurants and Tourist Spots)
- * and known HUB_POINTS.
- */
-export function snapTrustedPlace(
-  label: string,
-  places?: PlacePoi[],
-): (LatLng & { label: string }) | null {
-  if (!label) return null;
+export function snapTrustedPlace(label: string): (LatLng & { label: string }) | null {
   const n = normalize(label);
-  if (!n) return null;
-
-  // 1. Check database places (Restaurants & Tourist Spots)
-  if (places && places.length > 0) {
-    let bestPlace: PlacePoi | null = null;
-    let bestPlaceLen = 0;
-    for (const p of places) {
-      if (typeof p.latitude !== 'number' || typeof p.longitude !== 'number') continue;
-      const np = normalize(p.name);
-      if (!np) continue;
-      const isMatch =
-        n === np ||
-        (n.length >= 4 && np.includes(n)) ||
-        (np.length >= 4 && n.includes(np));
-      if (isMatch && np.length >= bestPlaceLen) {
-        bestPlace = p;
-        bestPlaceLen = np.length;
-      }
-    }
-    if (bestPlace && isInBatangas(bestPlace.latitude, bestPlace.longitude)) {
-      return {
-        label: bestPlace.name,
-        lat: bestPlace.latitude,
-        lng: bestPlace.longitude,
-      };
-    }
-  }
-
-  // 2. Check known HUB_POINTS
-  let best: (typeof HUB_POINTS)[number] | null = null;
+  let best: (typeof TRUSTED_POINTS)[number] | null = null;
   let bestLen = 0;
-  for (const p of HUB_POINTS) {
-    const pNorm = normalize(p.label);
-    const isLabelMatch =
-      n === pNorm ||
-      (n.length >= 4 && pNorm.includes(n)) ||
-      (pNorm.length >= 4 && n.includes(pNorm));
-    if (isLabelMatch && pNorm.length >= bestLen) {
-      best = p;
-      bestLen = pNorm.length;
-    }
+  for (const p of TRUSTED_POINTS) {
     for (const alias of p.aliases) {
       const a = normalize(alias);
-      const isAliasMatch =
-        n === a ||
-        (n.length >= 3 && a.length >= 3 && (n.includes(a) || a.includes(n)));
-      if (isAliasMatch && a.length >= bestLen) {
+      if ((n.includes(a) || normalize(p.label).includes(n)) && a.length >= bestLen) {
         best = p;
         bestLen = a.length;
       }
@@ -162,111 +97,24 @@ export function snapTrustedPlace(
   return best ? { label: best.label, lat: best.lat, lng: best.lng } : null;
 }
 
-/**
- * 3-Step Location Rule:
- * 1. Exact GPS Priority: Raw GPS coordinates are used exactly (never snapped or altered).
- * 2. Database POI Matching: Checked against places (restaurants/tourist spots) and HUB_POINTS.
- * 3. Strict Batangas Geofencing: Custom unknown text checked against bounds. Out of bounds points are rejected.
- */
 export function resolveMapPoint(
   label: string,
-  lat?: number,
-  lng?: number,
-  places?: PlacePoi[],
-): ResolvedMapPoint {
-  const trimmed = label?.trim() ?? '';
+  lat: number,
+  lng: number,
+): { label: string; lat: number; lng: number } {
+  const trusted = snapTrustedPlace(label);
+  if (trusted) return trusted;
 
-  // 1. EXACT GPS PRIORITY:
-  // If the frontend passes raw GPS coordinates (from user clicking "Locate Me" or granting permissions),
-  // use those exact lat/lng values. Do not override them with a snapped street name if valid.
-  if (
-    typeof lat === 'number' &&
-    Number.isFinite(lat) &&
-    typeof lng === 'number' &&
-    Number.isFinite(lng) &&
-    lat !== 0 &&
-    lng !== 0
-  ) {
-    if (!isInBatangas(lat, lng)) {
-      return {
-        label: trimmed || 'Your location (Outside Batangas City)',
-        lat,
-        lng,
-        outOfBounds: true,
-      };
+  const sanitized = sanitizeLatLng(lat, lng);
+  if (sanitized) {
+    // Nudge points that sit in the open bay east onto the coastal road
+    if (sanitized[1] < BAY_WEST_LNG && sanitized[0] < 13.76) {
+      return { label, lat: sanitized[0], lng: Math.max(sanitized[1], 121.046) };
     }
-
-    // Coordinates are valid within Batangas City bounds. Preserve exact GPS values.
-    const safeLng = lng < BAY_WEST_LNG && lat < 13.76 ? Math.max(lng, 121.046) : lng;
-    return {
-      label: trimmed || 'Your location',
-      lat,
-      lng: safeLng,
-      outOfBounds: false,
-    };
+    return { label, lat: sanitized[0], lng: sanitized[1] };
   }
 
-  // 2. DATABASE POI MATCHING:
-  // If the user types a text string, first check it against places table (Restaurants/Tourist Spots)
-  // and known HUB_POINTS. If it matches, use the exact coordinates from the database.
-  if (trimmed) {
-    const trusted = snapTrustedPlace(trimmed, places);
-    if (trusted) {
-      return {
-        label: trusted.label,
-        lat: trusted.lat,
-        lng: trusted.lng,
-        outOfBounds: false,
-      };
-    }
-  }
-
-  // 3. STRICT BATANGAS GEOFENCING:
-  // If the typed text is an unknown custom string:
-  // Check known non-Batangas cities / areas.
-  const norm = normalize(trimmed);
-  const NON_BATANGAS_CITIES = [
-    'manila', 'makati', 'quezon city', 'pasig', 'taguig', 'mandaluyong', 'cebu', 'davao',
-    'lipa', 'tanauan', 'sto tomas', 'santo tomas', 'tagaytay', 'bauan', 'san jose', 'alitagtag',
-    'cuenca', 'rosario', 'san juan', 'taysan', 'lobo', 'mabini', 'tingloy', 'nasugbu', 'calatagan',
-  ];
-  const isExplicitNonBatangas =
-    !norm.includes('plaza mabini') &&
-    NON_BATANGAS_CITIES.some((c) => {
-      const regex = new RegExp(`\\b${c}\\b`, 'i');
-      return regex.test(norm);
-    });
-
-  if (isExplicitNonBatangas) {
-    return {
-      label: trimmed,
-      lat: 0,
-      lng: 0,
-      outOfBounds: true,
-    };
-  }
-
-  // If sanitized coords were passed and valid:
-  if (typeof lat === 'number' && typeof lng === 'number') {
-    const sanitized = sanitizeLatLng(lat, lng);
-    if (sanitized) {
-      return {
-        label: trimmed,
-        lat: sanitized[0],
-        lng: sanitized[1],
-        outOfBounds: false,
-      };
-    }
-  }
-
-  // Reject the point entirely and return outOfBounds: true.
-  // Never fallback silently to Plaza Mabini!
-  return {
-    label: trimmed || 'Unknown location',
-    lat: 0,
-    lng: 0,
-    outOfBounds: true,
-  };
+  return { label, lat: HUBS.city.lat, lng: HUBS.city.lng };
 }
 
 export function sanitizePath(path: [number, number][]): [number, number][] {
@@ -351,8 +199,8 @@ function waypointFromText(text: string): LatLng | null {
  */
 export function rebuildPlanPaths<
   T extends {
-    origin: { label: string; lat: number; lng: number; outOfBounds?: boolean };
-    destination: { label: string; lat: number; lng: number; outOfBounds?: boolean };
+    origin: { label: string; lat: number; lng: number };
+    destination: { label: string; lat: number; lng: number };
     legs: Array<{
       mode: string;
       path: [number, number][];
@@ -362,32 +210,7 @@ export function rebuildPlanPaths<
       routeName?: string;
     }>;
   },
->(plan: T, places?: PlacePoi[]): T {
-  if (plan.origin?.outOfBounds || plan.destination?.outOfBounds) {
-    return {
-      ...plan,
-      legs: [],
-    };
-  }
-
-  const origin = resolveMapPoint(plan.origin.label, plan.origin.lat, plan.origin.lng, places);
-  const destination = resolveMapPoint(
-    plan.destination.label,
-    plan.destination.lat,
-    plan.destination.lng,
-    places,
-  );
-
-  // If either origin or destination is out of bounds, reject entirely: do not plot route
-  if (origin.outOfBounds || destination.outOfBounds) {
-    return {
-      ...plan,
-      origin,
-      destination,
-      legs: [],
-    };
-  }
-
+>(plan: T): T {
   // If the plan already contains valid polyline coordinates from transit_routes.geojson_path,
   // bypass hardcoded southCoastCorridor and HUBS snapping and strictly render the actual path.
   const hasRouteGeoJson = plan.legs.some(
@@ -396,14 +219,27 @@ export function rebuildPlanPaths<
   if (hasRouteGeoJson) {
     return {
       ...plan,
-      origin,
-      destination,
+      origin:
+        plan.origin.lat && plan.origin.lng
+          ? plan.origin
+          : resolveMapPoint(plan.origin.label, plan.origin.lat, plan.origin.lng),
+      destination:
+        plan.destination.lat && plan.destination.lng
+          ? plan.destination
+          : resolveMapPoint(plan.destination.label, plan.destination.lat, plan.destination.lng),
       legs: plan.legs.map((leg) => ({
         ...leg,
         path: sanitizePath(leg.path),
       })),
     };
   }
+
+  const origin = resolveMapPoint(plan.origin.label, plan.origin.lat, plan.origin.lng);
+  const destination = resolveMapPoint(
+    plan.destination.label,
+    plan.destination.lat,
+    plan.destination.lng,
+  );
 
   const originT = toTuple(origin);
   const destT = toTuple(destination);
@@ -453,11 +289,7 @@ export function rebuildPlanPaths<
     let to: LatLngTuple;
     let outMode = mode;
 
-    if (isWalk && plan.legs.length === 1) {
-      // Single-leg fallback: full trip line (never clip to 12% first-mile stub)
-      from = originT;
-      to = destT;
-    } else if (isWalk && index === 0) {
+    if (isWalk && index === 0) {
       from = originT;
       to = boardStop;
       // Keep first-mile walk short on the map (board at nearest stop)

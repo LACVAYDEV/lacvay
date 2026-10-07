@@ -61,59 +61,29 @@ function jeepneyMinutes(km: number): number {
   return Math.max(8, Math.round((km / JEEPNEY_KMH) * 60));
 }
 
-function buildAccessLeg(
-  distanceKm: number,
-  toFromText: string,
-  opts?: { routeName?: string; purpose?: 'board' | 'alight' },
-): ItineraryLeg {
+function buildAccessLeg(distanceKm: number, toFromText: string): ItineraryLeg {
   const m = Math.max(50, Math.round(distanceKm * 1000));
-  const route = opts?.routeName?.trim();
   if (distanceKm <= 0.3) {
-    const boardDetail =
-      opts?.purpose === 'board' && route
-        ? `Walk ~${m} meters to the roadside where **${route}** passes (${toFromText}). **Wait at the curb** and **flag down** a jeepney whose signboard matches the route — often within 200–300 meters of your start.`
-        : `Walk ~${m} meters ${toFromText}`;
     return {
       mode: 'walk',
-      summary: boardDetail,
+      summary: `Walk ~${m} meters ${toFromText}`,
       minutes: walkMinutes(distanceKm),
     };
-  }
-  if (distanceKm <= 1.2) {
-    const boardMid =
-      opts?.purpose === 'board' && route
-        ? `Walk ~${m} meters toward where **${route}** passes (${toFromText}), or book a tricycle/app if you prefer not to walk. At the roadside, **wait and flag** the matching signboard.`
-        : `Walk or book a tricycle/app (~${m} meters) ${toFromText}`;
+  } else if (distanceKm <= 1.2) {
     return {
-      mode: 'walk',
+      mode: 'walk', // Keeps the map line dashed
       title: 'Walk / Tricycle / App',
-      summary: boardMid,
+      summary: `Walk or book a tricycle/app (~${m} meters) ${toFromText}`,
       minutes: walkMinutes(distanceKm),
     };
+  } else {
+    return {
+      mode: 'tnvs',
+      title: 'Tricycle / TNVS',
+      summary: `Book a tricycle or TNVS app (~${distanceKm.toFixed(1)} km) ${toFromText}`,
+      minutes: Math.max(5, Math.round(distanceKm * 4)),
+    };
   }
-  return {
-    mode: 'tnvs',
-    title: 'Tricycle / TNVS',
-    summary: `Book a tricycle or TNVS app (~${distanceKm.toFixed(1)} km) ${toFromText}`,
-    minutes: Math.max(5, Math.round(distanceKm * 4)),
-  };
-}
-
-function buildTransferWalkLeg(
-  walkKm: number,
-  fromRouteName: string,
-  toRouteName: string,
-): ItineraryLeg {
-  const m = Math.max(50, Math.round(walkKm * 1000));
-  const min = Math.max(1, Math.round(walkMinutes(walkKm)));
-  return {
-    mode: 'walk',
-    title: 'Transfer Walk',
-    summary:
-      `Get off **${fromRouteName}** at the nearest safe stop. Walk ~${min} min (~${m} meters) to the roadside where **${toRouteName}** passes. ` +
-      `If the walk is short (about 200–300 meters), stay on the same corridor and **wait at the curb** for the next jeepney — flag down when the **${toRouteName}** signboard appears.`,
-    minutes: walkMinutes(walkKm),
-  };
 }
 
 function nearestPointsBetweenPaths(
@@ -221,10 +191,7 @@ export function buildOptimizedItinerary(
     const rideKm = Math.max(straightKm, walkOrigKm + walkDestKm);
     const fare = pickFare(m, rideKm);
     const legs: ItineraryLeg[] = [
-      buildAccessLeg(walkOrigKm, `from ${origin.label}`, {
-        routeName: m.route.route_name,
-        purpose: 'board',
-      }),
+      buildAccessLeg(walkOrigKm, `from ${origin.label} to the nearest stop on ${m.route.route_name}`),
       {
         mode: 'jeepney',
         summary: `Ride ${m.route.route_name} (corridor ${m.ends.from} ↔ ${m.ends.to}). Fares on file: ${m.fareNote}`,
@@ -233,10 +200,7 @@ export function buildOptimizedItinerary(
         fareDiscounted: fare.discounted,
         routeName: m.route.route_name,
       },
-      buildAccessLeg(walkDestKm, `from the alight point on ${m.route.route_name} to ${destination.label}`, {
-        routeName: m.route.route_name,
-        purpose: 'alight',
-      }),
+      buildAccessLeg(walkDestKm, `from the alight point on ${m.route.route_name} to ${destination.label}`),
     ];
     const totals = sumFares(legs);
     candidates.push({
@@ -280,10 +244,7 @@ export function buildOptimizedItinerary(
     const fare1 = pickFare(leg1, leg1.originKm! + walkKm);
     const fare2 = pickFare(leg2, walkKm + leg2.destKm!);
     const legs: ItineraryLeg[] = [
-      buildAccessLeg(leg1.originKm!, `from ${origin.label}`, {
-        routeName: leg1.route.route_name,
-        purpose: 'board',
-      }),
+      buildAccessLeg(leg1.originKm!, `from ${origin.label} to ${leg1.route.route_name} stop`),
       {
         mode: 'jeepney',
         summary: `Ride ${leg1.route.route_name}. Alight where this route is closest to ${leg2.route.route_name} (~${walkKm.toFixed(1)} km walk to transfer). Fares: ${leg1.fareNote}`,
@@ -292,7 +253,11 @@ export function buildOptimizedItinerary(
         fareDiscounted: fare1.discounted,
         routeName: leg1.route.route_name,
       },
-      buildTransferWalkLeg(walkKm, leg1.route.route_name, leg2.route.route_name),
+      {
+        mode: 'walk',
+        summary: `Walk ~${Math.max(1, Math.round(walkMinutes(walkKm)))} min (~${Math.max(50, Math.round(walkKm * 1000))}m) to ${leg2.route.route_name} stop`,
+        minutes: walkMinutes(walkKm),
+      },
       {
         mode: 'jeepney',
         summary: `Ride ${leg2.route.route_name} toward ${destination.label}. Fares: ${leg2.fareNote}`,
@@ -301,10 +266,7 @@ export function buildOptimizedItinerary(
         fareDiscounted: fare2.discounted,
         routeName: leg2.route.route_name,
       },
-      buildAccessLeg(leg2.destKm!, `from the alight point on ${leg2.route.route_name} to ${destination.label}`, {
-        routeName: leg2.route.route_name,
-        purpose: 'alight',
-      }),
+      buildAccessLeg(leg2.destKm!, `from ${leg2.route.route_name} to ${destination.label}`),
     ];
     const totals = sumFares(legs);
     candidates.push({
@@ -361,10 +323,7 @@ export function buildOptimizedItinerary(
     const fareMid = pickFare(mid, walkKm1 + walkKm2 + 3);
     const fare2 = pickFare(leg2, walkKm2 + (leg2.destKm ?? 0));
     const legs: ItineraryLeg[] = [
-      buildAccessLeg(leg1.originKm ?? 0, `from ${origin.label}`, {
-        routeName: leg1.route.route_name,
-        purpose: 'board',
-      }),
+      buildAccessLeg(leg1.originKm ?? 0, `from ${origin.label} to ${leg1.route.route_name} stop`),
       {
         mode: 'jeepney',
         summary: `Ride ${leg1.route.route_name}. Alight where this route is closest to ${mid.route.route_name} (~${walkKm1.toFixed(1)} km transfer). Fares: ${leg1.fareNote}`,
@@ -373,7 +332,11 @@ export function buildOptimizedItinerary(
         fareDiscounted: fare1.discounted,
         routeName: leg1.route.route_name,
       },
-      buildTransferWalkLeg(walkKm1, leg1.route.route_name, mid.route.route_name),
+      {
+        mode: 'walk',
+        summary: `Walk ~${Math.max(1, Math.round(walkMinutes(walkKm1)))} min (~${Math.max(50, Math.round(walkKm1 * 1000))}m) to ${mid.route.route_name} stop`,
+        minutes: walkMinutes(walkKm1),
+      },
       {
         mode: 'jeepney',
         summary: `Ride ${mid.route.route_name}. Alight where this route connects with ${leg2.route.route_name} (~${walkKm2.toFixed(1)} km transfer). Fares: ${mid.fareNote}`,
@@ -382,7 +345,11 @@ export function buildOptimizedItinerary(
         fareDiscounted: fareMid.discounted,
         routeName: mid.route.route_name,
       },
-      buildTransferWalkLeg(walkKm2, mid.route.route_name, leg2.route.route_name),
+      {
+        mode: 'walk',
+        summary: `Walk ~${Math.max(1, Math.round(walkMinutes(walkKm2)))} min (~${Math.max(50, Math.round(walkKm2 * 1000))}m) to ${leg2.route.route_name} stop`,
+        minutes: walkMinutes(walkKm2),
+      },
       {
         mode: 'jeepney',
         summary: `Ride ${leg2.route.route_name} toward ${destination.label}. Fares: ${leg2.fareNote}`,
@@ -391,10 +358,7 @@ export function buildOptimizedItinerary(
         fareDiscounted: fare2.discounted,
         routeName: leg2.route.route_name,
       },
-      buildAccessLeg(leg2.destKm ?? 0, `from the alight point on ${leg2.route.route_name} to ${destination.label}`, {
-        routeName: leg2.route.route_name,
-        purpose: 'alight',
-      }),
+      buildAccessLeg(leg2.destKm ?? 0, `from ${leg2.route.route_name} to ${destination.label}`),
     ];
     const totals = sumFares(legs);
     candidates.push({
@@ -467,10 +431,7 @@ export function buildOptimizedItinerary(
     const rideKm = Math.max(straightKm, originKm + destKm);
     const fare = pickFare(m, rideKm);
 
-    const accessLeg: ItineraryLeg = buildAccessLeg(originKm, `from ${origin.label}`, {
-      routeName: m.route.route_name,
-      purpose: 'board',
-    });
+    const accessLeg: ItineraryLeg = buildAccessLeg(originKm, `to ${m.route.route_name} corridor`);
 
     const jeepneyLeg: ItineraryLeg = {
       mode: 'jeepney',
@@ -481,10 +442,7 @@ export function buildOptimizedItinerary(
       routeName: m.route.route_name,
     };
 
-    const finalWalkLeg: ItineraryLeg = buildAccessLeg(destKm, `from the alight point on ${m.route.route_name} to ${destination.label}`, {
-      routeName: m.route.route_name,
-      purpose: 'alight',
-    });
+    const finalWalkLeg: ItineraryLeg = buildAccessLeg(destKm, `to ${destination.label}`);
 
     const legs: ItineraryLeg[] = [accessLeg, jeepneyLeg, finalWalkLeg];
     const totals = sumFares(legs);
