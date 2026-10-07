@@ -447,6 +447,29 @@ export async function resolveGpsOrigin(
   }
 
   const trimmed = clientLabel?.trim() ?? '';
+
+  if (trimmed && trimmed.length > 3 && !GENERIC_ORIGIN.test(trimmed)) {
+    const explicitLandmark = EXACT_LANDMARKS.find(l => 
+      l.name.toLowerCase() === trimmed.toLowerCase() || 
+      l.name.toLowerCase().includes(trimmed.toLowerCase())
+    );
+    if (explicitLandmark) {
+      const res: ResolvedOrigin = { label: explicitLandmark.name, lat: explicitLandmark.lat, lng: explicitLandmark.lng, kind: 'landmark', outOfBounds: false };
+      cache.set(key, res);
+      return res;
+    }
+    
+    const explicitPlace = places.find(p => 
+      p.name.toLowerCase() === trimmed.toLowerCase() || 
+      p.name.toLowerCase().includes(trimmed.toLowerCase())
+    );
+    if (explicitPlace) {
+      const res: ResolvedOrigin = { label: explicitPlace.name, lat: explicitPlace.latitude, lng: explicitPlace.longitude, kind: 'landmark', outOfBounds: false };
+      cache.set(key, res);
+      return res;
+    }
+  }
+
   if (
     trimmed &&
     !GENERIC_ORIGIN.test(trimmed) &&

@@ -108,16 +108,11 @@ export type RoadLegPath = {
   path: LatLngTuple[];
 };
 
-export function normalizeMode(mode: string, pathKm: number): 'walk' | 'jeepney' | 'tnvs' {
+export function normalizeMode(mode: string, _pathKm: number): 'walk' | 'jeepney' | 'tnvs' {
   const m = mode.toLowerCase();
   if (m === 'tnvs' || m.includes('angkas') || m.includes('grab')) return 'tnvs';
-  // Long "walk" stretches on the coast are jeepney corridor — never dash those
-  if (m === 'walk' || m === 'walking') {
-    return pathKm > MAX_WALK_KM ? 'jeepney' : 'walk';
-  }
-  if (m === 'jeepney' || m.includes('jeep')) return 'jeepney';
-  // Unknown / ride-like → jeepney when long, else jeepney default for transit maps
-  return pathKm > MAX_WALK_KM ? 'jeepney' : m.includes('walk') ? 'walk' : 'jeepney';
+  if (m === 'walk' || m === 'walking') return 'walk';
+  return 'jeepney';
 }
 
 /**
