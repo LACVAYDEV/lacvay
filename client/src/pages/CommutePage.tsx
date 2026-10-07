@@ -157,6 +157,7 @@ function PlanGuideView({
         minutes: leg.minutes,
         fareRegular: leg.fareRegular,
         routeName: leg.routeName,
+        color: leg.color,
       };
     });
   }, [roadLegs, plan.legs]);
@@ -260,7 +261,7 @@ function PlanGuideView({
                     <div className="flex gap-3">
                       <span
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white"
-                        style={{ backgroundColor: MODE_COLORS[leg.mode] }}
+                        style={{ backgroundColor: (leg.mode === 'jeepney' && leg.color) ? leg.color : MODE_COLORS[leg.mode] }}
                       >
                         <ModeIcon mode={leg.mode} />
                       </span>
@@ -425,7 +426,7 @@ function PlanGuideView({
                     <Polyline
                       positions={positions}
                       pathOptions={{
-                        color: MODE_COLORS[styleMode] ?? MODE_COLORS.jeepney,
+                        color: (styleMode === 'jeepney' && leg.color) ? leg.color : (MODE_COLORS[styleMode] ?? MODE_COLORS.jeepney),
                         weight: dimmed ? 3 : isWalk ? 4 : 5,
                         opacity: dimmed ? 0.35 : 1,
                         dashArray: isWalk ? '8 10' : isTnvs ? '2 12' : undefined,

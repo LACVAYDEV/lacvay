@@ -309,6 +309,7 @@ export interface CommuteGuideLeg {
   fareRegular?: number;
   fareDiscounted?: number;
   routeName?: string;
+  color?: string;
   /** [lat, lng] polyline for this leg */
   path: [number, number][];
 }

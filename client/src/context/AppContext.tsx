@@ -178,9 +178,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const reply = await sendAIMessage(message, effectiveOrigin);
         setAiMessages((prev) => [...prev, reply]);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to get AI reply:', err);
-        showToast('Could not reach LACVAY AI. Please try again.');
+        const errMsg = err?.message || 'My network is a bit jammed right now. Please give me a few seconds and try asking again.';
+        setAiMessages((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            role: 'assistant',
+            content: errMsg,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+        showToast(errMsg);
       } finally {
         setAiLoading(false);
       }

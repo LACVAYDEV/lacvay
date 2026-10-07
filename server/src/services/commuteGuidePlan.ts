@@ -15,6 +15,7 @@ export interface GuideLeg {
   fareRegular?: number;
   fareDiscounted?: number;
   routeName?: string;
+  color?: string;
   /** [lat, lng] polyline for this leg */
   path: [number, number][];
 }
@@ -126,12 +127,16 @@ function enrichLegs(
               return dest;
             })()
           : dest;
-      const alightIdx = nearestIndex(routePath, target[0], target[1]);
-      if (boardIdx <= alightIdx) {
-        path = routePath.slice(boardIdx, alightIdx + 1);
-      } else {
-        path = routePath.slice(alightIdx, boardIdx + 1).reverse();
+      let alightIdx = boardIdx;
+      let bestD = Infinity;
+      for (let i = boardIdx; i < routePath.length; i++) {
+        const d = haversineKm(target[0], target[1], routePath[i][0], routePath[i][1]);
+        if (d < bestD) { 
+          bestD = d; 
+          alightIdx = i; 
+        }
       }
+      path = routePath.slice(boardIdx, alightIdx + 1);
       if (path.length < 2) {
         path = [board, routePath[alightIdx]];
       }
@@ -176,6 +181,7 @@ function enrichLegs(
       fareRegular: leg.fareRegular,
       fareDiscounted: leg.fareDiscounted,
       routeName: leg.routeName,
+      color: matches.find((m) => m.route.route_name === leg.routeName)?.ends.color,
       path,
     });
     cursor = next;

@@ -32,6 +32,8 @@ import 'leaflet/dist/leaflet.css';
 
 const BATANGAS_CENTER: [number, number] = [13.7565, 121.0583];
 const SESSION_STORAGE_MAP_KEY = 'lacvay_map_view_state';
+const CAMERA_LAT_KEY = 'lacvay-camera-lat';
+const CAMERA_LNG_KEY = 'lacvay-camera-lng';
 
 interface StoredMapView {
   lat: number;
@@ -133,6 +135,8 @@ function MapStatePersister() {
           zoom,
         };
         sessionStorage.setItem(SESSION_STORAGE_MAP_KEY, JSON.stringify(state));
+        sessionStorage.setItem(CAMERA_LAT_KEY, String(center.lat));
+        sessionStorage.setItem(CAMERA_LNG_KEY, String(center.lng));
       } catch (err) {
         console.warn('Failed to save map view to sessionStorage:', err);
       }
@@ -148,6 +152,8 @@ function MapStatePersister() {
           zoom,
         };
         sessionStorage.setItem(SESSION_STORAGE_MAP_KEY, JSON.stringify(state));
+        sessionStorage.setItem(CAMERA_LAT_KEY, String(center.lat));
+        sessionStorage.setItem(CAMERA_LNG_KEY, String(center.lng));
       } catch (err) {
         console.warn('Failed to save map view to sessionStorage:', err);
       }
@@ -247,6 +253,16 @@ export default function MapPage() {
         ) {
           const zoom = typeof parsed.zoom === 'number' && !isNaN(parsed.zoom) ? parsed.zoom : 14;
           return { center: [parsed.lat, parsed.lng], zoom, fromSession: true };
+        }
+      }
+
+      const camLat = sessionStorage.getItem(CAMERA_LAT_KEY);
+      const camLng = sessionStorage.getItem(CAMERA_LNG_KEY);
+      if (camLat && camLng) {
+        const lat = parseFloat(camLat);
+        const lng = parseFloat(camLng);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return { center: [lat, lng], zoom: 14, fromSession: true };
         }
       }
     } catch (err) {

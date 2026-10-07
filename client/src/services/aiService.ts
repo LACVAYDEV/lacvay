@@ -6,24 +6,6 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 export const AI_ORIGIN_STORAGE_KEY = 'lacvay-ai-origin';
 export const ACTIVE_COMMUTE_PLAN_KEY = 'lacvay-active-commute-plan';
 
-const MOCK_RESPONSES: Record<string, string> = {
-  'tourist': 'Top spots near Batangas City include Taal Volcano, Basilica of the Immaculate Conception, Anilao for diving, and Laiya Beach for a weekend getaway.',
-  'fare': "Jeepney fares use LACVAY's documented matrix. For places off the jeepney line, book Angkas, Grab, or iDOL Taxi and check the fare in the app. Tricycle TODA fares are not listed — look for the nearest TODA and ask locals.",
-  'habal': 'For solo trips off the jeepney line, book Angkas in the app so the fare is shown before you ride.',
-  'taxi': 'For door-to-door trips with luggage or at night, book Grab or iDOL Taxi. Check the fare in the app or on the meter.',
-  'tricycle': 'LACVAY does not currently list tricycle TODA terminals or fares. For remote spots, book Angkas, Grab, or iDOL Taxi. You can also look for the nearest tricycle TODA and ask locals for directions.',
-};
-
-function getMockResponse(message: string): string {
-  const lower = message.toLowerCase();
-  const match = Object.entries(MOCK_RESPONSES)
-    .filter(([key]) => lower.includes(key))
-    .sort((a, b) => b[0].length - a[0].length)[0];
-  return (
-    match?.[1] ??
-    "I'm LACVAY AI, your Batangas City travel buddy! I can help with routes, fares, tourist spots, and restaurant recommendations."
-  );
-}
 
 export function getStoredAiOrigin(): string {
   try {
@@ -151,10 +133,13 @@ export async function sendAIMessage(
 
     if (res.ok) {
       const data = (await res.json()) as { reply?: string; plan?: CommuteGuidePlan | null };
+      if (!data.reply) {
+        throw new Error('Empty reply from AI');
+      }
       return {
         id: generateId(),
         role: 'assistant',
-        content: data.reply ?? getMockResponse(message),
+        content: data.reply,
         timestamp: new Date().toISOString(),
         plan: data.plan ?? null,
       };
@@ -182,22 +167,10 @@ export async function sendAIMessage(
     }
 
     const errBody = (await res.json().catch(() => null)) as { error?: string } | null;
-    return {
-      id: generateId(),
-      role: 'assistant',
-      content: errBody?.error ?? 'AI transit routing is currently unavailable. Please try again later.',
-      timestamp: new Date().toISOString(),
-      plan: null,
-    };
-  } catch (err) {
-    console.error('[aiService] Network error connecting to /ai/chat:', err);
-    return {
-      id: generateId(),
-      role: 'assistant',
-      content: 'Unable to connect to the transit server. Please check your internet connection.',
-      timestamp: new Date().toISOString(),
-      plan: null,
-    };
+    throw new Error(errBody?.error ?? 'AI API Error');
+  } catch (error) {
+    console.error('AI API Error:', error);
+    throw new Error("My network is a bit jammed right now. Please give me a few seconds and try asking again.");
   }
 }
 
