@@ -15,6 +15,7 @@ export interface GuideLeg {
   fareRegular?: number;
   fareDiscounted?: number;
   routeName?: string;
+  color?: string;
   /** [lat, lng] polyline for this leg */
   path: [number, number][];
 }
@@ -63,13 +64,17 @@ function modeTitle(mode: GuideLegMode): string {
 
 function findRoutePath(matches: RouteMatchInput[], routeName?: string): [number, number][] {
   if (!routeName) return [];
-  const n = routeName.toLowerCase();
-  const hit = matches.find(
-    (m) =>
-      m.route.route_name.toLowerCase() === n ||
-      m.route.route_name.toLowerCase().includes(n) ||
-      n.includes(m.route.route_name.toLowerCase()),
-  );
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[\u2010-\u2015\u2212]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const n = norm(routeName);
+  const hit = matches.find((m) => {
+    const mn = norm(m.route.route_name);
+    return mn === n || mn.includes(n) || n.includes(mn);
+  });
   const raw = hit?.path ?? [];
   // Keep only Batangas land corridor points (drop ferry / bay outliers)
   return raw.filter(
@@ -78,7 +83,7 @@ function findRoutePath(matches: RouteMatchInput[], routeName?: string): [number,
       Number.isFinite(lng) &&
       lat >= 13.58 &&
       lat <= 13.92 &&
-      lng >= 121.025 &&
+      lng >= 120.98 &&
       lng <= 121.22,
   );
 }
@@ -122,12 +127,16 @@ function enrichLegs(
               return dest;
             })()
           : dest;
-      const alightIdx = nearestIndex(routePath, target[0], target[1]);
-      if (boardIdx <= alightIdx) {
-        path = routePath.slice(boardIdx, alightIdx + 1);
-      } else {
-        path = routePath.slice(alightIdx, boardIdx + 1).reverse();
+      let alightIdx = boardIdx;
+      let bestD = Infinity;
+      for (let i = boardIdx; i < routePath.length; i++) {
+        const d = haversineKm(target[0], target[1], routePath[i][0], routePath[i][1]);
+        if (d < bestD) { 
+          bestD = d; 
+          alightIdx = i; 
+        }
       }
+      path = routePath.slice(boardIdx, alightIdx + 1);
       if (path.length < 2) {
         path = [board, routePath[alightIdx]];
       }
@@ -172,6 +181,7 @@ function enrichLegs(
       fareRegular: leg.fareRegular,
       fareDiscounted: leg.fareDiscounted,
       routeName: leg.routeName,
+      color: matches.find((m) => m.route.route_name === leg.routeName)?.ends.color,
       path,
     });
     cursor = next;
@@ -201,19 +211,21 @@ function nearestPoints(
   return { onA, onB };
 }
 
-function parseResolvedPoint(
+/** Parse RESOLVED ORIGIN/DESTINATION lines; coords are always the last (lat, lng) pair on the line. */
+export function parseResolvedPoint(
   briefing: string,
   kind: 'ORIGIN' | 'DESTINATION',
 ): { label: string; lat: number; lng: number } | null {
-  const re = new RegExp(
-    `RESOLVED ${kind}:\\s*([^\\n(]+?)\\s*\\((\\d+\\.\\d+)\\s*,\\s*(\\d+\\.\\d+)\\)`,
-  );
-  const m = briefing.match(re);
-  if (!m) return null;
-  const label = m[1].trim();
-  if (/^unknown/i.test(label)) return null;
-  let lat = Number(m[2]);
-  let lng = Number(m[3]);
+  const prefix = `RESOLVED ${kind}:`;
+  const line = briefing.split('\n').find((l) => l.startsWith(prefix));
+  if (!line) return null;
+  const rest = line.slice(prefix.length).trim();
+  const coordMatch = rest.match(/\((\d+\.\d+)\s*,\s*(\d+\.\d+)\)\s*$/);
+  if (!coordMatch || coordMatch.index == null) return null;
+  const label = rest.slice(0, coordMatch.index).trim();
+  if (!label || /^unknown/i.test(label)) return null;
+  let lat = Number(coordMatch[1]);
+  let lng = Number(coordMatch[2]);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   // Fix swapped GeoJSON-style pairs (lng, lat)
   if (lat > 50 && lng < 50) {
@@ -301,28 +313,7 @@ export function buildCommuteGuidePlan(opts: {
 
   const replyLegs = parseReplyLegs(opts.reply, origin, destination);
   if (!replyLegs.length) {
-    return {
-      title: `${origin.label} → ${destination.label}`,
-      origin,
-      destination,
-      planType: 'from_reply',
-      legs: [
-        {
-          order: 1,
-          mode: 'walk',
-          title: 'Walk',
-          description: `Head from ${origin.label} toward ${destination.label}`,
-          path: [
-            [origin.lat, origin.lng],
-            [destination.lat, destination.lng],
-          ],
-        },
-      ],
-      totalMinutes: null,
-      totalFareRegular: null,
-      totalFareDiscounted: null,
-      sourceReply: opts.reply,
-    };
+    return null;
   }
 
   return {
