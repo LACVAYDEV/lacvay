@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js';
 import type { Database, Json } from '../types/database.types.js';
 import { resolveGpsOrigin, resolveLocation, isInBatangas } from './reverseGeocode.js';
-import { routeTrip } from './graphRouter/pathfinder.js';
+import { routeTrip, type RouteStep } from './graphRouter/pathfinder.js';
 import { buildTransitGraph } from './graphRouter/graphBuilder.js';
 import type { Graph } from './graphRouter/types.js';
 
@@ -207,8 +207,13 @@ function formatStreetAtlas(): string {
   return REAL_STREET_ATLAS.join('\n');
 }
 
+export let SYSTEM_PROMPT = `You are LACVAY Transit Assistant for Batangas City jeepney commuters.
+
+You must strictly follow the OPTIMIZED GRAPH ITINERARY provided. Do not invent your own routes. Translate these exact steps into a friendly, numbered guide for the traveler.`;
+
 const COMMUTER_DETAIL_RULES: string[] = [
   'COMMUTER DETAIL RULES (graph-optimized plan — expand every step for travelers):',
+  '- You must strictly follow the OPTIMIZED GRAPH ITINERARY provided. Do not invent your own routes. Translate these exact steps into a friendly, numbered guide for the traveler.',
   '- The route plan was generated using Dijkstra Graph Theory pathfinding on real road segments.',
   '- Follow the exact sequential steps in SELECTED COMMUTE PLAN / COMMUTE STEPS.',
   '- **First mile:** state approximate walk meters to the nearest street/stop, which route signboard to look for, and that they should wait roadside and flag down the jeepney.',
@@ -1819,6 +1824,65 @@ function getOrBuildTransitGraph(routes: TransitRoute[]): Graph {
   return graph;
 }
 
+function formatOptimizedGraphItinerary(
+  graphPlan: RouteStep[] | null,
+  tripRoutes: TripRouteMatch[],
+  destinationLabel: string,
+  originStreet: string | null,
+  destStreet: string | null,
+  corridorFallback?: KnownCorridor | null,
+): string {
+  if (corridorFallback) {
+    return [
+      `1. Mode: Walk/Access | Distance: ~${Math.round(corridorFallback.walkMin * 80)}m | Action: Head to ${corridorFallback.walkTo}`,
+      `2. Mode: Jeepney | Route: ${corridorFallback.jeepneySignboard} | Fare: ₱${corridorFallback.fareRegular}${corridorFallback.fareDiscounted != null ? ` (discounted ₱${corridorFallback.fareDiscounted})` : ''} | Action: Board and ride to ${corridorFallback.alight}`,
+      `3. Mode: Walk | Action: ${corridorFallback.lastMile}`,
+    ].join('\n');
+  }
+
+  if (!graphPlan || graphPlan.length === 0) {
+    const directMatch = tripRoutes.find((m) => m.direct);
+    if (directMatch) {
+      const fare = directMatch.fareNote ? ` | Fare: ${directMatch.fareNote}` : '';
+      return [
+        `1. Mode: Walk/Access | Action: Head toward ${originStreet ?? directMatch.route.route_name} corridor`,
+        `2. Mode: Jeepney | Route: ${directMatch.route.route_name} | Corridor: ${directMatch.ends.from} ↔ ${directMatch.ends.to}${fare} | Action: Board and alight near ${destinationLabel}`,
+        `3. Mode: Walk | Action: Walk to ${destinationLabel}`,
+      ].join('\n');
+    }
+    return '1. Mode: TNVS / Tricycle | Action: Take a local tricycle or book TNVS door-to-door to destination.';
+  }
+
+  return graphPlan
+    .map((step, idx) => {
+      const num = idx + 1;
+      const m = Math.max(10, Math.round(step.distanceKm * 1000));
+      if (step.type === 'walk') {
+        const isFirst = idx === 0;
+        const isLast = idx === graphPlan.length - 1;
+        const streetHint = isFirst && originStreet ? ` toward ${originStreet}` : isLast && destStreet ? ` along ${destStreet} to ${destinationLabel}` : '';
+        return `${num}. Mode: Walk | Distance: ~${m}m | Action: ${step.instruction}${streetHint}`;
+      }
+      if (step.type === 'transfer') {
+        const from = step.fromRouteName ?? 'previous route';
+        const to = step.toRouteName ?? step.routeName ?? 'connecting route';
+        return `${num}. Mode: Transfer Walk | Distance: ~${m}m | Action: Transfer from ${from} to ${to}. Wait roadside and flag down the jeepney.`;
+      }
+      if (step.type === 'ride') {
+        const routeName = step.routeName ?? 'jeepney';
+        const matched = tripRoutes.find(
+          (r) => r.route.route_name.toLowerCase() === routeName.toLowerCase(),
+        );
+        const fare = matched?.fareNote ? ` | Fare: ${matched.fareNote}` : '';
+        const corridorStr = matched ? ` | Corridor: ${matched.ends.from} ↔ ${matched.ends.to}` : '';
+        const dist = step.distanceKm ? ` | Distance: ~${step.distanceKm.toFixed(1)} km` : '';
+        return `${num}. Mode: Jeepney | Route: ${routeName}${dist}${fare}${corridorStr} | Action: Board ${routeName}, alight at nearest stop to ${destinationLabel}`;
+      }
+      return `${num}. Mode: Unknown | Distance: ~${m}m | Action: ${step.instruction}`;
+    })
+    .join('\n');
+}
+
 export async function buildTransitBriefing(
   message: string,
   location: ChatLocationContext = {},
@@ -2099,9 +2163,30 @@ export async function buildTransitBriefing(
       ? graphPlan.filter((s) => s.type === 'transfer').length
       : 0;
 
+  const rawGraphItinerary = formatOptimizedGraphItinerary(
+    graphPlan,
+    tripRoutes,
+    destination.label,
+    originStreet,
+    destStreet,
+    shouldUseCorridorSteps ? corridor : null,
+  );
+
+  SYSTEM_PROMPT = `You are LACVAY Transit Assistant for Batangas City jeepney commuters.
+
+You must strictly follow the OPTIMIZED GRAPH ITINERARY provided. Do not invent your own routes. Translate these exact steps into a friendly, numbered guide for the traveler.
+
+### OPTIMIZED GRAPH ITINERARY ###
+${rawGraphItinerary}`;
+
   const sections = [
     `RESOLVED ORIGIN: ${origin.label} (${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)})`,
     `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
+    '',
+    '### OPTIMIZED GRAPH ITINERARY ###',
+    'You must strictly follow the OPTIMIZED GRAPH ITINERARY provided. Do not invent your own routes. Translate these exact steps into a friendly, numbered guide for the traveler.',
+    '',
+    rawGraphItinerary,
     '',
     ...COMMUTER_DETAIL_RULES,
     '',
