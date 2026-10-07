@@ -1,7 +1,9 @@
 import { supabase } from './supabase.js';
 import type { Database, Json } from '../types/database.types.js';
 import { resolveGpsOrigin, resolveLocation, isInBatangas } from './reverseGeocode.js';
-import { buildOptimizedItinerary, type RouteMatchInput } from './itineraryPlanner.js';
+import { routeTrip } from './graphRouter/pathfinder.js';
+import { buildTransitGraph } from './graphRouter/graphBuilder.js';
+import type { Graph } from './graphRouter/types.js';
 
 type TransitRoute = Database['public']['Tables']['transit_routes']['Row'];
 type JeepneyFare = Database['public']['Tables']['jeepney_fare_matrix']['Row'];
@@ -206,13 +208,14 @@ function formatStreetAtlas(): string {
 }
 
 const COMMUTER_DETAIL_RULES: string[] = [
-  'COMMUTER DETAIL RULES (optimized plan — expand every step for travelers):',
-  '- Jeepneys are **loops**: riders usually walk **200–300 meters** (or less when possible) to the **nearest point where the route line passes**, then **wait at the roadside** and **flag down** the jeepney when the **signboard matches**.',
-  '- **First mile:** state approximate **meters**, a **real street/road name** from REAL STREETS, which **route signboard** to look for, and that they should **wait at the curb** (not inside a mall unless the briefing says so).',
-  '- **Transfers:** say **where to get off** (street, landmark, or terminal), **walk ~X min / ~Xm** to where the **next route passes**, then **wait and flag** the next jeepney. Prefer the **shortest walk** between route lines (already optimized in SELECTED COMMUTE PLAN).',
-  '- **Last mile:** after alighting, give a **short walk** to the exact destination (shrine entrance, campus gate, etc.) with street name when known.',
-  '- Use **2 or 3 jeepneys** when that is cheaper/faster than TNVS; only suggest TNVS for long gaps (>1.2 km) or when the traveler asked for it.',
-  '- Do NOT invent street names — use REAL STREETS & ROADS below.',
+  'COMMUTER DETAIL RULES (graph-optimized plan — expand every step for travelers):',
+  '- The route plan was generated using Dijkstra Graph Theory pathfinding on real road segments.',
+  '- Follow the exact sequential steps in SELECTED COMMUTE PLAN / COMMUTE STEPS.',
+  '- **First mile:** state approximate walk meters to the nearest street/stop, which route signboard to look for, and that they should wait roadside and flag down the jeepney.',
+  '- **Jeepney legs:** state the exact route name and signboard, corridor (from ↔ to), where to board, where to alight, and fare.',
+  '- **Transfers:** follow the Transfer Walk steps: alight at the transfer stop, walk to the connecting line, wait roadside, and flag the next jeepney.',
+  '- **Last mile:** short walk from alight point to the destination with street name when known.',
+  '- Do NOT invent fake routes or reverse directions — strictly follow the Graph Router steps provided below.',
 ];
 
 function streetHintForLabel(label: string): string | null {
@@ -1106,6 +1109,49 @@ function formatKnownTransfer(
   ].join('\n');
 }
 
+function findKnownCorridor(
+  origin: { label: string; lat?: number; lng?: number },
+  destination: { label: string; lat?: number; lng?: number },
+): KnownCorridor | null {
+  for (const c of KNOWN_CORRIDORS) {
+    const destHit = includesAlias(destination.label, c.destinationAliases);
+    if (!destHit) continue;
+
+    const sanIsidroCorridor = c.originAliases.some((a) => normalize(a).includes('san isidro'));
+    const chapelCorridor = c.originAliases.some((a) => normalize(a).includes('chapel'));
+    const brgyStoNinoCorridor = c.originAliases.some(
+      (a) => normalize(a).includes('barangay sto nino') || normalize(a).includes('brgy sto nino'),
+    );
+    const clbCorridor = c.originAliases.some((a) => normalize(a) === 'clb' || normalize(a).includes('colegio'));
+    const atMonteMaria = isMonteMariaArea(origin.label, origin.lat, origin.lng);
+    const atBrgyStoNino = isBarangayStoNino(origin.label, origin.lat, origin.lng);
+    const atPier = isPierOrigin(origin.label, origin.lat, origin.lng);
+    const atClb = includesAlias(origin.label, ['clb', 'colegio ng lungsod', 'sports coliseum']);
+
+    if (sanIsidroCorridor && (atMonteMaria || atBrgyStoNino)) continue;
+    if (chapelCorridor && !atMonteMaria) continue;
+    if (brgyStoNinoCorridor && !atBrgyStoNino) continue;
+    if (sanIsidroCorridor && atBrgyStoNino) continue;
+    if (clbCorridor && (atPier || !atClb)) {
+      if (!atClb) {
+        if (origin.lat == null || origin.lng == null) continue;
+        const clbPt = findPoint('clb');
+        if (!clbPt || haversineKm(origin.lat, origin.lng, clbPt.lat, clbPt.lng) > 0.35) continue;
+      }
+    }
+
+    if (includesAlias(origin.label, c.originAliases)) return c;
+    if (origin.lat == null || origin.lng == null) continue;
+    const radiusKm = clbCorridor ? 0.35 : 1.2;
+    const matched = c.originAliases.some((alias) => {
+      const point = findPoint(alias);
+      return point != null && haversineKm(origin.lat!, origin.lng!, point.lat, point.lng) <= radiusKm;
+    });
+    if (matched) return c;
+  }
+  return null;
+}
+
 /** Prefer SM Ilijan parking terminal hub for south-coast trips when origin cannot board Dela Paz directly. */
 function inferSmIlijanHubTransfer(
   origin: { label: string; lat?: number; lng?: number },
@@ -1762,6 +1808,17 @@ function resolveDestination(
   return null;
 }
 
+let cachedTransitGraph: { routeCount: number; graph: Graph } | null = null;
+
+function getOrBuildTransitGraph(routes: TransitRoute[]): Graph {
+  if (cachedTransitGraph && cachedTransitGraph.routeCount === routes.length) {
+    return cachedTransitGraph.graph;
+  }
+  const graph = buildTransitGraph(routes, { bidirectionalRides: true });
+  cachedTransitGraph = { routeCount: routes.length, graph };
+  return graph;
+}
+
 export async function buildTransitBriefing(
   message: string,
   location: ChatLocationContext = {},
@@ -1911,95 +1968,136 @@ export async function buildTransitBriefing(
   }
 
   const tripRoutes = analyzeTripRoutes(live.routes, live.fares, live.landmarks, origin, destination);
-  const matchesInput: RouteMatchInput[] = tripRoutes.map((m) => ({
-    route: { id: m.route.id, route_name: m.route.route_name, vehicle_type: m.route.vehicle_type },
-    ends: m.ends,
-    path: m.path,
-    originKm: m.originKm,
-    destKm: m.destKm,
-    servesOrigin: m.servesOrigin,
-    servesDest: m.servesDest,
-    direct: m.direct,
-    fareNote: m.fareNote,
-    landmarkNames: m.landmarkNames,
-    fares: parseFareNoteNumbers(m.fareNote),
-  }));
 
-  const itinerary = buildOptimizedItinerary(originPt, destPt, matchesInput);
+  const graph = getOrBuildTransitGraph(live.routes);
+  let graphPlan = routeTrip(originPt, destPt, graph);
+  if (!graphPlan) {
+    // Relaxed search threshold if origin is slightly outside standard 800m
+    graphPlan = routeTrip(originPt, destPt, graph, { maxOriginDistanceKm: 2.0 });
+  }
+
+  const corridor = originPt && destPt ? findKnownCorridor(originPt, destPt) : null;
+  const hasTransferInGraph = !graphPlan || graphPlan.some((s) => s.type === 'transfer');
+  const shouldUseCorridorSteps = Boolean(corridor && hasTransferInGraph);
 
   const steps: string[] = [];
   const originStreet = streetHintForLabel(origin.label);
   const destStreet = streetHintForLabel(destination.label);
-  if (itinerary && itinerary.legs.length) {
-    const isTransfer = itinerary.planType === 'transfer';
-    itinerary.legs.forEach((leg, index) => {
-      const stepNum = index + 1;
-      const nextJeepney = itinerary.legs.slice(index + 1).find((l) => l.mode === 'jeepney');
 
-      if (leg.mode === 'walk') {
-        const title =
-          index === 0
-            ? 'Walk / Tricycle'
-            : leg.title === 'Transfer Walk' || (isTransfer && nextJeepney)
-              ? 'Transfer Walk'
-              : 'Walk';
-        let detail = leg.summary.replace(/\*\*/g, '');
-        if (index === 0 && originStreet && !detail.includes(originStreet)) {
+  let winningRoutes: string[] = [];
+
+  if (shouldUseCorridorSteps && corridor) {
+    const walkMin = corridor.walkMin > 0 ? `~${corridor.walkMin} min ` : '';
+    steps.push(`1. **Walk / Tricycle** — Walk ${walkMin}to ${corridor.walkTo}.`);
+    steps.push(
+      `2. **Jeepney** — Board **${corridor.jeepneySignboard}**. Alight at ${corridor.alight}. Fare: ₱${corridor.fareRegular}${corridor.fareDiscounted != null ? ` (discounted ₱${corridor.fareDiscounted})` : ''}.`,
+    );
+    steps.push(`3. **Walk** — ${corridor.lastMile}`);
+    const matchedRoute = live.routes.find((r) =>
+      corridor.jeepneySignboard.toLowerCase().includes(r.route_name.toLowerCase()),
+    );
+    winningRoutes = [matchedRoute ? matchedRoute.route_name : 'Dela Paz/Ilijan - Batangas'];
+  } else if (graphPlan && graphPlan.length > 0) {
+    winningRoutes = graphPlan
+      .filter((s) => s.type === 'ride' && s.routeName)
+      .map((s) => s.routeName!) as string[];
+
+    graphPlan.forEach((step, index) => {
+      const stepNum = index + 1;
+      const m = Math.max(10, Math.round(step.distanceKm * 1000));
+
+      if (step.type === 'walk') {
+        const isFirst = index === 0;
+        const isLast = index === graphPlan.length - 1;
+        const title = isFirst ? (step.distanceKm > 0.3 ? 'Walk / Tricycle' : 'Walk') : 'Walk';
+        let detail = step.instruction.replace(/\*\*/g, '');
+        if (isFirst && originStreet && !detail.includes(originStreet)) {
           detail += ` Head toward **${originStreet}** where jeepneys pass.`;
         }
-        if (index === itinerary.legs.length - 1 && destStreet && !detail.includes(destStreet)) {
+        if (isLast && destStreet && !detail.includes(destStreet)) {
           detail += ` Continue on **${destStreet}** to reach ${destination.label}.`;
         }
         steps.push(`${stepNum}. **${title}** — ${detail.endsWith('.') ? detail : `${detail}.`}`);
-      } else if (leg.mode === 'tnvs') {
-        steps.push(`${stepNum}. **Tricycle / TNVS** — ${leg.summary.replace(/\*\*/g, '')}.`);
-      } else if (leg.mode === 'jeepney') {
+      } else if (step.type === 'transfer') {
+        const fromRoute = step.fromRouteName ?? 'previous route';
+        const toRoute = step.toRouteName ?? step.routeName ?? 'connecting route';
+        const detail = `Walk ~${m}m to transfer from **${fromRoute}** to the **${toRoute}** line. Wait roadside and flag the signboard.`;
+        steps.push(`${stepNum}. **Transfer Walk** — ${detail}`);
+      } else if (step.type === 'ride') {
+        const routeName = step.routeName ?? 'jeepney';
         const matched = tripRoutes.find(
-          (r) => r.route.route_name.toLowerCase() === leg.routeName?.toLowerCase(),
+          (r) => r.route.route_name.toLowerCase() === routeName.toLowerCase(),
         );
         const color = matched?.ends.color ? ` (${matched.ends.color})` : '';
-        const fare = leg.fareRegular != null ? ` Fare: ₱${leg.fareRegular}.` : '';
-        const corridor = matched
-          ? ` Corridor: ${matched.ends.from} ↔ ${matched.ends.to}.`
+        const fare = matched?.fareNote ? ` Fare: ${matched.fareNote}.` : '';
+        const corridorStr = matched ? ` Corridor: ${matched.ends.from} ↔ ${matched.ends.to}.` : '';
+        const distStr = step.distanceKm
+          ? ` (~${step.distanceKm.toFixed(1)} km${step.stopCount ? `, ${step.stopCount} stops` : ''})`
           : '';
-        const boardHint =
-          index === 0 && originStreet
-            ? ` From **${originStreet}**, walk to where this route passes (often 200–300 m), wait roadside, flag signboard **${leg.routeName}**.`
-            : ` Wait roadside and flag signboard **${leg.routeName}**.`;
-        if (nextJeepney) {
-          const alightHint = ` Get off at the nearest safe stop where you can reach the **${nextJeepney.routeName}** line (see **Transfer Walk** next).`;
-          steps.push(
-            `${stepNum}. **Jeepney** — Board **${leg.routeName ?? 'jeepney'}**${color}.${boardHint}${corridor}${alightHint}${fare}`,
-          );
-        } else {
-          const alightHint = destStreet
-            ? ` Alight on **${destStreet}** or the nearest stop to ${destination.label}, then finish on foot if needed.`
+
+        const nextTransfer = graphPlan.slice(index + 1).find((s) => s.type === 'transfer');
+        const alightHint = nextTransfer
+          ? ` Alight at the transfer point to connect with **${nextTransfer.toRouteName ?? 'next route'}** (see **Transfer Walk** next).`
+          : destStreet
+            ? ` Alight on **${destStreet}** or the nearest stop to ${destination.label}, then finish on foot.`
             : ` Alight at the nearest stop to ${destination.label}.`;
-          steps.push(
-            `${stepNum}. **Jeepney** — Board **${leg.routeName ?? 'jeepney'}**${color}.${boardHint}${corridor}${alightHint}${fare}`,
-          );
-        }
+
+        const boardHint =
+          index <= 1 && originStreet
+            ? ` From **${originStreet}**, wait roadside, flag signboard **${routeName}**.`
+            : ` Wait roadside and flag signboard **${routeName}**.`;
+
+        steps.push(
+          `${stepNum}. **Jeepney** — Board **${routeName}**${color}${distStr}.${boardHint}${corridorStr}${alightHint}${fare}`,
+        );
       }
     });
+  } else {
+    // If no transit graph route was found (e.g. remote area off transit corridors)
+    const directMatch = tripRoutes.find((m) => m.direct);
+    if (directMatch) {
+      const fare = directMatch.fareNote ? ` Fare: ${directMatch.fareNote}.` : '';
+      steps.push(`1. **Walk / Tricycle** — Head toward **${originStreet ?? directMatch.route.route_name}** corridor.`);
+      steps.push(`2. **Jeepney** — Board **${directMatch.route.route_name}**. Corridor: ${directMatch.ends.from} ↔ ${directMatch.ends.to}.${fare}`);
+      steps.push(`3. **Walk** — Walk to ${destination.label}.`);
+    } else {
+      steps.push(`1. **Walk / Tricycle** — Walk from ${origin.label} towards the nearest road.`);
+      steps.push(`2. **Tricycle / TNVS** — Book Angkas, Grab, or take a local tricycle directly to ${destination.label} as no jeepney stop is within walking distance.`);
+    }
   }
 
-  const winningJeepneys = itinerary?.legs.filter((l) => l.mode === 'jeepney') ?? [];
-  const winningDetails = winningJeepneys.map((j) => {
+  const uniqueWinningRoutes = [...new Set(winningRoutes)];
+
+  const winningDetails = uniqueWinningRoutes.map((routeName) => {
     const matched = tripRoutes.find(
-      (r) => r.route.route_name.toLowerCase() === j.routeName?.toLowerCase(),
+      (r) => r.route.route_name.toLowerCase() === routeName.toLowerCase(),
     );
     return matched
       ? `- Winning Route: ${matched.route.route_name}${matched.ends.color ? ` (${matched.ends.color})` : ''}\n  Board Corridor: ${matched.ends.from} ↔ ${matched.ends.to}\n  Fares: ${matched.fareNote}`
-      : `- Winning Route: ${j.routeName}`;
+      : `- Winning Route: ${routeName}`;
   });
 
   const otherDirect = tripRoutes
     .filter(
       (m) =>
         m.direct &&
-        !winningJeepneys.some((w) => w.routeName?.toLowerCase() === m.route.route_name.toLowerCase()),
+        !uniqueWinningRoutes.some((w) => w.toLowerCase() === m.route.route_name.toLowerCase()),
     )
     .map((m) => m.route.route_name);
+
+  const totalWalkKm = shouldUseCorridorSteps && corridor
+    ? corridor.walkMin * 0.08
+    : graphPlan
+      ? graphPlan
+          .filter((s) => s.type === 'walk' || s.type === 'transfer')
+          .reduce((sum, s) => sum + s.distanceKm, 0)
+      : 0;
+
+  const transferCount = shouldUseCorridorSteps
+    ? 0
+    : graphPlan
+      ? graphPlan.filter((s) => s.type === 'transfer').length
+      : 0;
 
   const sections = [
     `RESOLVED ORIGIN: ${origin.label} (${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)})`,
@@ -2009,8 +2107,24 @@ export async function buildTransitBriefing(
     '',
     formatStreetAtlas(),
     '',
+    ...(corridor
+      ? [
+          'KNOWN LOCAL ITINERARY (prefer this over forcing an unmatched live route):',
+          `1. Walk ~${corridor.walkMin} min to ${corridor.walkTo}.`,
+          `2. Ride jeepney: ${corridor.jeepneySignboard}. Regular fare ₱${corridor.fareRegular}${corridor.fareDiscounted != null ? ` / discounted ₱${corridor.fareDiscounted}` : ''}. ETA ~${corridor.etaMin} min.`,
+          `3. Alight at ${corridor.alight}.`,
+          `4. Last mile: ${corridor.lastMile}`,
+          `5. Booking apps: ${corridor.apps}`,
+          '',
+        ]
+      : []),
+    'GRAPH ROUTER SUMMARY:',
+    `- Total Walk Distance: ~${Math.max(10, Math.round(totalWalkKm * 1000))} meters`,
+    `- Transit Lines: ${uniqueWinningRoutes.length ? uniqueWinningRoutes.join(' → ') : 'None'}`,
+    `- Transfer Points: ${transferCount}`,
+    '',
     'SELECTED ROUTE DETAILS:',
-    winningDetails.length ? winningDetails.join('\n') : `- Mode: ${itinerary?.planType ?? 'direct'}`,
+    winningDetails.length ? winningDetails.join('\n') : `- Mode: ${uniqueWinningRoutes.length ? 'direct' : 'walk'}`,
     otherDirect.length ? `- Alternative Direct Routes: ${otherDirect.join(', ')}` : '',
     '',
     'SELECTED COMMUTE PLAN:',
