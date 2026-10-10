@@ -189,6 +189,33 @@ export function buildTransitGraph(
       }
     }
 
+    // Calculate total surveyed path distance
+    let totalRouteDistKm = 0;
+    for (let i = 0; i < routeNodeList.length - 1; i++) {
+      totalRouteDistKm += haversineKm(
+        routeNodeList[i].lat,
+        routeNodeList[i].lng,
+        routeNodeList[i + 1].lat,
+        routeNodeList[i + 1].lng,
+      );
+    }
+
+    const firstNode = routeNodeList[0];
+    const lastNode = routeNodeList[routeNodeList.length - 1];
+    const loopGapKm =
+      routeNodeList.length >= 2
+        ? haversineKm(firstNode.lat, firstNode.lng, lastNode.lat, lastNode.lng)
+        : Infinity;
+
+    // A route is classified as a surveyed loop if:
+    // 1. It has at least 3 points
+    // 2. Either the loop gap is <= 0.25 km (250m, closed loop) OR
+    //    the loop gap is <= 2.0 km and represents a small fraction (<= 35%) of total round-trip distance.
+    const isLoopRoute =
+      routeNodeList.length >= 3 &&
+      totalRouteDistKm > 0 &&
+      (loopGapKm <= 0.25 || (loopGapKm <= 2.0 && loopGapKm / totalRouteDistKm <= 0.35));
+
     // Connect sequential nodes on the same route with 'ride' edges
     // Base ride cost: weight = distanceKm * 1.0
     for (let i = 0; i < routeNodeList.length - 1; i++) {
@@ -197,7 +224,7 @@ export function buildTransitGraph(
       const dist = Math.max(0.01, haversineKm(u.lat, u.lng, v.lat, v.lng));
       const rideWeight = dist * 1.0;
 
-      // Forward ride edge
+      // Forward ride edge (always present along surveyed trajectory)
       addEdge({
         fromNode: u.id,
         toNode: v.id,
@@ -208,15 +235,32 @@ export function buildTransitGraph(
         distanceKm: dist,
       });
 
-      // Backward ride edge (supports two-way travel along the route corridor)
+      // For non-loop, linear corridors (e.g. straight intercity highway lines with gap > 2km),
+      // allow bidirectional travel. For surveyed loops, preserve strict forward traffic flow!
+      if (!isLoopRoute) {
+        addEdge({
+          fromNode: v.id,
+          toNode: u.id,
+          weight: rideWeight,
+          type: 'ride',
+          routeId: route.id,
+          routeName: route.route_name,
+          distanceKm: dist,
+        });
+      }
+    }
+
+    // Connect end of loop back to start so circular traversal is continuous
+    if (isLoopRoute && firstNode && lastNode) {
+      const closingDistKm = Math.max(0.01, loopGapKm);
       addEdge({
-        fromNode: v.id,
-        toNode: u.id,
-        weight: rideWeight,
+        fromNode: lastNode.id,
+        toNode: firstNode.id,
+        weight: closingDistKm * 1.0,
         type: 'ride',
         routeId: route.id,
         routeName: route.route_name,
-        distanceKm: dist,
+        distanceKm: closingDistKm,
       });
     }
   }
