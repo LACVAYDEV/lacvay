@@ -52,7 +52,7 @@ import { buildFallbackCommutePlan, looksLikeCommuteReply } from '@/lib/commutePl
 
 import { rebuildPlanPaths } from '@/lib/mapCoordinates';
 
-import type { AIMessage, SavedGuideStep } from '@/types';
+import type { AIMessage, SavedGuideStep, CommuteGuidePlan } from '@/types';
 
 
 
@@ -344,55 +344,42 @@ export default function AIAssistantPage() {
 
 
   const handleSaveGuide = async (msg: AIMessage) => {
-
-    if (!user) {
-
-      showToast('Please sign in to save guides to your trips.');
-
-      navigate('/login');
-
-      return;
-
-    }
-
-
-
     setSavingGuideId(msg.id);
-
     try {
+      // 1. Resolve full plan: prefer direct msg.plan, or build fallback plan
+      const plan: CommuteGuidePlan | null = msg.plan
+        ? msg.plan
+        : buildFallbackCommutePlan(msg.content, aiOrigin.trim() || undefined);
 
       const parsed = parseGuideFromMessage(msg.content);
+      const title = plan?.title?.trim() || parsed.title || 'Batangas City Commute Guide';
+      const summary = plan
+        ? `${plan.title} · ~${plan.totalMinutes ?? 25} min${plan.totalFareRegular != null ? ` · ₱${plan.totalFareRegular}` : ''}`
+        : parsed.summary;
 
-      const title = msg.plan?.title?.trim() || parsed.title;
+      const steps: SavedGuideStep[] = plan?.legs?.length
+        ? plan.legs.map((leg: any) => ({
+            order: leg.order,
+            title: leg.title,
+            description: leg.description,
+          }))
+        : parsed.steps;
 
-      await savedGuidesService.saveGuide(user.id, {
-
+      await savedGuidesService.saveGuide(user?.id, {
         title,
-
-        summary: parsed.summary,
-
-        steps: parsed.steps,
-
+        summary,
+        steps,
+        plan,
       });
 
-
-
       setSavedGuideIds((prev) => new Set([...prev, msg.id]));
-
       showToast('Itinerary saved! Check your "Saved Guides" tab.');
-
     } catch (err) {
-
       console.error('Failed to save guide:', err);
-
       showToast('Could not save guide. Please try again.');
-
     } finally {
-
       setSavingGuideId(null);
-
     }
-
   };
 
 

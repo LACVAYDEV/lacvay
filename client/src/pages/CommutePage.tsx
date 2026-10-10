@@ -11,10 +11,15 @@ import {
   Sparkles,
   Loader2,
   ArrowRight,
+  Bookmark,
 } from 'lucide-react';
 import type { GlobalCommuteGuide, TransportSegment, CommuteGuidePlan, GuideLegMode } from '@/types';
 import { dataService } from '@/services/dataService';
 import { loadActiveCommutePlan, clearActiveCommutePlan } from '@/services/aiService';
+import { savedGuidesService } from '@/services/savedGuidesService';
+import { useAuth } from '@/context/AuthContext';
+import { useApp } from '@/context/AppContext';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -113,11 +118,41 @@ function PlanGuideView({
   onClear: () => void;
 }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { showToast } = useApp();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [activeLeg, setActiveLeg] = useState<number | null>(null);
   const [roadLegs, setRoadLegs] = useState<RoadLegPath[] | null>(null);
   const [routing, setRouting] = useState(true);
 
   const plan = useMemo(() => rebuildPlanPaths(rawPlan), [rawPlan]);
+
+  const handleSavePlan = async () => {
+    setIsSaving(true);
+    try {
+      const steps = plan.legs.map((leg) => ({
+        order: leg.order,
+        title: leg.title,
+        description: leg.description,
+      }));
+
+      await savedGuidesService.saveGuide(user?.id, {
+        title: plan.title,
+        summary: `${plan.title} · ~${plan.totalMinutes ?? 25} min${plan.totalFareRegular != null ? ` · ₱${plan.totalFareRegular}` : ''}`,
+        steps,
+        plan,
+      });
+
+      setIsSaved(true);
+      showToast('Guide saved to your trips! View anytime in Saved Guides.');
+    } catch (err) {
+      console.error('Failed to save commute guide:', err);
+      showToast('Could not save guide. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -218,6 +253,24 @@ function PlanGuideView({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={handleSavePlan}
+            disabled={isSaving || isSaved}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition',
+              isSaved
+                ? 'bg-lacvay-blush text-lacvay-green border border-lacvay-green/30'
+                : 'border border-gray-200 bg-white text-gray-700 hover:border-lacvay-green hover:text-lacvay-green',
+            )}
+          >
+            {isSaving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Bookmark className={cn('h-3.5 w-3.5', isSaved && 'fill-lacvay-green text-lacvay-green')} />
+            )}
+            {isSaved ? 'Saved to Trips' : 'Save Guide'}
+          </button>
           <button
             type="button"
             onClick={() => navigate('/ai-assistant')}
@@ -480,23 +533,27 @@ export default function CommutePage() {
   } | null;
   const passedGuide = stateObj?.guide || stateObj?.commuteGuide;
 
+  const incomingPlanInitial = stateObj?.plan || passedGuide?.plan;
+
   const [selected, setSelected] = useState<GlobalCommuteGuide | null>(() => {
-    return passedGuide ? parsePassedGuide(passedGuide) : null;
+    return passedGuide && !passedGuide.plan ? parsePassedGuide(passedGuide) : null;
   });
 
   const [guides, setGuides] = useState<GlobalCommuteGuide[]>(() => {
-    return passedGuide ? [parsePassedGuide(passedGuide)] : [];
+    return passedGuide && !passedGuide.plan ? [parsePassedGuide(passedGuide)] : [];
   });
 
   const [loading, setLoading] = useState(true);
 
   const [activePlan, setActivePlan] = useState<CommuteGuidePlan | null>(() => {
-    // If a saved guide was passed explicitly, prioritize showing it rather than any stale activePlan from localStorage
+    if (incomingPlanInitial) {
+      return rebuildPlanPaths(incomingPlanInitial);
+    }
+    // If a saved guide was passed explicitly without a plan, prioritize showing it rather than any stale activePlan from localStorage
     if (passedGuide) {
       return null;
     }
-    const fromState = stateObj?.plan;
-    const loaded = fromState ?? loadActiveCommutePlan();
+    const loaded = loadActiveCommutePlan();
     return loaded ? rebuildPlanPaths(loaded) : null;
   });
   const navigate = useNavigate();
@@ -508,9 +565,11 @@ export default function CommutePage() {
       commuteGuide?: any;
     } | null;
     const currentPassed = currentState?.guide || currentState?.commuteGuide;
+    const incomingPlan = currentState?.plan || currentPassed?.plan;
 
-    if (currentState?.plan) {
-      setActivePlan(rebuildPlanPaths(currentState.plan));
+    if (incomingPlan) {
+      setActivePlan(rebuildPlanPaths(incomingPlan));
+      setSelected(null);
     } else if (currentPassed) {
       setActivePlan(null);
       const parsed = parsePassedGuide(currentPassed);
@@ -528,7 +587,7 @@ export default function CommutePage() {
       } | null;
       const currentPassed = currentState?.guide || currentState?.commuteGuide;
 
-      if (currentPassed) {
+      if (currentPassed && !currentPassed.plan) {
         const parsed = parsePassedGuide(currentPassed);
         setGuides([parsed, ...g.filter((item) => item.id !== parsed.id)]);
         setSelected(parsed);

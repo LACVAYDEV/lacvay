@@ -10,6 +10,7 @@ import {
   Info,
   Camera,
   Utensils,
+  X,
 } from 'lucide-react';
 import type { Place } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -65,30 +66,52 @@ const eateryIcon = L.divIcon({
   iconAnchor: [16, 16],
 });
 
-// Highlighted destination pins (yellow ring with bounce animation)
+// Highlighted destination pins (golden sparkle aura with twinkle star badge)
 const highlightedTouristIcon = L.divIcon({
-  className: 'custom-pin',
-  html: ReactDOMServer.renderToString(
-    <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-teal-500 shadow-md text-white ring-4 ring-yellow-400 animate-bounce">
-      <Camera size={16} />
-    </div>,
-  ),
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
+  className: 'sparkle-pin',
+  html: `
+    <div style="position:relative;display:flex;align-items:center;justify-content:center;width:46px;height:46px;cursor:pointer;">
+      <span style="position:absolute;inset:2px;border-radius:9999px;background:rgba(20,184,166,0.3);animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></span>
+      <div class="animate-sparkle-halo" style="position:relative;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9999px;background:linear-gradient(135deg,#0d9488,#115e59);border:2.5px solid #ffffff;color:#ffffff;box-shadow:0 0 16px rgba(245,158,11,0.85);">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+          <circle cx="12" cy="13" r="3"/>
+        </svg>
+        <span class="animate-sparkle-twinkle" style="position:absolute;top:-5px;right:-5px;display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:9999px;background:linear-gradient(135deg,#fef08a,#f59e0b);color:#78350f;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:1.5px solid #ffffff;font-size:11px;font-weight:900;line-height:1;">
+          ✦
+        </span>
+      </div>
+    </div>
+  `,
+  iconSize: [46, 46],
+  iconAnchor: [23, 23],
+  popupAnchor: [0, -22],
 });
 
 const highlightedEateryIcon = L.divIcon({
-  className: 'custom-pin',
-  html: ReactDOMServer.renderToString(
-    <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-orange-500 shadow-md text-white ring-4 ring-yellow-400 animate-bounce">
-      <Utensils size={16} />
-    </div>,
-  ),
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
+  className: 'sparkle-pin',
+  html: `
+    <div style="position:relative;display:flex;align-items:center;justify-content:center;width:46px;height:46px;cursor:pointer;">
+      <span style="position:absolute;inset:2px;border-radius:9999px;background:rgba(249,115,22,0.3);animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></span>
+      <div class="animate-sparkle-halo" style="position:relative;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9999px;background:linear-gradient(135deg,#ea580c,#c2410c);border:2.5px solid #ffffff;color:#ffffff;box-shadow:0 0 16px rgba(245,158,11,0.85);">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"/>
+          <path d="M15 2v10a4 4 0 0 1-4 4H7"/>
+          <path d="M7 2v20"/>
+          <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+        </svg>
+        <span class="animate-sparkle-twinkle" style="position:absolute;top:-5px;right:-5px;display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:9999px;background:linear-gradient(135deg,#fef08a,#f59e0b);color:#78350f;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:1.5px solid #ffffff;font-size:11px;font-weight:900;line-height:1;">
+          ✦
+        </span>
+      </div>
+    </div>
+  `,
+  iconSize: [46, 46],
+  iconAnchor: [23, 23],
+  popupAnchor: [0, -22],
 });
 
-// Visual pin for explored destination from URL parameters
+// Visual pin for explored destination from URL parameters (only used for non-place arbitrary coordinates)
 const explorePinIcon = L.divIcon({
   className: 'custom-explore-pin',
   html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
@@ -130,7 +153,7 @@ function ExploreFocusController({ coord }: { coord: [number, number] | null }) {
   const map = useMap();
   useEffect(() => {
     if (coord) {
-      map.setView(coord, 17, { animate: true });
+      map.flyTo(coord, 17, { animate: true, duration: 1.2 });
     }
   }, [coord, map]);
   return null;
@@ -219,15 +242,16 @@ export default function MapPage() {
   const [showRoutes, setShowRoutes] = useState(true);
   const routeIdParam = params.get('routeId');
 
-  // Highlighted place ID from top search or URL parameter
-  const [highlightedPlaceId, setHighlightedPlaceId] = useState<string | null>(() => params.get('highlight'));
+  // Highlighted place ID from URL parameter (placeId or highlight) or top search
+  const placeIdParam = params.get('placeId') || params.get('highlight');
+  const [highlightedPlaceId, setHighlightedPlaceId] = useState<string | null>(() => placeIdParam);
 
   useEffect(() => {
-    const hl = params.get('highlight');
-    if (hl !== highlightedPlaceId) {
+    const hl = params.get('placeId') || params.get('highlight');
+    if (hl && hl !== highlightedPlaceId) {
       setHighlightedPlaceId(hl);
     }
-  }, [params]);
+  }, [params, highlightedPlaceId]);
 
   // URL Parameter "Explore" Coordinates
   const latParam = params.get('lat');
@@ -287,15 +311,28 @@ export default function MapPage() {
     return { center: BATANGAS_CENTER, zoom: 13, fromSession: false };
   });
 
-  // Find matching place for explored coordinate if one exists
+  // Find matching place for explored coordinate or placeId
   const exploredPlace = useMemo(() => {
+    if (highlightedPlaceId) {
+      const byId = places.find((p) => String(p.id) === String(highlightedPlaceId));
+      if (byId) return byId;
+    }
     if (!exploreCoord) return null;
-    return places.find(
-      (p) =>
-        Math.abs(p.latitude - exploreCoord[0]) < 0.0002 &&
-        Math.abs(p.longitude - exploreCoord[1]) < 0.0002,
+    return (
+      places.find(
+        (p) =>
+          Math.abs(p.latitude - exploreCoord[0]) < 0.0015 &&
+          Math.abs(p.longitude - exploreCoord[1]) < 0.0015,
+      ) || null
     );
-  }, [exploreCoord, places]);
+  }, [exploreCoord, places, highlightedPlaceId]);
+
+  // Sync highlightedPlaceId whenever exploredPlace is found
+  useEffect(() => {
+    if (exploredPlace && exploredPlace.id !== highlightedPlaceId) {
+      setHighlightedPlaceId(exploredPlace.id);
+    }
+  }, [exploredPlace, highlightedPlaceId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -502,6 +539,41 @@ export default function MapPage() {
       {/* Full-Width Explorer Map Container - Fills remaining height cleanly */}
       <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-lg shadow-sm border border-gray-100 bg-white">
         <div className="w-full h-full relative overflow-hidden">
+          {/* Explored Place Sparkle Banner */}
+          {exploredPlace && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 rounded-full bg-white/95 px-3.5 py-1.5 shadow-xl border border-amber-300 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-xs shrink-0 font-bold">
+                ✨
+              </span>
+              <div className="text-left min-w-0 max-w-[200px] sm:max-w-xs">
+                <p className="truncate text-xs font-bold text-gray-900 leading-tight">
+                  {exploredPlace.name}
+                </p>
+                <p className="text-[10px] text-amber-700 font-medium leading-none mt-0.5">
+                  Tap the sparkling pin for details
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setHighlightedPlaceId(null);
+                  setParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.delete('lat');
+                    next.delete('lng');
+                    next.delete('placeId');
+                    next.delete('highlight');
+                    return next;
+                  });
+                }}
+                className="ml-1 rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition"
+                title="Dismiss highlight"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
           <MapContainer
             center={initialView.center}
             zoom={initialView.zoom}
@@ -711,7 +783,7 @@ export default function MapPage() {
                   key={p.id}
                   position={[p.latitude, p.longitude]}
                   icon={icon}
-                  zIndexOffset={isHighlighted ? 1000 : 0}
+                  zIndexOffset={isHighlighted ? 2000 : 0}
                 >
                   <Popup>
                     <div className="p-1 max-w-[220px] text-left">
@@ -768,16 +840,16 @@ export default function MapPage() {
               );
             })}
 
-            {/* Visual pin marker for URL explored coordinate */}
-            {exploreCoord && !highlightedPlaceId && (
+            {/* Visual pin marker for URL explored coordinate ONLY if no place exists at that coordinate */}
+            {exploreCoord && !exploredPlace && !highlightedPlaceId && (
               <Marker position={exploreCoord} icon={explorePinIcon} zIndexOffset={1500}>
                 <Popup autoPan={false}>
                   <div className="p-1 text-left">
                     <span className="inline-block rounded-full bg-lacvay-blush px-2 py-0.5 text-[10px] font-bold text-lacvay-green-dark">
-                      Explored Destination
+                      Explored Location
                     </span>
                     <p className="mt-1 font-bold text-sm text-gray-900 leading-tight">
-                      {exploredPlace ? exploredPlace.name : 'Selected Location'}
+                      Selected Coordinate
                     </p>
                     <p className="mt-0.5 text-xs text-gray-500">
                       {exploreCoord[0].toFixed(5)}, {exploreCoord[1].toFixed(5)}

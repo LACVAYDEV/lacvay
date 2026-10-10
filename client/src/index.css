@@ -448,3 +448,39 @@ body {
 .route-fare-balloon .leaflet-popup-close-button:hover {
   color: #374151 !important;
 }
+
+/* Highlighted and Sparkle Place Pins */
+.sparkle-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+@keyframes sparkle-halo {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7), 0 0 16px 2px rgba(251, 191, 36, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0), 0 0 24px 6px rgba(251, 191, 36, 0.95);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes sparkle-twinkle {
+  0%, 100% {
+    transform: scale(0.9) rotate(0deg);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 1;
+  }
+}
+
+.animate-sparkle-halo {
+  animation: sparkle-halo 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-sparkle-twinkle {
+  animation: sparkle-twinkle 2s ease-in-out infinite;
+}

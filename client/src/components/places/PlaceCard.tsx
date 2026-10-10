@@ -255,7 +255,7 @@ export function PlaceCard({
               e.stopPropagation();
               navigate(
                 lat != null && lng != null
-                  ? '/map?lat=' + lat + '&lng=' + lng
+                  ? `/map?lat=${lat}&lng=${lng}&placeId=${place.id}`
                   : '/map'
               );
             }}

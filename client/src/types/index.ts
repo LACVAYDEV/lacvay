@@ -96,6 +96,7 @@ export interface SavedGuide {
   title: string;
   summary?: string | null;
   steps: SavedGuideStep[] | any;
+  plan?: CommuteGuidePlan | null;
   created_at?: string | null;
 }
 

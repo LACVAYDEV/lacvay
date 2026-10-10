@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Clock, Navigation, ChevronLeft, ChevronRight, Compass, Star } from 'lucide-react';
+import { Clock, Navigation, ChevronLeft, ChevronRight, Compass, Star, Map } from 'lucide-react';
 import { dataService } from '@/services/dataService';
 import { isVideoMediaUrl } from '@/lib/mediaUtils';
 import type { Restaurant } from '@/types';
@@ -147,9 +147,19 @@ export default function RestaurantDetailPage() {
           {restaurant.coordinates && (
             <div>
               <p className="text-xs font-semibold uppercase text-gray-400">Coordinates</p>
-              <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-gray-800">
-                <Compass className="h-4 w-4 text-lacvay-green" /> {restaurant.coordinates.lat.toFixed(4)}, {restaurant.coordinates.lng.toFixed(4)}
-              </p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
+                  <Compass className="h-4 w-4 text-lacvay-green shrink-0" /> {restaurant.coordinates.lat.toFixed(4)}, {restaurant.coordinates.lng.toFixed(4)}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/map?lat=${restaurant.coordinates!.lat}&lng=${restaurant.coordinates!.lng}&placeId=${restaurant.id}`)}
+                  className="h-7 px-2.5 text-xs shrink-0"
+                >
+                  <Map className="h-3.5 w-3.5" /> Show on map
+                </Button>
+              </div>
             </div>
           )}
         </div>

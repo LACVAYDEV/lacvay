@@ -186,7 +186,7 @@ export default function TouristSpotDetailPage() {
               {spot.coordinates && (
                 <Button
                   variant="outline"
-                  onClick={() => navigate(`/map?lat=${spot.coordinates!.lat}&lng=${spot.coordinates!.lng}`)}
+                  onClick={() => navigate(`/map?lat=${spot.coordinates!.lat}&lng=${spot.coordinates!.lng}&placeId=${spot.id}`)}
                   className="w-full"
                 >
                   <Map className="h-4 w-4" /> Show on map
