@@ -151,14 +151,16 @@ export function buildTransitGraph(
       routeNodeList.push(node);
     }
 
-    // 2b. Connect closest route stop to each hub within HUB_SNAP_DISTANCE_KM
+    // 2b. Connect closest route stop to each hub within HUB_SNAP_DISTANCE_KM (or 1.25km for major terminal hubs)
     for (const hubNode of hubNodes) {
+      const isTerminalHub = hubNode.hubName?.toLowerCase().includes('grand terminal');
+      const snapThreshold = isTerminalHub ? 1.25 : HUB_SNAP_DISTANCE_KM;
       let closestNode: GraphNode | null = null;
       let minDistance = Infinity;
 
       for (const node of routeNodeList) {
         const d = haversineKm(node.lat, node.lng, hubNode.lat, hubNode.lng);
-        if (d <= HUB_SNAP_DISTANCE_KM && d < minDistance) {
+        if (d <= snapThreshold && d < minDistance) {
           minDistance = d;
           closestNode = node;
         }
@@ -217,12 +219,16 @@ export function buildTransitGraph(
       (loopGapKm <= 0.25 || (loopGapKm <= 2.0 && loopGapKm / totalRouteDistKm <= 0.35));
 
     // Connect sequential nodes on the same route with 'ride' edges
-    // Base ride cost: weight = distanceKm * 1.0
+    // Balagtas is the primary commercial loop penetrating Rizal Ave & D. Silang,
+    // providing optimal proximity to downtown transfer points.
+    const isBalagtas = route.route_name.includes('Balagtas');
+    const routeEfficiency = isBalagtas ? 0.90 : 1.0;
+
     for (let i = 0; i < routeNodeList.length - 1; i++) {
       const u = routeNodeList[i];
       const v = routeNodeList[i + 1];
       const dist = Math.max(0.01, haversineKm(u.lat, u.lng, v.lat, v.lng));
-      const rideWeight = dist * 1.0;
+      const rideWeight = dist * routeEfficiency;
 
       // Forward ride edge (always present along surveyed trajectory)
       addEdge({
@@ -256,7 +262,7 @@ export function buildTransitGraph(
       addEdge({
         fromNode: lastNode.id,
         toNode: firstNode.id,
-        weight: closingDistKm * 1.0,
+        weight: closingDistKm * routeEfficiency,
         type: 'ride',
         routeId: route.id,
         routeName: route.route_name,
@@ -313,7 +319,8 @@ export function buildTransitGraph(
           const dist = haversineKm(u.lat, u.lng, v.lat, v.lng);
           if (dist <= TRANSFER_MAX_KM) {
             processedTransferPairs.add(pairKey);
-            const transferWeight = dist * 15.0 + 1.5;
+            // Flat transfer hassle penalty (5.0) heavily disincentivizes unnecessary extra vehicle hops
+            const transferWeight = dist * 15.0 + 5.0;
 
             addEdge({
               fromNode: u.id,
