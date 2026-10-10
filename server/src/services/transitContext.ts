@@ -1,9 +1,15 @@
 import { supabase } from './supabase.js';
 import type { Database, Json } from '../types/database.types.js';
-import { resolveGpsOrigin, resolveLocation, isInBatangas } from './reverseGeocode.js';
-import { routeTrip, type RouteStep } from './graphRouter/pathfinder.js';
-import { buildTransitGraph } from './graphRouter/graphBuilder.js';
-import type { Graph } from './graphRouter/types.js';
+import { resolveGpsOrigin, resolveLocation, isInBatangas, HUB_POINTS } from './reverseGeocode.js';
+import {
+  buildTransitGraph,
+  findOptimalPath,
+  compressPath,
+  routeTripGraph,
+  type TransitGraph,
+  type CompressedStep,
+  type GraphTripResult,
+} from './graphEngine/index.js';
 
 type TransitRoute = Database['public']['Tables']['transit_routes']['Row'];
 type JeepneyFare = Database['public']['Tables']['jeepney_fare_matrix']['Row'];
@@ -209,11 +215,11 @@ function formatStreetAtlas(): string {
 
 export let SYSTEM_PROMPT = `You are LACVAY Transit Assistant for Batangas City jeepney commuters.
 
-You must strictly follow the OPTIMIZED GRAPH ITINERARY provided. Do not invent your own routes. Translate these exact steps into a friendly, numbered guide for the traveler.`;
+Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. You may generate as many steps as necessary. Do not omit any transfers.`;
 
 const COMMUTER_DETAIL_RULES: string[] = [
   'COMMUTER DETAIL RULES (graph-optimized plan — expand every step for travelers):',
-  '- You must strictly follow the OPTIMIZED GRAPH ITINERARY provided. Do not invent your own routes. Translate these exact steps into a friendly, numbered guide for the traveler.',
+  '- Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. You may generate as many steps as necessary. Do not omit any transfers.',
   '- The route plan was generated using Dijkstra Graph Theory pathfinding on real road segments.',
   '- Follow the exact sequential steps in SELECTED COMMUTE PLAN / COMMUTE STEPS.',
   '- **First mile:** state approximate walk meters to the nearest street/stop, which route signboard to look for, and that they should wait roadside and flag down the jeepney.',
@@ -1813,19 +1819,19 @@ function resolveDestination(
   return null;
 }
 
-let cachedTransitGraph: { routeCount: number; graph: Graph } | null = null;
+let cachedTransitGraph: { routeCount: number; graph: TransitGraph } | null = null;
 
-function getOrBuildTransitGraph(routes: TransitRoute[]): Graph {
+function getOrBuildTransitGraph(routes: TransitRoute[]): TransitGraph {
   if (cachedTransitGraph && cachedTransitGraph.routeCount === routes.length) {
     return cachedTransitGraph.graph;
   }
-  const graph = buildTransitGraph(routes, { bidirectionalRides: true });
+  const graph = buildTransitGraph(routes, HUB_POINTS);
   cachedTransitGraph = { routeCount: routes.length, graph };
   return graph;
 }
 
 function formatOptimizedGraphItinerary(
-  graphPlan: RouteStep[] | null,
+  compressedSteps: CompressedStep[] | null,
   tripRoutes: TripRouteMatch[],
   destinationLabel: string,
   originStreet: string | null,
@@ -1840,7 +1846,7 @@ function formatOptimizedGraphItinerary(
     ].join('\n');
   }
 
-  if (!graphPlan || graphPlan.length === 0) {
+  if (!compressedSteps || compressedSteps.length === 0) {
     const directMatch = tripRoutes.find((m) => m.direct);
     if (directMatch) {
       const fare = directMatch.fareNote ? ` | Fare: ${directMatch.fareNote}` : '';
@@ -1853,23 +1859,30 @@ function formatOptimizedGraphItinerary(
     return '1. Mode: TNVS / Tricycle | Action: Take a local tricycle or book TNVS door-to-door to destination.';
   }
 
-  return graphPlan
+  return compressedSteps
     .map((step, idx) => {
       const num = idx + 1;
       const m = Math.max(10, Math.round(step.distanceKm * 1000));
-      if (step.type === 'walk') {
+      if (step.action === 'walk') {
         const isFirst = idx === 0;
-        const isLast = idx === graphPlan.length - 1;
+        const isLast = idx === compressedSteps.length - 1;
         const streetHint = isFirst && originStreet ? ` toward ${originStreet}` : isLast && destStreet ? ` along ${destStreet} to ${destinationLabel}` : '';
-        return `${num}. Mode: Walk | Distance: ~${m}m | Action: ${step.instruction}${streetHint}`;
+        const detail = isFirst
+          ? `Walk from origin to nearest boarding stop${streetHint}`
+          : isLast
+            ? `Walk from alight point to destination (${destinationLabel})${streetHint}`
+            : `Walk ~${m}m`;
+        return `${num}. Mode: Walk | Distance: ~${m}m | Action: ${detail}`;
       }
-      if (step.type === 'transfer') {
-        const from = step.fromRouteName ?? 'previous route';
-        const to = step.toRouteName ?? step.routeName ?? 'connecting route';
-        return `${num}. Mode: Transfer Walk | Distance: ~${m}m | Action: Transfer from ${from} to ${to}. Wait roadside and flag down the jeepney.`;
+      if (step.action === 'transfer_walk') {
+        const prevBoard = compressedSteps.slice(0, idx).reverse().find((s) => s.action === 'board');
+        const nextBoard = compressedSteps.slice(idx + 1).find((s) => s.action === 'board');
+        const from = prevBoard?.route ?? 'previous route';
+        const to = nextBoard?.route ?? 'connecting route';
+        return `${num}. Mode: Transfer Walk | Distance: ~${m}m | Action: Transfer from ${from} to ${to}. Wait roadside and flag down the connecting jeepney.`;
       }
-      if (step.type === 'ride') {
-        const routeName = step.routeName ?? 'jeepney';
+      if (step.action === 'board') {
+        const routeName = step.route ?? 'jeepney';
         const matched = tripRoutes.find(
           (r) => r.route.route_name.toLowerCase() === routeName.toLowerCase(),
         );
@@ -1878,7 +1891,7 @@ function formatOptimizedGraphItinerary(
         const dist = step.distanceKm ? ` | Distance: ~${step.distanceKm.toFixed(1)} km` : '';
         return `${num}. Mode: Jeepney | Route: ${routeName}${dist}${fare}${corridorStr} | Action: Board ${routeName}, alight at nearest stop to ${destinationLabel}`;
       }
-      return `${num}. Mode: Unknown | Distance: ~${m}m | Action: ${step.instruction}`;
+      return `${num}. Mode: Unknown | Distance: ~${m}m | Action: Walk ~${m}m`;
     })
     .join('\n');
 }
@@ -2034,14 +2047,15 @@ export async function buildTransitBriefing(
   const tripRoutes = analyzeTripRoutes(live.routes, live.fares, live.landmarks, origin, destination);
 
   const graph = getOrBuildTransitGraph(live.routes);
-  let graphPlan = routeTrip(originPt, destPt, graph);
-  if (!graphPlan) {
-    // Relaxed search threshold if origin is slightly outside standard 800m
-    graphPlan = routeTrip(originPt, destPt, graph, { maxOriginDistanceKm: 2.0 });
+  let graphResult = routeTripGraph(graph, originPt, destPt);
+  if (!graphResult) {
+    // Relaxed search threshold if origin/destination is slightly farther
+    graphResult = routeTripGraph(graph, originPt, destPt, { maxAccessKm: 5.0 });
   }
+  const compressedSteps = graphResult?.steps ?? null;
 
   const corridor = originPt && destPt ? findKnownCorridor(originPt, destPt) : null;
-  const hasTransferInGraph = !graphPlan || graphPlan.some((s) => s.type === 'transfer');
+  const hasTransferInGraph = !compressedSteps || compressedSteps.some((s) => s.action === 'transfer_walk');
   const shouldUseCorridorSteps = Boolean(corridor && hasTransferInGraph);
 
   const steps: string[] = [];
@@ -2061,20 +2075,24 @@ export async function buildTransitBriefing(
       corridor.jeepneySignboard.toLowerCase().includes(r.route_name.toLowerCase()),
     );
     winningRoutes = [matchedRoute ? matchedRoute.route_name : 'Dela Paz/Ilijan - Batangas'];
-  } else if (graphPlan && graphPlan.length > 0) {
-    winningRoutes = graphPlan
-      .filter((s) => s.type === 'ride' && s.routeName)
-      .map((s) => s.routeName!) as string[];
+  } else if (compressedSteps && compressedSteps.length > 0) {
+    winningRoutes = compressedSteps
+      .filter((s) => s.action === 'board' && s.route)
+      .map((s) => s.route!) as string[];
 
-    graphPlan.forEach((step, index) => {
+    compressedSteps.forEach((step, index) => {
       const stepNum = index + 1;
       const m = Math.max(10, Math.round(step.distanceKm * 1000));
 
-      if (step.type === 'walk') {
+      if (step.action === 'walk') {
         const isFirst = index === 0;
-        const isLast = index === graphPlan.length - 1;
+        const isLast = index === compressedSteps.length - 1;
         const title = isFirst ? (step.distanceKm > 0.3 ? 'Walk / Tricycle' : 'Walk') : 'Walk';
-        let detail = step.instruction.replace(/\*\*/g, '');
+        let detail = isFirst
+          ? `Walk ~${m}m from origin to nearest jeepney boarding point.`
+          : isLast
+            ? `Walk ~${m}m from alight point to destination (${destination.label}).`
+            : `Walk ~${m}m.`;
         if (isFirst && originStreet && !detail.includes(originStreet)) {
           detail += ` Head toward **${originStreet}** where jeepneys pass.`;
         }
@@ -2082,13 +2100,15 @@ export async function buildTransitBriefing(
           detail += ` Continue on **${destStreet}** to reach ${destination.label}.`;
         }
         steps.push(`${stepNum}. **${title}** — ${detail.endsWith('.') ? detail : `${detail}.`}`);
-      } else if (step.type === 'transfer') {
-        const fromRoute = step.fromRouteName ?? 'previous route';
-        const toRoute = step.toRouteName ?? step.routeName ?? 'connecting route';
+      } else if (step.action === 'transfer_walk') {
+        const prevBoard = compressedSteps.slice(0, index).reverse().find((s) => s.action === 'board');
+        const nextBoard = compressedSteps.slice(index + 1).find((s) => s.action === 'board');
+        const fromRoute = prevBoard?.route ?? 'previous route';
+        const toRoute = nextBoard?.route ?? 'connecting route';
         const detail = `Walk ~${m}m to transfer from **${fromRoute}** to the **${toRoute}** line. Wait roadside and flag the signboard.`;
         steps.push(`${stepNum}. **Transfer Walk** — ${detail}`);
-      } else if (step.type === 'ride') {
-        const routeName = step.routeName ?? 'jeepney';
+      } else if (step.action === 'board') {
+        const routeName = step.route ?? 'jeepney';
         const matched = tripRoutes.find(
           (r) => r.route.route_name.toLowerCase() === routeName.toLowerCase(),
         );
@@ -2096,12 +2116,13 @@ export async function buildTransitBriefing(
         const fare = matched?.fareNote ? ` Fare: ${matched.fareNote}.` : '';
         const corridorStr = matched ? ` Corridor: ${matched.ends.from} ↔ ${matched.ends.to}.` : '';
         const distStr = step.distanceKm
-          ? ` (~${step.distanceKm.toFixed(1)} km${step.stopCount ? `, ${step.stopCount} stops` : ''})`
+          ? ` (~${step.distanceKm.toFixed(1)} km)`
           : '';
 
-        const nextTransfer = graphPlan.slice(index + 1).find((s) => s.type === 'transfer');
+        const nextTransfer = compressedSteps.slice(index + 1).find((s) => s.action === 'transfer_walk');
+        const nextBoard = compressedSteps.slice(index + 1).find((s) => s.action === 'board');
         const alightHint = nextTransfer
-          ? ` Alight at the transfer point to connect with **${nextTransfer.toRouteName ?? 'next route'}** (see **Transfer Walk** next).`
+          ? ` Alight at the transfer point to connect with **${nextBoard?.route ?? 'next route'}** (see **Transfer Walk** next).`
           : destStreet
             ? ` Alight on **${destStreet}** or the nearest stop to ${destination.label}, then finish on foot.`
             : ` Alight at the nearest stop to ${destination.label}.`;
@@ -2151,20 +2172,20 @@ export async function buildTransitBriefing(
 
   const totalWalkKm = shouldUseCorridorSteps && corridor
     ? corridor.walkMin * 0.08
-    : graphPlan
-      ? graphPlan
-          .filter((s) => s.type === 'walk' || s.type === 'transfer')
+    : compressedSteps
+      ? compressedSteps
+          .filter((s) => s.action === 'walk' || s.action === 'transfer_walk')
           .reduce((sum, s) => sum + s.distanceKm, 0)
       : 0;
 
   const transferCount = shouldUseCorridorSteps
     ? 0
-    : graphPlan
-      ? graphPlan.filter((s) => s.type === 'transfer').length
+    : compressedSteps
+      ? compressedSteps.filter((s) => s.action === 'transfer_walk').length
       : 0;
 
   const rawGraphItinerary = formatOptimizedGraphItinerary(
-    graphPlan,
+    compressedSteps,
     tripRoutes,
     destination.label,
     originStreet,
@@ -2174,7 +2195,7 @@ export async function buildTransitBriefing(
 
   SYSTEM_PROMPT = `You are LACVAY Transit Assistant for Batangas City jeepney commuters.
 
-You must strictly follow the OPTIMIZED GRAPH ITINERARY provided. Do not invent your own routes. Translate these exact steps into a friendly, numbered guide for the traveler.
+Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. You may generate as many steps as necessary. Do not omit any transfers.
 
 ### OPTIMIZED GRAPH ITINERARY ###
 ${rawGraphItinerary}`;
@@ -2184,7 +2205,7 @@ ${rawGraphItinerary}`;
     `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
     '',
     '### OPTIMIZED GRAPH ITINERARY ###',
-    'You must strictly follow the OPTIMIZED GRAPH ITINERARY provided. Do not invent your own routes. Translate these exact steps into a friendly, numbered guide for the traveler.',
+    'Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. You may generate as many steps as necessary. Do not omit any transfers.',
     '',
     rawGraphItinerary,
     '',
