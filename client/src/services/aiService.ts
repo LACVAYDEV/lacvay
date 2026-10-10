@@ -5,6 +5,47 @@ import { supabase } from '@/lib/supabase';
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 export const AI_ORIGIN_STORAGE_KEY = 'lacvay-ai-origin';
 export const ACTIVE_COMMUTE_PLAN_KEY = 'lacvay-active-commute-plan';
+export const PINNED_ORIGIN_STORAGE_KEY = 'lacvay-pinned-origin';
+
+export interface PinnedOrigin {
+  lat: number;
+  lng: number;
+  label: string;
+}
+
+export function getStoredPinnedOrigin(): PinnedOrigin | null {
+  try {
+    const raw = sessionStorage.getItem(PINNED_ORIGIN_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Number.isFinite(parsed?.lat) && Number.isFinite(parsed?.lng)) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredPinnedOrigin(pinned: PinnedOrigin | null): void {
+  try {
+    if (pinned && Number.isFinite(pinned.lat) && Number.isFinite(pinned.lng)) {
+      sessionStorage.setItem(PINNED_ORIGIN_STORAGE_KEY, JSON.stringify(pinned));
+    } else {
+      sessionStorage.removeItem(PINNED_ORIGIN_STORAGE_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearStoredPinnedOrigin(): void {
+  try {
+    sessionStorage.removeItem(PINNED_ORIGIN_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 
 export function getStoredAiOrigin(): string {
@@ -78,10 +119,21 @@ export function clearActiveCommutePlan(): void {
 export async function sendAIMessage(
   message: string,
   originOverride?: string,
+  explicitCoords?: { lat: number; lng: number },
 ): Promise<AIMessage> {
   const geo = (await requestUserLocation()) ?? getStoredGeo();
   const typed = (originOverride ?? getStoredAiOrigin()).trim();
   const manual = isManualAiOrigin() || Boolean(originOverride?.trim());
+  const storedPinned = getStoredPinnedOrigin();
+
+  const pinned = explicitCoords
+    ? { lat: explicitCoords.lat, lng: explicitCoords.lng, label: typed || 'Pinned starting point' }
+    : storedPinned;
+
+  const isUsingPinned = Boolean(
+    pinned &&
+    (!typed || !storedPinned || typed === storedPinned.label.trim() || !originOverride)
+  );
 
   // If From is a known landmark different from GPS (e.g. typed "CLB" while GPS is Sto. Niño), keep From
   const typedIsExplicitPlace =
@@ -99,11 +151,17 @@ export async function sendAIMessage(
     /current location|your location/i.test(typed);
 
   const usingGps =
+    !isUsingPinned &&
     Boolean(geo) && !typedIsExplicitPlace && (!manual || typedLooksLikeGps);
 
-  const origin = usingGps
-    ? geo!.label
-    : typed || (geo ? geo.label : 'SM Batangas');
+  const origin = isUsingPinned
+    ? pinned!.label
+    : usingGps
+      ? geo!.label
+      : typed || (geo ? geo.label : 'SM Batangas');
+
+  const originLat = isUsingPinned ? pinned!.lat : (usingGps ? geo!.lat : undefined);
+  const originLng = isUsingPinned ? pinned!.lng : (usingGps ? geo!.lng : undefined);
 
   const trimmedMsg = message.trim();
   const apiMessage =
@@ -125,9 +183,9 @@ export async function sendAIMessage(
       body: JSON.stringify({
         message: apiMessage,
         origin,
-        // Only attach GPS when From matches current location — otherwise named place (CLB) wins
-        originLat: usingGps ? geo!.lat : undefined,
-        originLng: usingGps ? geo!.lng : undefined,
+        // Send exact pinned coords or GPS coords to backend for accurate routing
+        originLat,
+        originLng,
       }),
     });
 

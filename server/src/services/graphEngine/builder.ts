@@ -272,7 +272,7 @@ export function buildTransitGraph(
           const dist = haversineKm(u.lat, u.lng, v.lat, v.lng);
           if (dist <= TRANSFER_MAX_KM) {
             processedTransferPairs.add(pairKey);
-            const transferWeight = dist * 15.0 + 3.0;
+            const transferWeight = dist * 15.0 + 1.5;
 
             addEdge({
               fromNode: u.id,

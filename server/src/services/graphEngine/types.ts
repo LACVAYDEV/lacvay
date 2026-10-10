@@ -43,4 +43,8 @@ export interface CompressedStep {
   fromNode?: string;
   toNode?: string;
   fareNote?: string;
+  fareRegular?: number;
+  fareDiscounted?: number;
+  estimatedMinutes?: number;
 }
+

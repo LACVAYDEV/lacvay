@@ -194,6 +194,16 @@ export function compressPath(edges: GraphEdge[]): CompressedStep[] {
     }
   }
 
+  for (const step of steps) {
+    if (step.action === 'walk') {
+      step.estimatedMinutes = Math.max(1, Math.round(step.distanceKm * 15));
+    } else if (step.action === 'transfer_walk') {
+      step.estimatedMinutes = Math.max(3, Math.round(step.distanceKm * 15) + 3);
+    } else if (step.action === 'board') {
+      step.estimatedMinutes = Math.max(2, Math.round((step.distanceKm / 18) * 60) + 2);
+    }
+  }
+
   return steps;
 }
 

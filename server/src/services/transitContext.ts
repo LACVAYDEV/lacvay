@@ -2055,8 +2055,8 @@ export async function buildTransitBriefing(
   const compressedSteps = graphResult?.steps ?? null;
 
   const corridor = originPt && destPt ? findKnownCorridor(originPt, destPt) : null;
-  const hasTransferInGraph = !compressedSteps || compressedSteps.some((s) => s.action === 'transfer_walk');
-  const shouldUseCorridorSteps = Boolean(corridor && hasTransferInGraph);
+  // A known corridor is ONLY a fallback when the transit graph engine cannot find any route
+  const shouldUseCorridorSteps = Boolean(corridor && (!compressedSteps || compressedSteps.length === 0));
 
   const steps: string[] = [];
   const originStreet = streetHintForLabel(origin.label);

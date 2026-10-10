@@ -87,7 +87,7 @@ function replyFromBriefing(briefing: string): string | null {
     const steps = slice
       .split('\n')
       .map((l) => l.trim())
-      .filter((l) => /^\d+\.\s+\*\*/.test(l));
+      .filter((l) => /^\d+\.\s+/.test(l));
     if (steps.length) {
       const header = origin && dest ? `**${origin} → ${dest}**\n\n` : '';
       return header + steps.join('\n');
@@ -201,7 +201,8 @@ async function callGroq(message: string, briefing: string): Promise<string | nul
 }
 
 function isWeakCommuteReply(text: string): boolean {
-  const numbered = text.split('\n').filter((line) => /^\s*\d+\.\s+\*\*/.test(line.trim()));
+  // Accept both **bold** and plain numbered steps (e.g. "1. Walk …" or "1. **Walk** …")
+  const numbered = text.split('\n').filter((line) => /^\s*\d+\.\s+/.test(line.trim()));
   return numbered.length < 2;
 }
 

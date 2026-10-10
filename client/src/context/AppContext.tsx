@@ -8,8 +8,14 @@ import {
   setStoredAiOrigin,
   markManualAiOrigin,
   clearManualAiOrigin,
+  getStoredPinnedOrigin,
+  setStoredPinnedOrigin,
+  clearStoredPinnedOrigin,
+  type PinnedOrigin,
 } from '@/services/aiService';
 import { GEO_EVENT, GEO_ORIGIN_MANUAL_KEY, getStoredGeo, requestUserLocation, type UserGeo } from '@/lib/userLocation';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface AppContextValue {
   savedPlaces: SavedPlace[];
@@ -33,6 +39,11 @@ interface AppContextValue {
   setAiOrigin: (value: string) => void;
   locatingAiOrigin: boolean;
   locateAiOriginFromGps: () => Promise<void>;
+  pinnedOrigin: PinnedOrigin | null;
+  setPinnedOriginLocation: (lat: number, lng: number, customLabel?: string) => Promise<string>;
+  clearPinnedOriginLocation: () => void;
+  isPinModalOpen: boolean;
+  setIsPinModalOpen: (open: boolean) => void;
   showToast: (message: string) => void;
   aiSuggestions: string[];
   selectSession: (sessionId: string) => Promise<void>;
@@ -58,9 +69,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiOrigin, setAiOriginState] = useState('');
   const [locatingAiOrigin, setLocatingAiOrigin] = useState(false);
+  const [pinnedOrigin, setPinnedOriginState] = useState<PinnedOrigin | null>(() => getStoredPinnedOrigin());
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
+    const storedPinned = getStoredPinnedOrigin();
+    if (storedPinned) {
+      setPinnedOriginState(storedPinned);
+      setAiOriginState(storedPinned.label);
+      setStoredAiOrigin(storedPinned.label);
+      return;
+    }
+
     const applyGeo = (geo: UserGeo | null) => {
       try {
         if (sessionStorage.getItem(GEO_ORIGIN_MANUAL_KEY) === '1') {
@@ -95,6 +116,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAiOriginState(value);
     setStoredAiOrigin(value);
     markManualAiOrigin();
+    setPinnedOriginState((current) => {
+      if (current && value.trim() !== current.label.trim()) {
+        clearStoredPinnedOrigin();
+        return null;
+      }
+      return current;
+    });
+  }, []);
+
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const setPinnedOriginLocation = useCallback(
+    async (lat: number, lng: number, customLabel?: string) => {
+      let label = customLabel?.trim();
+      if (!label) {
+        try {
+          const res = await fetch(`${API_URL}/geo/reverse?lat=${lat}&lng=${lng}`);
+          if (res.ok) {
+            const data = (await res.json()) as { label?: string };
+            if (data.label?.trim()) {
+              label = data.label.trim();
+            }
+          }
+        } catch {
+          /* fallback */
+        }
+      }
+
+      if (!label) {
+        label = `Pinned (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      }
+
+      const obj: PinnedOrigin = { lat, lng, label };
+      setPinnedOriginState(obj);
+      setStoredPinnedOrigin(obj);
+      setAiOriginState(label);
+      setStoredAiOrigin(label);
+      markManualAiOrigin();
+      showToast(`Starting point pinned: ${label}`);
+      return label;
+    },
+    [showToast],
+  );
+
+  const clearPinnedOriginLocation = useCallback(() => {
+    setPinnedOriginState(null);
+    clearStoredPinnedOrigin();
   }, []);
 
   // Load saved places from localStorage.
@@ -106,11 +177,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const showToast = useCallback((message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 3000);
-  }, []);
-
   const locateAiOriginFromGps = useCallback(async () => {
     setLocatingAiOrigin(true);
     try {
@@ -120,6 +186,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
       clearManualAiOrigin();
+      setPinnedOriginState(null);
+      clearStoredPinnedOrigin();
       setAiOriginState(geo.label);
       setStoredAiOrigin(geo.label);
     } finally {
@@ -240,6 +308,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setAiOrigin,
         locatingAiOrigin,
         locateAiOriginFromGps,
+        pinnedOrigin,
+        setPinnedOriginLocation,
+        clearPinnedOriginLocation,
+        isPinModalOpen,
+        setIsPinModalOpen,
         showToast,
         aiSuggestions: AI_SUGGESTIONS,
         selectSession,

@@ -8,6 +8,7 @@ import { AIFloatingButton } from './AIFloatingButton';
 import { LogoMark } from '@/components/ui/Logo';
 import { HeaderToolbar } from '@/components/layout/HeaderToolbar';
 import { AdvertisementBanner, isAdBannerDismissed } from '@/components/ads/AdvertisementBanner';
+import { MapPinModal } from '@/components/map/MapPinModal';
 import { cn } from '@/lib/utils';
 
 interface AppLayoutProps {
@@ -147,6 +148,7 @@ export function AppLayout({ children, sidebarOpen, setSidebarOpen }: AppLayoutPr
         </main>
 
         <AIFloatingButton />
+        <MapPinModal />
 
         <nav
           aria-label="Primary"

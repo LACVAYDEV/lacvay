@@ -15,6 +15,7 @@ import type { Place } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { isVideoMediaUrl } from '@/lib/mediaUtils';
 import { formatCurrency } from '@/lib/utils';
+import { useApp } from '@/context/AppContext';
 
 import {
   transitAdminService,
@@ -99,6 +100,19 @@ const explorePinIcon = L.divIcon({
   iconSize: [38, 38],
   iconAnchor: [19, 19],
   popupAnchor: [0, -18],
+});
+
+const pinnedOriginPinIcon = L.divIcon({
+  className: 'custom-pinned-origin-pin',
+  html: `<div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+    <div style="background:#15803d;color:#ffffff;border:2.5px solid #ffffff;border-radius:9999px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.35);font-size:10px;font-weight:800;letter-spacing:0.02em;">
+      FROM
+    </div>
+    <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #15803d;margin-top:-1px;"></div>
+  </div>`,
+  iconSize: [32, 38],
+  iconAnchor: [16, 38],
+  popupAnchor: [0, -38],
 });
 
 function RouteBoundsController({ coords }: { coords: [number, number][] }) {
@@ -192,6 +206,7 @@ function MapFlyToListener({ onHighlight }: { onHighlight: (id: string) => void }
 
 export default function MapPage() {
   const [params, setParams] = useSearchParams();
+  const { pinnedOrigin, clearPinnedOriginLocation } = useApp();
 
   // Dynamic places and transit routes from Supabase
   const [places, setPlaces] = useState<Place[]>([]);
@@ -767,6 +782,44 @@ export default function MapPage() {
                     <p className="mt-0.5 text-xs text-gray-500">
                       {exploreCoord[0].toFixed(5)}, {exploreCoord[1].toFixed(5)}
                     </p>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+
+            {/* Visual pin marker for Pinned Starting Point */}
+            {pinnedOrigin && (
+              <Marker
+                position={[pinnedOrigin.lat, pinnedOrigin.lng]}
+                icon={pinnedOriginPinIcon}
+                zIndexOffset={1600}
+              >
+                <Popup autoPan={false}>
+                  <div className="p-1 text-left min-w-[170px]">
+                    <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                      Starting Point (Pinned)
+                    </span>
+                    <p className="mt-1 font-bold text-sm text-gray-900 leading-tight">
+                      {pinnedOrigin.label}
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {pinnedOrigin.lat.toFixed(5)}, {pinnedOrigin.lng.toFixed(5)}
+                    </p>
+                    <div className="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={clearPinnedOriginLocation}
+                        className="text-gray-400 hover:text-rose-600 transition"
+                      >
+                        Clear Pin
+                      </button>
+                      <Link
+                        to="/ai-assistant"
+                        className="font-bold text-lacvay-green hover:underline"
+                      >
+                        Ask AI Guide →
+                      </Link>
+                    </div>
                   </div>
                 </Popup>
               </Marker>

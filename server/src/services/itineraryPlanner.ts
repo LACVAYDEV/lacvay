@@ -36,8 +36,8 @@ export interface OptimizedItinerary {
   score: number;
 }
 
-const PATH_SERVE_KM = 0.4;
-const MAX_TRANSFER_WALK_KM = 0.2;
+const PATH_SERVE_KM = 1.2;
+const MAX_TRANSFER_WALK_KM = 0.8;
 const WALK_MIN_PER_KM = 15;
 const JEEPNEY_KMH = 18;
 const TNVS_LAST_MILE_MIN = 12;

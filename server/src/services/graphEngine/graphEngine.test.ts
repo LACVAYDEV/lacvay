@@ -93,9 +93,9 @@ describe('Graph Engine: Builder & Dijkstra', () => {
 
     const compressed = compressPath(mockEdges);
     expect(compressed).toEqual([
-      { action: 'board', route: 'Balagtas', routeId: 'r1', distanceKm: 2.1, fromNode: 'n1', toNode: 'n3' },
-      { action: 'transfer_walk', distanceKm: 0.05, fromNode: 'n3', toNode: 'n4' },
-      { action: 'board', route: 'Libjo', routeId: 'r2', distanceKm: 1.5, fromNode: 'n4', toNode: 'n5' },
+      { action: 'board', route: 'Balagtas', routeId: 'r1', distanceKm: 2.1, fromNode: 'n1', toNode: 'n3', estimatedMinutes: 9 },
+      { action: 'transfer_walk', distanceKm: 0.05, fromNode: 'n3', toNode: 'n4', estimatedMinutes: 4 },
+      { action: 'board', route: 'Libjo', routeId: 'r2', distanceKm: 1.5, fromNode: 'n4', toNode: 'n5', estimatedMinutes: 7 },
     ]);
   });
 

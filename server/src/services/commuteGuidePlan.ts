@@ -247,19 +247,45 @@ function parseReplyLegs(
   const steps: { mode: GuideLegMode; title: string; description: string }[] = [];
 
   for (const line of lines) {
-    const num = line.match(/^\d+[.)]\s+\*\*(Walk|Jeepney|TNVS|Transfer Walk)[^*]*\*\*\s*[—:-]?\s*(.*)/i);
-    const plain = line.match(/^\d+[.)]\s+(Walk|Jeepney|TNVS|Transfer Walk)\b[—:-]?\s*(.*)/i);
+    const num = line.match(/^\d+[.)]\s+\*\*([^*]+)\*\*\s*[—:-]?\s*(.*)/i);
+    const plain = line.match(/^\d+[.)]\s+([A-Za-z0-9/ ]+?)\s*[—:-]\s*(.*)/i);
     const hit = num ?? plain;
     if (!hit) continue;
-    const modeRaw = hit[1].toLowerCase();
-    const mode: GuideLegMode =
-      modeRaw.includes('walk') ? 'walk' : modeRaw.startsWith('jeep') ? 'jeepney' : 'tnvs';
-    const isTransfer = /transfer\s+walk/i.test(hit[1]);
+    const titleCandidate = hit[1].trim();
+    const titleLower = titleCandidate.toLowerCase();
+    const isTransfer = titleLower.includes('transfer');
+    const isJeep = titleLower.includes('jeep') || titleLower.includes('ride') || titleLower.includes('board');
+    const isWalk = titleLower.includes('walk') || titleLower.includes('foot');
+    const isTricycle = titleLower.includes('tricycle') || titleLower.includes('trike');
+    const isTnvs = titleLower.includes('tnvs') || titleLower.includes('grab') || titleLower.includes('angkas') || titleLower.includes('taxi');
+
+    let mode: GuideLegMode = 'walk';
+    let title = 'Walk';
+
+    if (isTransfer) {
+      mode = 'walk';
+      title = 'Transfer Walk';
+    } else if (isJeep) {
+      mode = 'jeepney';
+      title = 'Jeepney';
+    } else if (isTnvs) {
+      mode = 'tnvs';
+      title = 'TNVS';
+    } else if (isTricycle) {
+      mode = 'walk';
+      title = 'Walk / Tricycle';
+    } else if (isWalk) {
+      mode = 'walk';
+      title = 'Walk';
+    } else {
+      continue;
+    }
+
     const rest = (hit[2] || '').replace(/[*_]/g, '').trim();
     steps.push({
       mode,
-      title: isTransfer ? 'Transfer Walk' : modeTitle(mode),
-      description: rest || (isTransfer ? 'Transfer Walk' : modeTitle(mode)),
+      title,
+      description: rest || title,
     });
   }
 
@@ -296,6 +322,67 @@ export function buildCommuteGuidePlan(opts: {
   if (!origin || !destination) return null;
 
   const itinerary = buildOptimizedItinerary(origin, destination, opts.matches);
+  const replyLegs = parseReplyLegs(opts.reply, origin, destination);
+
+  // The graph engine (Dijkstra) may produce richer multi-transfer plans than the
+  // itinerary planner. If the AI reply has more actionable steps (jeepney + transfer legs),
+  // prefer it so multi-step guides actually surface to the user.
+  const replyActionLegs = replyLegs.filter((l) => l.mode === 'jeepney' || l.title === 'Transfer Walk');
+  const itineraryActionLegs = itinerary?.legs.filter((l) => l.mode === 'jeepney') ?? [];
+
+  const preferReply = replyLegs.length > 0 && replyActionLegs.length > itineraryActionLegs.length;
+
+  if (itinerary?.legs.length && !preferReply) {
+    const legs = enrichLegs(itinerary, origin, destination, opts.matches);
+    return {
+      title: `${origin.label} → ${destination.label}`,
+      origin,
+      destination,
+      planType: itinerary.planType,
+      legs,
+      totalMinutes: itinerary.totalMinutes,
+      totalFareRegular: itinerary.totalFareRegular,
+      totalFareDiscounted: itinerary.totalFareDiscounted,
+      sourceReply: opts.reply,
+    };
+  }
+
+  // Try enriching reply legs with real route polylines when available
+  if (replyLegs.length) {
+    const enrichedReplyLegs = replyLegs.map((leg) => {
+      if (leg.mode === 'jeepney' && !leg.routeName) return leg;
+      // Try to find the route path from matches to get a real polyline
+      const routeNameInDesc = leg.description.match(/(?:Board|Ride)\s+\*?\*?([^*,.(]+)/i)?.[1]?.trim();
+      if (routeNameInDesc) {
+        const routePath = findRoutePath(opts.matches, routeNameInDesc);
+        if (routePath.length >= 2) {
+          const boardIdx = nearestIndex(routePath, leg.path[0][0], leg.path[0][1]);
+          const alightIdx = nearestIndex(routePath, leg.path[leg.path.length - 1][0], leg.path[leg.path.length - 1][1]);
+          const start = Math.min(boardIdx, alightIdx);
+          const end = Math.max(boardIdx, alightIdx);
+          const slice = routePath.slice(start, end + 1);
+          if (slice.length >= 2) {
+            return { ...leg, path: slice, routeName: routeNameInDesc };
+          }
+        }
+      }
+      return leg;
+    });
+
+    return {
+      title: `${origin.label} → ${destination.label}`,
+      origin,
+      destination,
+      planType: 'from_reply',
+      legs: enrichedReplyLegs,
+      totalMinutes: itinerary?.totalMinutes ?? null,
+      totalFareRegular: itinerary?.totalFareRegular ?? null,
+      totalFareDiscounted: itinerary?.totalFareDiscounted ?? null,
+      sourceReply: opts.reply,
+    };
+  }
+
+  // Last resort: use itinerary planner even if few legs
   if (itinerary?.legs.length) {
     const legs = enrichLegs(itinerary, origin, destination, opts.matches);
     return {
@@ -311,20 +398,6 @@ export function buildCommuteGuidePlan(opts: {
     };
   }
 
-  const replyLegs = parseReplyLegs(opts.reply, origin, destination);
-  if (!replyLegs.length) {
-    return null;
-  }
-
-  return {
-    title: `${origin.label} → ${destination.label}`,
-    origin,
-    destination,
-    planType: 'from_reply',
-    legs: replyLegs,
-    totalMinutes: null,
-    totalFareRegular: null,
-    totalFareDiscounted: null,
-    sourceReply: opts.reply,
-  };
+  return null;
 }
+
