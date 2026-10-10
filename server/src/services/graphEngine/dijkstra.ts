@@ -141,9 +141,20 @@ export function findOptimalPath(
  * Merges raw sequential ride edges on the same route into a consolidated step.
  * Returns clean steps: [ { action: 'board', route: 'Balagtas', distanceKm: 2.1 }, ... ]
  */
-export function compressPath(edges: GraphEdge[]): CompressedStep[] {
+/**
+ * Merges raw sequential ride edges on the same route into a consolidated step.
+ * Returns clean steps: [ { action: 'board', route: 'Balagtas', distanceKm: 2.1, pathCoords: [...] }, ... ]
+ */
+export function compressPath(edges: GraphEdge[], graph?: TransitGraph): CompressedStep[] {
   const steps: CompressedStep[] = [];
   if (!edges || edges.length === 0) return steps;
+
+  const appendCoord = (coords: [number, number][], lat: number, lng: number) => {
+    const prev = coords[coords.length - 1];
+    if (!prev || Math.abs(prev[0] - lat) > 1e-6 || Math.abs(prev[1] - lng) > 1e-6) {
+      coords.push([lat, lng]);
+    }
+  };
 
   for (const edge of edges) {
     // Skip zero-length internal bridge connectors between hub containers
@@ -157,7 +168,19 @@ export function compressPath(edges: GraphEdge[]): CompressedStep[] {
       if (last && last.action === 'board' && last.routeId === edge.routeId) {
         last.distanceKm = Number((last.distanceKm + edge.distanceKm).toFixed(2));
         last.toNode = edge.toNode;
+        if (graph) {
+          const toNodeObj = graph.nodes.get(edge.toNode);
+          if (toNodeObj && last.pathCoords) {
+            appendCoord(last.pathCoords, toNodeObj.lat, toNodeObj.lng);
+          }
+        }
       } else {
+        const fromNodeObj = graph?.nodes.get(edge.fromNode);
+        const toNodeObj = graph?.nodes.get(edge.toNode);
+        const pathCoords: [number, number][] = [];
+        if (fromNodeObj) appendCoord(pathCoords, fromNodeObj.lat, fromNodeObj.lng);
+        if (toNodeObj) appendCoord(pathCoords, toNodeObj.lat, toNodeObj.lng);
+
         steps.push({
           action: 'board',
           route: edge.routeName ?? edge.routeId ?? 'Jeepney',
@@ -165,30 +188,57 @@ export function compressPath(edges: GraphEdge[]): CompressedStep[] {
           distanceKm: Number(edge.distanceKm.toFixed(2)),
           fromNode: edge.fromNode,
           toNode: edge.toNode,
+          pathCoords: pathCoords.length ? pathCoords : undefined,
         });
       }
     } else if (edge.type === 'transfer') {
       if (last && last.action === 'transfer_walk') {
         last.distanceKm = Number((last.distanceKm + edge.distanceKm).toFixed(2));
         last.toNode = edge.toNode;
+        if (graph) {
+          const toNodeObj = graph.nodes.get(edge.toNode);
+          if (toNodeObj && last.pathCoords) {
+            appendCoord(last.pathCoords, toNodeObj.lat, toNodeObj.lng);
+          }
+        }
       } else {
+        const fromNodeObj = graph?.nodes.get(edge.fromNode);
+        const toNodeObj = graph?.nodes.get(edge.toNode);
+        const pathCoords: [number, number][] = [];
+        if (fromNodeObj) appendCoord(pathCoords, fromNodeObj.lat, fromNodeObj.lng);
+        if (toNodeObj) appendCoord(pathCoords, toNodeObj.lat, toNodeObj.lng);
+
         steps.push({
           action: 'transfer_walk',
           distanceKm: Number(edge.distanceKm.toFixed(2)),
           fromNode: edge.fromNode,
           toNode: edge.toNode,
+          pathCoords: pathCoords.length ? pathCoords : undefined,
         });
       }
     } else if (edge.type === 'walk') {
       if (last && last.action === 'walk') {
         last.distanceKm = Number((last.distanceKm + edge.distanceKm).toFixed(2));
         last.toNode = edge.toNode;
+        if (graph) {
+          const toNodeObj = graph.nodes.get(edge.toNode);
+          if (toNodeObj && last.pathCoords) {
+            appendCoord(last.pathCoords, toNodeObj.lat, toNodeObj.lng);
+          }
+        }
       } else {
+        const fromNodeObj = graph?.nodes.get(edge.fromNode);
+        const toNodeObj = graph?.nodes.get(edge.toNode);
+        const pathCoords: [number, number][] = [];
+        if (fromNodeObj) appendCoord(pathCoords, fromNodeObj.lat, fromNodeObj.lng);
+        if (toNodeObj) appendCoord(pathCoords, toNodeObj.lat, toNodeObj.lng);
+
         steps.push({
           action: 'walk',
           distanceKm: Number(edge.distanceKm.toFixed(2)),
           fromNode: edge.fromNode,
           toNode: edge.toNode,
+          pathCoords: pathCoords.length ? pathCoords : undefined,
         });
       }
     }
@@ -337,7 +387,31 @@ export function routeTripGraph(
 
   const rawEdges = findOptimalPath(graph, tempOriginId, tempDestId);
 
-  // Clean up temporary nodes and edges
+  if (!rawEdges || rawEdges.length === 0) {
+    // Clean up temporary nodes and edges
+    graph.nodes.delete(tempOriginId);
+    graph.nodes.delete(tempDestId);
+    graph.adjacency.delete(tempOriginId);
+    for (const { fromNode, edge } of destInjectedEdges) {
+      const list = graph.adjacency.get(fromNode);
+      if (list) {
+        const idx = list.indexOf(edge);
+        if (idx !== -1) list.splice(idx, 1);
+      }
+    }
+    return null;
+  }
+
+  const originWalkKm = rawEdges[0]?.fromNode === tempOriginId ? rawEdges[0].distanceKm : 0;
+  const lastEdge = rawEdges[rawEdges.length - 1];
+  const destWalkKm = lastEdge?.toNode === tempDestId ? lastEdge.distanceKm : 0;
+
+  const totalDistanceKm = Number(rawEdges.reduce((sum, e) => sum + e.distanceKm, 0).toFixed(2));
+  const totalWeight = Number(rawEdges.reduce((sum, e) => sum + e.weight, 0).toFixed(2));
+  // Compress path with full graph context to preserve exact database coordinates
+  const compressed = compressPath(rawEdges, graph);
+
+  // Clean up temporary nodes and edges after coordinates are extracted
   graph.nodes.delete(tempOriginId);
   graph.nodes.delete(tempDestId);
   graph.adjacency.delete(tempOriginId);
@@ -348,18 +422,6 @@ export function routeTripGraph(
       if (idx !== -1) list.splice(idx, 1);
     }
   }
-
-  if (!rawEdges || rawEdges.length === 0) {
-    return null;
-  }
-
-  const originWalkKm = rawEdges[0]?.fromNode === tempOriginId ? rawEdges[0].distanceKm : 0;
-  const lastEdge = rawEdges[rawEdges.length - 1];
-  const destWalkKm = lastEdge?.toNode === tempDestId ? lastEdge.distanceKm : 0;
-
-  const totalDistanceKm = Number(rawEdges.reduce((sum, e) => sum + e.distanceKm, 0).toFixed(2));
-  const totalWeight = Number(rawEdges.reduce((sum, e) => sum + e.weight, 0).toFixed(2));
-  const compressed = compressPath(rawEdges);
 
   return {
     steps: compressed,

@@ -46,5 +46,7 @@ export interface CompressedStep {
   fareRegular?: number;
   fareDiscounted?: number;
   estimatedMinutes?: number;
+  instruction?: string;
+  pathCoords?: [number, number][];
 }
 

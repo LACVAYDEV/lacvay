@@ -218,15 +218,15 @@ export let SYSTEM_PROMPT = `You are LACVAY Transit Assistant for Batangas City j
 Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. You may generate as many steps as necessary. Do not omit any transfers.`;
 
 const COMMUTER_DETAIL_RULES: string[] = [
-  'COMMUTER DETAIL RULES (graph-optimized plan — expand every step for travelers):',
-  '- Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. You may generate as many steps as necessary. Do not omit any transfers.',
+  'COMMUTER DETAIL RULES (graph-optimized plan — strictly follow every step):',
+  '- Output ONLY the exact sequence of steps from SELECTED COMMUTE PLAN / COMMUTE STEPS. Do not invent, add, or alter any routes or steps.',
   '- The route plan was generated using Dijkstra Graph Theory pathfinding on real road segments.',
   '- Follow the exact sequential steps in SELECTED COMMUTE PLAN / COMMUTE STEPS.',
   '- **First mile:** state approximate walk meters to the nearest street/stop, which route signboard to look for, and that they should wait roadside and flag down the jeepney.',
   '- **Jeepney legs:** state the exact route name and signboard, corridor (from ↔ to), where to board, where to alight, and fare.',
   '- **Transfers:** follow the Transfer Walk steps: alight at the transfer stop, walk to the connecting line, wait roadside, and flag the next jeepney.',
   '- **Last mile:** short walk from alight point to the destination with street name when known.',
-  '- Do NOT invent fake routes or reverse directions — strictly follow the Graph Router steps provided below.',
+  '- Do NOT invent fake routes, additive detours, or extra steps — strictly follow the Graph Router steps provided below.',
 ];
 
 function streetHintForLabel(label: string): string | null {
@@ -1896,10 +1896,23 @@ function formatOptimizedGraphItinerary(
     .join('\n');
 }
 
-export async function buildTransitBriefing(
+export interface TransitRoutingContext {
+  briefing: string;
+  origin: { label: string; lat: number; lng: number; outOfBounds?: boolean } | null;
+  destination: { label: string; lat: number; lng: number; outOfBounds?: boolean } | null;
+  graphResult: GraphTripResult | null;
+  liveRoutes: TransitRoute[];
+  liveFares: JeepneyFare[];
+  tripRoutes: TripRouteMatch[];
+  winningRoutes: string[];
+  corridorFallback?: KnownCorridor | null;
+  tnvsRequested?: boolean;
+}
+
+export async function getTransitRoutingContext(
   message: string,
   location: ChatLocationContext = {},
-): Promise<string> {
+): Promise<TransitRoutingContext> {
   const live = await loadLiveData().catch((err) => {
     console.error('Failed to load transit data for AI:', err);
     return { routes: [], fares: [], places: [], landmarks: [] };
@@ -1989,35 +2002,75 @@ export async function buildTransitBriefing(
 
   // 3. Strict Out of Bounds Rejection
   if (origin?.outOfBounds) {
-    return [
+    const briefing = [
       `RESOLVED ORIGIN: ${origin.label} (OUT OF BOUNDS — outside Batangas City)`,
       destination ? `RESOLVED DESTINATION: ${destination.label}` : 'RESOLVED DESTINATION: unknown',
       '',
       `LOCATION WARNING: Starting point "${origin.label}" is outside Batangas City. LACVAY only provides public transit guides within Batangas City. Please specify a location inside Batangas City.`,
     ].join('\n');
+    return {
+      briefing,
+      origin: { label: origin.label, lat: origin.lat ?? 0, lng: origin.lng ?? 0, outOfBounds: true },
+      destination: destination && destination.lat != null && destination.lng != null ? { label: destination.label, lat: destination.lat, lng: destination.lng } : null,
+      graphResult: null,
+      liveRoutes: live.routes,
+      liveFares: live.fares,
+      tripRoutes: [],
+      winningRoutes: [],
+    };
   }
 
   if (destination?.outOfBounds) {
-    return [
+    const briefing = [
       origin ? `RESOLVED ORIGIN: ${origin.label}` : 'RESOLVED ORIGIN: unknown',
       `RESOLVED DESTINATION: ${destination.label} (OUT OF BOUNDS — outside Batangas City)`,
       '',
       `LOCATION WARNING: Destination "${destination.label}" is outside Batangas City. LACVAY only provides public transit guides within Batangas City. Please specify a destination inside Batangas City.`,
     ].join('\n');
+    return {
+      briefing,
+      origin: origin && origin.lat != null && origin.lng != null ? { label: origin.label, lat: origin.lat, lng: origin.lng } : null,
+      destination: { label: destination.label, lat: destination.lat ?? 0, lng: destination.lng ?? 0, outOfBounds: true },
+      graphResult: null,
+      liveRoutes: live.routes,
+      liveFares: live.fares,
+      tripRoutes: [],
+      winningRoutes: [],
+    };
   }
 
   if (!destination || destination.lat == null || destination.lng == null) {
-    return [
+    const briefing = [
       origin ? `RESOLVED ORIGIN: ${origin.label}${origin.lat != null ? ` (${origin.lat.toFixed(4)}, ${origin.lng?.toFixed(4)})` : ''}` : 'RESOLVED ORIGIN: unknown',
       destination ? `RESOLVED DESTINATION: ${destination.label} (no coordinates on file)` : 'RESOLVED DESTINATION: unknown — ask where they want to go.',
     ].join('\n');
+    return {
+      briefing,
+      origin: origin && origin.lat != null && origin.lng != null ? { label: origin.label, lat: origin.lat, lng: origin.lng } : null,
+      destination: null,
+      graphResult: null,
+      liveRoutes: live.routes,
+      liveFares: live.fares,
+      tripRoutes: [],
+      winningRoutes: [],
+    };
   }
 
   if (!origin || origin.lat == null || origin.lng == null) {
-    return [
+    const briefing = [
       'RESOLVED ORIGIN: unknown — ask where they are starting from.',
       `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
     ].join('\n');
+    return {
+      briefing,
+      origin: null,
+      destination: { label: destination.label, lat: destination.lat, lng: destination.lng },
+      graphResult: null,
+      liveRoutes: live.routes,
+      liveFares: live.fares,
+      tripRoutes: [],
+      winningRoutes: [],
+    };
   }
 
   const originPt = { label: origin.label, lat: origin.lat, lng: origin.lng };
@@ -2032,7 +2085,7 @@ export async function buildTransitBriefing(
           : tnvsPreference.app === 'idol'
             ? 'iDOL Taxi'
             : 'TNVS';
-    return [
+    const briefing = [
       `RESOLVED ORIGIN: ${origin.label} (${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)})`,
       `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
       '',
@@ -2042,6 +2095,17 @@ export async function buildTransitBriefing(
       `2. **TNVS** — Book ${app} door-to-door from ${origin.label} to ${destination.label}. Fare shown in app.`,
       `3. **Walk** — Walk to the entrance of ${destination.label}.`,
     ].join('\n');
+    return {
+      briefing,
+      origin: originPt,
+      destination: destPt,
+      graphResult: null,
+      liveRoutes: live.routes,
+      liveFares: live.fares,
+      tripRoutes: [],
+      winningRoutes: [],
+      tnvsRequested: true,
+    };
   }
 
   const tripRoutes = analyzeTripRoutes(live.routes, live.fares, live.landmarks, origin, destination);
@@ -2195,7 +2259,7 @@ export async function buildTransitBriefing(
 
   SYSTEM_PROMPT = `You are LACVAY Transit Assistant for Batangas City jeepney commuters.
 
-Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. You may generate as many steps as necessary. Do not omit any transfers.
+Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. Output ONLY the exact sequence of steps from the itinerary. Do NOT invent, add, or alter any routes or steps.
 
 ### OPTIMIZED GRAPH ITINERARY ###
 ${rawGraphItinerary}`;
@@ -2205,7 +2269,7 @@ ${rawGraphItinerary}`;
     `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
     '',
     '### OPTIMIZED GRAPH ITINERARY ###',
-    'Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. You may generate as many steps as necessary. Do not omit any transfers.',
+    'Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. Output ONLY the exact sequence of steps from the itinerary. Do NOT invent, add, or alter any routes or steps.',
     '',
     rawGraphItinerary,
     '',
@@ -2240,7 +2304,27 @@ ${rawGraphItinerary}`;
     ...steps,
   ];
 
-  return sections.filter(Boolean).join('\n');
+  const briefing = sections.filter(Boolean).join('\n');
+
+  return {
+    briefing,
+    origin: { label: origin.label, lat: origin.lat, lng: origin.lng },
+    destination: { label: destination.label, lat: destination.lat, lng: destination.lng },
+    graphResult,
+    liveRoutes: live.routes,
+    liveFares: live.fares,
+    tripRoutes,
+    winningRoutes: uniqueWinningRoutes,
+    corridorFallback: shouldUseCorridorSteps ? corridor : null,
+  };
+}
+
+export async function buildTransitBriefing(
+  message: string,
+  location: ChatLocationContext = {},
+): Promise<string> {
+  const ctx = await getTransitRoutingContext(message, location);
+  return ctx.briefing;
 }
 
 export type OdPlanType = 'direct' | 'transfer' | 'corridor' | 'tnvs' | 'partial' | 'unknown';

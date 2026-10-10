@@ -1,4 +1,9 @@
-import { buildTransitBriefing, getRouteMatchesForPoints, type ChatLocationContext } from './transitContext.js';
+import {
+  buildTransitBriefing,
+  getTransitRoutingContext,
+  getRouteMatchesForPoints,
+  type ChatLocationContext,
+} from './transitContext.js';
 import {
   buildCommuteGuidePlan,
   parseResolvedPoint,
@@ -109,13 +114,17 @@ function replyFromBriefing(briefing: string): string | null {
 
 const SYSTEM_INSTRUCTION = `You are LACVAY Transit Assistant for Batangas City jeepney commuters.
 
-Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. You may generate as many steps as necessary. Do not omit any transfers.
+Output ONLY numbered commute steps strictly following the OPTIMIZED GRAPH ITINERARY and SELECTED COMMUTE PLAN / COMMUTE STEPS in the briefing.
 
-Output ONLY numbered commute steps. Follow the OPTIMIZED GRAPH ITINERARY and SELECTED COMMUTE PLAN / COMMUTE STEPS in the briefing — it is generated and optimized by the Graph Theory routing engine (shortest road paths, optimal transfer points, and sequential ride legs).
+CRITICAL GROUNDING RULES:
+- Output the exact sequence of steps from the briefing. Do NOT add, invent, or suggest any other jeepney routes, detours, or extra steps.
+- Every jeepney route mentioned MUST strictly be one of the winning routes explicitly listed in the briefing.
+- If the itinerary has 3 steps, output exactly those 3 steps. If it has 5 steps, output exactly those 5 steps.
+- Preserve the exact route names, transfer walk instructions, and fare amounts given in the briefing.
 
 DETAIL RULES (every step must be specific, friendly, and directional):
-- **First mile (walk to first stop):** State walk distance (~Xm) to the real street/road where the jeepney passes, wait roadside, and flag down the jeepney matching the signboard (e.g. Dela Paz/Ilijan, Alangilan - Batangas). Mention tricycle only if the access distance is long (>1.2 km).
-- **Jeepney legs:** Mention the route name, color if given, corridor (from ↔ to), where to board, where to alight, and fare ₱X.
+- **First mile (walk to first stop):** State walk distance (~Xm) to the real street/road where the jeepney passes, wait roadside, and flag down the jeepney matching the signboard.
+- **Jeepney legs:** Mention the exact route name, color if given, corridor (from ↔ to), where to board, where to alight, and fare ₱X.
 - **Transfers:** When the plan specifies a Transfer Walk, clearly tell the traveler to alight from Route A, **Transfer Walk** ~Xm to where Route B passes, wait roadside, and flag Route B.
 - **Last mile:** Short walk from the alight point to the destination with street name when known.
 
@@ -125,8 +134,6 @@ Format:
 3. **Transfer Walk** — … (only if transfer)
 4. **Jeepney** — …
 N. **Walk** — …
-
-Prefer **multi-jeepney transfers** over TNVS unless the traveler asked for Angkas/Grab/iDOL or the briefing says TNVS.
 
 No preamble, no conversational filler before step 1, no markdown tables. Output clean, friendly, numbered markdown steps.`;
 
@@ -206,6 +213,14 @@ function isWeakCommuteReply(text: string): boolean {
   return numbered.length < 2;
 }
 
+function hasAdditiveRoutes(text: string, winningRoutes: string[]): boolean {
+  if (!winningRoutes.length) return false;
+  const lines = text.split('\n').filter((l) => /^\s*\d+\.\s+/.test(l.trim()));
+  const jeepneyLines = lines.filter((l) => /\b(jeepney|board|ride)\b/i.test(l));
+  // If LLM created more jeepney legs than the graph router found, it added invented routes
+  return jeepneyLines.length > winningRoutes.length;
+}
+
 function finalizeReply(text: string): string {
   return normalizeAiResponse(text);
 }
@@ -219,25 +234,38 @@ export async function chatWithAI(
   message: string,
   location: ChatLocationContext = {},
 ): Promise<ChatAiResult> {
-  const briefing = await buildTransitBriefing(message, location);
+  const routingContext = await getTransitRoutingContext(message, location);
+  const briefing = routingContext.briefing;
   const briefingReply = replyFromBriefing(briefing);
+
   const groqReply = await callGroq(message, briefing);
   const geminiReply = groqReply ? null : await callGemini(message, briefing);
   let modelReply = groqReply ?? geminiReply;
-  if (modelReply && briefingReply && isWeakCommuteReply(modelReply)) {
-    modelReply = briefingReply;
+
+  // Validation: If model reply is weak or hallucinated additive jeepney lines,
+  // strictly fall back to briefingReply which is 100% database-grounded.
+  if (modelReply && briefingReply) {
+    if (isWeakCommuteReply(modelReply) || hasAdditiveRoutes(modelReply, routingContext.winningRoutes)) {
+      modelReply = briefingReply;
+    }
   }
+
   const reply = finalizeReply(
     modelReply ?? briefingReply ?? getMockResponse(message),
   );
 
   let plan: CommuteGuidePlan | null = null;
   try {
-    const origin = parseResolvedPoint(briefing, 'ORIGIN');
-    const destination = parseResolvedPoint(briefing, 'DESTINATION');
+    const origin = routingContext.origin ?? parseResolvedPoint(briefing, 'ORIGIN');
+    const destination = routingContext.destination ?? parseResolvedPoint(briefing, 'DESTINATION');
     if (origin && destination) {
       const matches = await getRouteMatchesForPoints(origin, destination);
-      plan = buildCommuteGuidePlan({ briefing, reply, matches });
+      plan = buildCommuteGuidePlan({
+        briefing,
+        reply,
+        matches,
+        routingContext,
+      });
     }
   } catch (err) {
     console.warn('[aiService] Failed to build commute guide plan:', err);

@@ -132,59 +132,56 @@ export function buildTransitGraph(
 
     const routeNodeList: GraphNode[] = [];
 
+    // 2a. Create GraphNodes for every coordinate in the route's polyline
+    // Retain exact surveyed coordinates from GeoJSON to avoid warping road lines
     for (let i = 0; i < cleanedCoords.length; i++) {
-      let [lat, lng] = cleanedCoords[i];
-      let snappedHub: GraphNode | null = null;
-
-      // Check if this point snaps directly to any injected Hub
-      for (const hubNode of hubNodes) {
-        const distToHub = haversineKm(lat, lng, hubNode.lat, hubNode.lng);
-        if (distToHub <= HUB_SNAP_DISTANCE_KM) {
-          if (!snappedHub || distToHub < haversineKm(lat, lng, snappedHub.lat, snappedHub.lng)) {
-            snappedHub = hubNode;
-          }
-        }
-      }
-
+      const [lat, lng] = cleanedCoords[i];
       const nodeId = `node_${sanitizeId(route.id)}_${i}`;
-      let isHub = false;
-      let hubName: string | undefined;
-
-      if (snappedHub) {
-        lat = snappedHub.lat;
-        lng = snappedHub.lng;
-        isHub = true;
-        hubName = snappedHub.hubName;
-        if (!snappedHub.routeIds.includes(route.id)) {
-          snappedHub.routeIds.push(route.id);
-        }
-      }
 
       const node: GraphNode = {
         id: nodeId,
         lat,
         lng,
         routeIds: [route.id],
-        isHub,
-        hubName,
+        isHub: false,
         stopSequence: i,
       };
 
       nodes.set(nodeId, node);
       routeNodeList.push(node);
+    }
 
-      // Connect snapped route stop to the master hub node with 0m connection
-      if (snappedHub) {
+    // 2b. Connect closest route stop to each hub within HUB_SNAP_DISTANCE_KM
+    for (const hubNode of hubNodes) {
+      let closestNode: GraphNode | null = null;
+      let minDistance = Infinity;
+
+      for (const node of routeNodeList) {
+        const d = haversineKm(node.lat, node.lng, hubNode.lat, hubNode.lng);
+        if (d <= HUB_SNAP_DISTANCE_KM && d < minDistance) {
+          minDistance = d;
+          closestNode = node;
+        }
+      }
+
+      if (closestNode) {
+        closestNode.isHub = true;
+        closestNode.hubName = hubNode.hubName;
+        if (!hubNode.routeIds.includes(route.id)) {
+          hubNode.routeIds.push(route.id);
+        }
+
+        // Bridge connector between route stop and central hub
         addEdge({
-          fromNode: snappedHub.id,
-          toNode: nodeId,
+          fromNode: hubNode.id,
+          toNode: closestNode.id,
           weight: 0.001,
           type: 'walk',
           distanceKm: 0,
         });
         addEdge({
-          fromNode: nodeId,
-          toNode: snappedHub.id,
+          fromNode: closestNode.id,
+          toNode: hubNode.id,
           weight: 0.001,
           type: 'walk',
           distanceKm: 0,

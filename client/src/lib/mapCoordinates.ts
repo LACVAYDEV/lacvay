@@ -314,9 +314,11 @@ export function rebuildPlanPaths<
         }
       }
     } else if (isWalk) {
-      // Transfer walk (e.g. SM entrance → Ilijan terminal): short hub hop only
-      from = toTuple(HUBS.sm);
-      to = toTuple(HUBS.ilijanTerminal);
+      // Transfer walk: connect previous ride alight stop to next ride board stop
+      const prevRide = classified.slice(0, index).reverse().find((c) => c.isRide);
+      const nextRide = classified.slice(index + 1).find((c) => c.isRide);
+      from = (prevRide?.leg.path?.length ? prevRide.leg.path.slice(-1)[0] : null) ?? boardStop;
+      to = (nextRide?.leg.path?.length ? nextRide.leg.path[0] : null) ?? alightStop;
     } else {
       // Jeepney / TNVS: slice of the land corridor
       const ridePos = Math.max(0, rideIdx.indexOf(index));
