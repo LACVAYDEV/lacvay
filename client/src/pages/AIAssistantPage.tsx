@@ -26,7 +26,7 @@ import { savedGuidesService } from '@/services/savedGuidesService';
 
 import { usePromptLimit } from '@/hooks/usePromptLimit';
 
-import { UpgradeModal } from '@/components/ui/UpgradeModal';
+import { SubscriptionToast } from '@/components/ui/SubscriptionToast';
 
 import { PromptCounter } from '@/components/ui/PromptCounter';
 
@@ -786,16 +786,9 @@ export default function AIAssistantPage() {
 
       </footer>
 
-      <UpgradeModal
-
+      <SubscriptionToast
         open={showUpgradeModal}
-
         onClose={() => setShowUpgradeModal(false)}
-
-        remaining_prompts={remainingPrompts}
-
-        total_prompts={totalPrompts}
-
       />
 
     </div>
