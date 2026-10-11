@@ -28,8 +28,6 @@ import { usePromptLimit } from '@/hooks/usePromptLimit';
 
 import { SubscriptionToast } from '@/components/ui/SubscriptionToast';
 
-import { PromptLimitBanner } from '@/components/ui/PromptLimitBanner';
-
 import { PromptCounter } from '@/components/ui/PromptCounter';
 
 import {
@@ -260,11 +258,9 @@ export default function AIAssistantPage() {
 
   const [savedGuideIds, setSavedGuideIds] = useState<Set<string>>(new Set());
 
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-
-
-
   const { remainingPrompts, totalPrompts, isPremium, refreshUsage, usage } = usePromptLimit();
+
+  const [showUpgradeModal, setShowUpgradeModal] = useState(!isPremium);
 
 
 
@@ -311,18 +307,6 @@ export default function AIAssistantPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   }, [aiMessages, aiLoading]);
-
-  // Listen for banner's View Plans button
-  useEffect(() => {
-    const handleShowSubscriptionToast = () => {
-      setShowUpgradeModal(true);
-    };
-
-    window.addEventListener('show-subscription-toast', handleShowSubscriptionToast);
-    return () => {
-      window.removeEventListener('show-subscription-toast', handleShowSubscriptionToast);
-    };
-  }, []);
 
 
 
@@ -458,14 +442,6 @@ export default function AIAssistantPage() {
 
 
       <div className="flex-1 overflow-y-auto">
-
-        {/* Prompt Limit Banner - shows to free users */}
-        {!isPremium && usage && (
-          <PromptLimitBanner
-            remainingPrompts={remainingPrompts}
-            totalPrompts={totalPrompts}
-          />
-        )}
 
         <div className="w-full space-y-6 px-4 py-5 sm:px-6 md:px-8 lg:px-10">
 
