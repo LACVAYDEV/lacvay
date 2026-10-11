@@ -1,4 +1,4 @@
-import { Zap } from 'lucide-react';
+import { Zap, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 
@@ -9,6 +9,57 @@ interface UpgradeModalProps {
   remaining_prompts: number;
   total_prompts: number;
 }
+
+interface PricingTier {
+  name: string;
+  price: number;
+  currency: string;
+  description: string;
+  features: string[];
+  buttonLabel: string;
+  isPopular?: boolean;
+}
+
+const pricingTiers: PricingTier[] = [
+  {
+    name: 'FREE',
+    price: 0,
+    currency: '₱',
+    description: 'Basic LACVAY features',
+    features: [
+      'Basic transportation information',
+      'Basic tourism information',
+      'Limited access to routes and AI',
+    ],
+    buttonLabel: 'Current Plan',
+  },
+  {
+    name: 'BASIC',
+    price: 99,
+    currency: '₱',
+    description: 'Suitable for occasional users',
+    features: [
+      'Up to 3 saved/checked routes',
+      '3 AI Assistant uses',
+      'More transportation and tourism information',
+    ],
+    buttonLabel: 'Upgrade to Basic',
+    isPopular: false,
+  },
+  {
+    name: 'PREMIUM',
+    price: 199,
+    currency: '₱',
+    description: 'Best for frequent commuters, travelers, and tourists',
+    features: [
+      'Unlimited routes',
+      'Unlimited AI Assistant',
+      'Full access to LACVAY features',
+    ],
+    buttonLabel: 'Upgrade to Premium',
+    isPopular: true,
+  },
+];
 
 export function UpgradeModal({
   open,
@@ -22,29 +73,24 @@ export function UpgradeModal({
       open={open} 
       onClose={onClose}
       role="alertdialog"
-      size="md"
+      size="lg"
     >
-      <div className="space-y-5 p-6">
-        {/* Header with icon */}
-        <div className="flex items-start gap-4">
-          <div className="rounded-lg bg-lacvay-green/10 p-3 text-lacvay-green">
-            <Zap className="h-6 w-6" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-bold text-gray-900">Weekly Limit Reached</h2>
-            <p className="text-sm text-gray-500">You've used all your prompts this week</p>
-          </div>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Weekly Limit Reached</h2>
+          <p className="text-gray-600">You've used all your {total_prompts} prompts this week. Choose a plan to continue.</p>
         </div>
 
         {/* Usage Info */}
         <div className="rounded-lg bg-gray-50 p-4">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-600">Prompts Used</span>
             <span className="text-2xl font-bold text-lacvay-green">
               {total_prompts - remaining_prompts}/{total_prompts}
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-gray-200">
+          <div className="h-2 overflow-hidden rounded-full bg-gray-200 mt-2">
             <div className="h-full w-full bg-lacvay-green" />
           </div>
           <p className="mt-2 text-xs text-gray-600">
@@ -52,49 +98,83 @@ export function UpgradeModal({
           </p>
         </div>
 
-        {/* Upgrade Benefits */}
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-900">Premium Benefits:</h3>
-          <ul className="space-y-2">
-            {[
-              'Unlimited AI prompts',
-              'Priority support',
-              'Advanced features',
-              'Early access to new features',
-            ].map((benefit, index) => (
-              <li key={index} className="flex items-center gap-2 text-sm text-gray-700">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-lacvay-green/10">
-                  <span className="text-xs font-bold text-lacvay-green">✓</span>
-                </span>
-                {benefit}
-              </li>
-            ))}
-          </ul>
+        {/* Pricing Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {pricingTiers.map((tier) => (
+            <div
+              key={tier.name}
+              className={`relative rounded-2xl overflow-hidden transition-all ${
+                tier.isPopular
+                  ? 'ring-2 ring-lacvay-green shadow-lg scale-105'
+                  : 'border border-gray-200 shadow'
+              } ${tier.name === 'FREE' ? 'bg-gray-50' : 'bg-white'}`}
+            >
+              {tier.isPopular && (
+                <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-lacvay-green to-blue-600 text-white text-center py-1 text-xs font-bold">
+                  MOST POPULAR
+                </div>
+              )}
+              
+              <div className={`p-6 ${tier.isPopular ? 'pt-12' : ''}`}>
+                {/* Tier Name */}
+                <h3 className="text-xl font-bold text-gray-900 mb-1">{tier.name}</h3>
+                <p className="text-sm text-gray-600 mb-4">{tier.description}</p>
+
+                {/* Price */}
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-gray-900">
+                    {tier.currency}{tier.price}
+                  </span>
+                  {tier.price > 0 && (
+                    <span className="text-sm text-gray-600 ml-2">per month</span>
+                  )}
+                </div>
+
+                {/* Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (tier.name === 'FREE') {
+                      onContinue?.();
+                      onClose();
+                    }
+                  }}
+                  className={`w-full py-3 rounded-lg font-semibold text-white transition mb-6 ${
+                    tier.isPopular
+                      ? 'bg-gradient-to-r from-lacvay-green to-blue-600 hover:shadow-lg'
+                      : 'bg-gray-300 hover:bg-gray-400'
+                  }`}
+                >
+                  {tier.buttonLabel}
+                </button>
+
+                {/* Features */}
+                <ul className="space-y-3">
+                  {tier.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-lacvay-green shrink-0 mt-0.5" />
+                      <span className="text-sm text-gray-700">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-col gap-3 pt-2">
-          <Button className="w-full bg-lacvay-green hover:bg-lacvay-green-dark">
-            <Zap className="h-4 w-4" />
-            Upgrade to Premium
-          </Button>
+        {/* Footer */}
+        <div className="text-center pt-2">
           <button
             type="button"
             onClick={() => {
               onContinue?.();
               onClose();
             }}
-            className="rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+            className="text-sm text-lacvay-green font-semibold hover:underline"
           >
-            Continue without upgrading
+            Skip for now
           </button>
         </div>
-
-        {/* Info */}
-        <p className="text-center text-xs text-gray-500">
-          You can still use all features.{' '}
-          <span className="font-medium text-lacvay-green">Upgrade anytime to unlock unlimited prompts.</span>
-        </p>
       </div>
     </Modal>
   );
