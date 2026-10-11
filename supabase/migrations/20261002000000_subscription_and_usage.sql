@@ -104,9 +104,17 @@ create policy "Users can read own usage stats"
   to authenticated
   using (user_id = auth.uid());
 
+drop policy if exists "System can insert usage stats" on public.usage_stats;
+drop policy if exists "System can update usage stats" on public.usage_stats;
 drop policy if exists "System can insert/update usage stats" on public.usage_stats;
-create policy "System can insert/update usage stats"
-  on public.usage_stats for insert, update
+
+create policy "System can insert usage stats"
+  on public.usage_stats for insert
+  to authenticated
+  with check (true);
+
+create policy "System can update usage stats"
+  on public.usage_stats for update
   to authenticated
   using (true)
   with check (true);

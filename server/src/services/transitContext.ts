@@ -1,7 +1,15 @@
 import { supabase } from './supabase.js';
 import type { Database, Json } from '../types/database.types.js';
-import { resolveGpsOrigin } from './reverseGeocode.js';
-import { buildOptimizedItinerary, type RouteMatchInput } from './itineraryPlanner.js';
+import { resolveGpsOrigin, resolveLocation, isInBatangas, HUB_POINTS } from './reverseGeocode.js';
+import {
+  buildTransitGraph,
+  findOptimalPath,
+  compressPath,
+  routeTripGraph,
+  type TransitGraph,
+  type CompressedStep,
+  type GraphTripResult,
+} from './graphEngine/index.js';
 
 type TransitRoute = Database['public']['Tables']['transit_routes']['Row'];
 type JeepneyFare = Database['public']['Tables']['jeepney_fare_matrix']['Row'];
@@ -203,6 +211,39 @@ const REAL_STREET_ATLAS: string[] = [
 
 function formatStreetAtlas(): string {
   return REAL_STREET_ATLAS.join('\n');
+}
+
+export let SYSTEM_PROMPT = `You are LACVAY Transit Assistant for Batangas City jeepney commuters.
+
+Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. You may generate as many steps as necessary. Do not omit any transfers.`;
+
+const COMMUTER_DETAIL_RULES: string[] = [
+  'COMMUTER DETAIL RULES (graph-optimized plan — strictly follow every step):',
+  '- Output ONLY the exact sequence of steps from SELECTED COMMUTE PLAN / COMMUTE STEPS. Do not invent, add, or alter any routes or steps.',
+  '- The route plan was generated using Dijkstra Graph Theory pathfinding on real road segments.',
+  '- Follow the exact sequential steps in SELECTED COMMUTE PLAN / COMMUTE STEPS.',
+  '- **First mile:** state approximate walk meters to the nearest street/stop, which route signboard to look for, and that they should wait roadside and flag down the jeepney.',
+  '- **Jeepney legs:** state the exact route name and signboard, corridor (from ↔ to), where to board, where to alight, and fare.',
+  '- **Transfers:** follow the Transfer Walk steps: alight at the transfer stop, walk to the connecting line, wait roadside, and flag the next jeepney.',
+  '- **Last mile:** short walk from alight point to the destination with street name when known.',
+  '- Do NOT invent fake routes, additive detours, or extra steps — strictly follow the Graph Router steps provided below.',
+];
+
+function streetHintForLabel(label: string): string | null {
+  const n = label.toLowerCase();
+  if (/clb|colegio|sports coliseum|arrieta/.test(n)) return 'Arrieta Rd';
+  if (/pier|ppa|port of batangas|batangas port/.test(n)) return 'Ferry Road / Pier access';
+  if (/city hall|plaza mabini|basilica|burgos/.test(n)) return 'P. Burgos St';
+  if (/evangelista/.test(n)) return 'A. Evangelista St';
+  if (/grand terminal|alangilan|batstateu|pablo borbon/.test(n)) {
+    return /grand terminal/.test(n) ? 'Diversion Rd / National Road (Grand Terminal area)' : 'National Road (Alangilan corridor)';
+  }
+  if (/sm city|sm batangas|ilijan terminal/.test(n)) return 'SM parking / PPA coastal side (Ilijan terminal)';
+  if (/sto\.?\s*nino|santo nino|tabangao|monte maria|pagkilatan|ilijan|san isidro/.test(n)) {
+    return 'Batangas–Tabangao–Lobo Road (N439)';
+  }
+  if (/rizal|citimart|bay mall|lawas/.test(n)) return 'Rizal Avenue';
+  return null;
 }
 
 interface KnownTransfer {
@@ -1079,6 +1120,49 @@ function formatKnownTransfer(
   ].join('\n');
 }
 
+function findKnownCorridor(
+  origin: { label: string; lat?: number; lng?: number },
+  destination: { label: string; lat?: number; lng?: number },
+): KnownCorridor | null {
+  for (const c of KNOWN_CORRIDORS) {
+    const destHit = includesAlias(destination.label, c.destinationAliases);
+    if (!destHit) continue;
+
+    const sanIsidroCorridor = c.originAliases.some((a) => normalize(a).includes('san isidro'));
+    const chapelCorridor = c.originAliases.some((a) => normalize(a).includes('chapel'));
+    const brgyStoNinoCorridor = c.originAliases.some(
+      (a) => normalize(a).includes('barangay sto nino') || normalize(a).includes('brgy sto nino'),
+    );
+    const clbCorridor = c.originAliases.some((a) => normalize(a) === 'clb' || normalize(a).includes('colegio'));
+    const atMonteMaria = isMonteMariaArea(origin.label, origin.lat, origin.lng);
+    const atBrgyStoNino = isBarangayStoNino(origin.label, origin.lat, origin.lng);
+    const atPier = isPierOrigin(origin.label, origin.lat, origin.lng);
+    const atClb = includesAlias(origin.label, ['clb', 'colegio ng lungsod', 'sports coliseum']);
+
+    if (sanIsidroCorridor && (atMonteMaria || atBrgyStoNino)) continue;
+    if (chapelCorridor && !atMonteMaria) continue;
+    if (brgyStoNinoCorridor && !atBrgyStoNino) continue;
+    if (sanIsidroCorridor && atBrgyStoNino) continue;
+    if (clbCorridor && (atPier || !atClb)) {
+      if (!atClb) {
+        if (origin.lat == null || origin.lng == null) continue;
+        const clbPt = findPoint('clb');
+        if (!clbPt || haversineKm(origin.lat, origin.lng, clbPt.lat, clbPt.lng) > 0.35) continue;
+      }
+    }
+
+    if (includesAlias(origin.label, c.originAliases)) return c;
+    if (origin.lat == null || origin.lng == null) continue;
+    const radiusKm = clbCorridor ? 0.35 : 1.2;
+    const matched = c.originAliases.some((alias) => {
+      const point = findPoint(alias);
+      return point != null && haversineKm(origin.lat!, origin.lng!, point.lat, point.lng) <= radiusKm;
+    });
+    if (matched) return c;
+  }
+  return null;
+}
+
 /** Prefer SM Ilijan parking terminal hub for south-coast trips when origin cannot board Dela Paz directly. */
 function inferSmIlijanHubTransfer(
   origin: { label: string; lat?: number; lng?: number },
@@ -1735,10 +1819,100 @@ function resolveDestination(
   return null;
 }
 
-export async function buildTransitBriefing(
+let cachedTransitGraph: { routeCount: number; graph: TransitGraph } | null = null;
+
+function getOrBuildTransitGraph(routes: TransitRoute[]): TransitGraph {
+  if (cachedTransitGraph && cachedTransitGraph.routeCount === routes.length) {
+    return cachedTransitGraph.graph;
+  }
+  const graph = buildTransitGraph(routes, HUB_POINTS);
+  cachedTransitGraph = { routeCount: routes.length, graph };
+  return graph;
+}
+
+function formatOptimizedGraphItinerary(
+  compressedSteps: CompressedStep[] | null,
+  tripRoutes: TripRouteMatch[],
+  destinationLabel: string,
+  originStreet: string | null,
+  destStreet: string | null,
+  corridorFallback?: KnownCorridor | null,
+): string {
+  if (corridorFallback) {
+    return [
+      `1. Mode: Walk/Access | Distance: ~${Math.round(corridorFallback.walkMin * 80)}m | Action: Head to ${corridorFallback.walkTo}`,
+      `2. Mode: Jeepney | Route: ${corridorFallback.jeepneySignboard} | Fare: ₱${corridorFallback.fareRegular}${corridorFallback.fareDiscounted != null ? ` (discounted ₱${corridorFallback.fareDiscounted})` : ''} | Action: Board and ride to ${corridorFallback.alight}`,
+      `3. Mode: Walk | Action: ${corridorFallback.lastMile}`,
+    ].join('\n');
+  }
+
+  if (!compressedSteps || compressedSteps.length === 0) {
+    const directMatch = tripRoutes.find((m) => m.direct);
+    if (directMatch) {
+      const fare = directMatch.fareNote ? ` | Fare: ${directMatch.fareNote}` : '';
+      return [
+        `1. Mode: Walk/Access | Action: Head toward ${originStreet ?? directMatch.route.route_name} corridor`,
+        `2. Mode: Jeepney | Route: ${directMatch.route.route_name} | Corridor: ${directMatch.ends.from} ↔ ${directMatch.ends.to}${fare} | Action: Board and alight near ${destinationLabel}`,
+        `3. Mode: Walk | Action: Walk to ${destinationLabel}`,
+      ].join('\n');
+    }
+    return '1. Mode: TNVS / Tricycle | Action: Take a local tricycle or book TNVS door-to-door to destination.';
+  }
+
+  return compressedSteps
+    .map((step, idx) => {
+      const num = idx + 1;
+      const m = Math.max(10, Math.round(step.distanceKm * 1000));
+      if (step.action === 'walk') {
+        const isFirst = idx === 0;
+        const isLast = idx === compressedSteps.length - 1;
+        const streetHint = isFirst && originStreet ? ` toward ${originStreet}` : isLast && destStreet ? ` along ${destStreet} to ${destinationLabel}` : '';
+        const detail = isFirst
+          ? `Walk from origin to nearest boarding stop${streetHint}`
+          : isLast
+            ? `Walk from alight point to destination (${destinationLabel})${streetHint}`
+            : `Walk ~${m}m`;
+        return `${num}. Mode: Walk | Distance: ~${m}m | Action: ${detail}`;
+      }
+      if (step.action === 'transfer_walk') {
+        const prevBoard = compressedSteps.slice(0, idx).reverse().find((s) => s.action === 'board');
+        const nextBoard = compressedSteps.slice(idx + 1).find((s) => s.action === 'board');
+        const from = prevBoard?.route ?? 'previous route';
+        const to = nextBoard?.route ?? 'connecting route';
+        return `${num}. Mode: Transfer Walk | Distance: ~${m}m | Action: Transfer from ${from} to ${to}. Wait roadside and flag down the connecting jeepney.`;
+      }
+      if (step.action === 'board') {
+        const routeName = step.route ?? 'jeepney';
+        const matched = tripRoutes.find(
+          (r) => r.route.route_name.toLowerCase() === routeName.toLowerCase(),
+        );
+        const fare = matched?.fareNote ? ` | Fare: ${matched.fareNote}` : '';
+        const corridorStr = matched ? ` | Corridor: ${matched.ends.from} ↔ ${matched.ends.to}` : '';
+        const dist = step.distanceKm ? ` | Distance: ~${step.distanceKm.toFixed(1)} km` : '';
+        return `${num}. Mode: Jeepney | Route: ${routeName}${dist}${fare}${corridorStr} | Action: Board ${routeName}, alight at nearest stop to ${destinationLabel}`;
+      }
+      return `${num}. Mode: Unknown | Distance: ~${m}m | Action: Walk ~${m}m`;
+    })
+    .join('\n');
+}
+
+export interface TransitRoutingContext {
+  briefing: string;
+  origin: { label: string; lat: number; lng: number; outOfBounds?: boolean } | null;
+  destination: { label: string; lat: number; lng: number; outOfBounds?: boolean } | null;
+  graphResult: GraphTripResult | null;
+  liveRoutes: TransitRoute[];
+  liveFares: JeepneyFare[];
+  tripRoutes: TripRouteMatch[];
+  winningRoutes: string[];
+  corridorFallback?: KnownCorridor | null;
+  tnvsRequested?: boolean;
+}
+
+export async function getTransitRoutingContext(
   message: string,
   location: ChatLocationContext = {},
-): Promise<string> {
+): Promise<TransitRoutingContext> {
   const live = await loadLiveData().catch((err) => {
     console.error('Failed to load transit data for AI:', err);
     return { routes: [], fares: [], places: [], landmarks: [] };
@@ -1752,68 +1926,151 @@ export async function buildTransitBriefing(
 
   const tnvsPreference = wantsTnvsPreference(message);
   const parsed = parseTrip(message, location.origin);
-  const destination = resolveDestination(message, parsed.destination, live.places);
-  let origin: { label: string; lat?: number; lng?: number } | null = null;
+
+  // 1. Resolve Destination using 3-step rule (DB POI -> geocode -> isInBatangas)
+  let destination: { label: string; lat?: number; lng?: number; outOfBounds?: boolean } | null = null;
+  const legacyDest = resolveDestination(message, parsed.destination, live.places);
+  if (legacyDest?.lat != null && legacyDest?.lng != null) {
+    destination = { label: legacyDest.label, lat: legacyDest.lat, lng: legacyDest.lng, outOfBounds: false };
+  } else if (parsed.destination?.trim() || legacyDest?.label) {
+    const rawDestQuery = parsed.destination?.trim() || legacyDest?.label || '';
+    const res = await resolveLocation(rawDestQuery, { places: live.places });
+    destination = {
+      label: res.label,
+      lat: res.lat ?? undefined,
+      lng: res.lng ?? undefined,
+      outOfBounds: res.outOfBounds,
+    };
+  }
+
+  // 2. Resolve Origin using 3-step rule (Exact GPS -> DB POI -> geocode -> isInBatangas)
+  let origin: { label: string; lat?: number; lng?: number; outOfBounds?: boolean } | null = null;
   let originAssumed = false;
 
-  const originExplicitInMessage = parsed.originExplicit;
+  const originQuery = parsed.originExplicit
+    ? parsed.origin
+    : (location.origin?.trim() || parsed.origin);
 
-  // From-field landmark (e.g. typed "CLB") that differs from GPS — respect From
-  const fromFieldKnown = location.origin?.trim() ? findPoint(location.origin) : null;
-  const fromFieldDiffersFromGps =
-    Boolean(fromFieldKnown) &&
-    hasGps &&
-    haversineKm(location.originLat!, location.originLng!, fromFieldKnown!.lat, fromFieldKnown!.lng) > 0.6;
-
-  // Prefer live GPS only when From is not a different named landmark
-  if (hasGps && !originExplicitInMessage && !fromFieldDiffersFromGps) {
-    const gps = await resolveGpsOrigin(
-      location.originLat!,
-      location.originLng!,
-      live.places,
-      location.origin,
-    );
-    origin = { label: gps.label, lat: gps.lat, lng: gps.lng };
-  } else if (fromFieldKnown && (originExplicitInMessage || fromFieldDiffersFromGps || !hasGps)) {
-    origin = { label: fromFieldKnown.name, lat: fromFieldKnown.lat, lng: fromFieldKnown.lng };
-  } else if (parsed.origin) {
-    origin = resolveNamedPlace(parsed.origin, live.places);
-    if (origin && origin.lat == null && hasGps) {
-      origin = { label: origin.label, lat: location.originLat, lng: location.originLng };
+  if (hasGps && (!parsed.originExplicit || /^(my location|your current location|current location|here)$/i.test(originQuery || ''))) {
+    if (!isInBatangas(location.originLat!, location.originLng!)) {
+      origin = {
+        label: location.origin || 'Your location',
+        lat: location.originLat,
+        lng: location.originLng,
+        outOfBounds: true,
+      };
+    } else {
+      const gps = await resolveGpsOrigin(
+        location.originLat!,
+        location.originLng!,
+        live.places,
+        location.origin,
+      );
+      // Exact GPS priority: raw coordinates preserved
+      origin = { label: gps.label, lat: location.originLat, lng: location.originLng, outOfBounds: false };
     }
+  } else if (originQuery) {
+    const res = await resolveLocation(originQuery, {
+      rawLat: hasGps ? location.originLat : undefined,
+      rawLng: hasGps ? location.originLng : undefined,
+      places: live.places,
+    });
+    origin = {
+      label: res.label,
+      lat: res.lat ?? undefined,
+      lng: res.lng ?? undefined,
+      outOfBounds: res.outOfBounds,
+    };
   } else if (hasGps) {
-    const gps = await resolveGpsOrigin(
-      location.originLat!,
-      location.originLng!,
-      live.places,
-      location.origin,
-    );
-    origin = { label: gps.label, lat: gps.lat, lng: gps.lng };
+    if (!isInBatangas(location.originLat!, location.originLng!)) {
+      origin = { label: 'Your location', lat: location.originLat, lng: location.originLng, outOfBounds: true };
+    } else {
+      const gps = await resolveGpsOrigin(
+        location.originLat!,
+        location.originLng!,
+        live.places,
+        location.origin,
+      );
+      origin = { label: gps.label, lat: location.originLat, lng: location.originLng, outOfBounds: false };
+    }
   }
 
-  // Prefer resolving bare labels like "CLB" / "pablo borbon" via KNOWN_POINTS
-  if (origin?.lat == null && parsed.origin) {
-    const known = findPoint(parsed.origin);
-    if (known) origin = { label: known.name, lat: known.lat, lng: known.lng };
-  }
-
-  if (destination?.lat != null && !origin) {
-    origin = resolveNamedPlace('SM City Batangas', live.places);
+  if (destination?.lat != null && !origin && !destination.outOfBounds) {
+    origin = { label: 'SM City Batangas', lat: 13.7594, lng: 121.0722, outOfBounds: false };
     originAssumed = true;
   }
 
+  // 3. Strict Out of Bounds Rejection
+  if (origin?.outOfBounds) {
+    const briefing = [
+      `RESOLVED ORIGIN: ${origin.label} (OUT OF BOUNDS — outside Batangas City)`,
+      destination ? `RESOLVED DESTINATION: ${destination.label}` : 'RESOLVED DESTINATION: unknown',
+      '',
+      `LOCATION WARNING: Starting point "${origin.label}" is outside Batangas City. LACVAY only provides public transit guides within Batangas City. Please specify a location inside Batangas City.`,
+    ].join('\n');
+    return {
+      briefing,
+      origin: { label: origin.label, lat: origin.lat ?? 0, lng: origin.lng ?? 0, outOfBounds: true },
+      destination: destination && destination.lat != null && destination.lng != null ? { label: destination.label, lat: destination.lat, lng: destination.lng } : null,
+      graphResult: null,
+      liveRoutes: live.routes,
+      liveFares: live.fares,
+      tripRoutes: [],
+      winningRoutes: [],
+    };
+  }
+
+  if (destination?.outOfBounds) {
+    const briefing = [
+      origin ? `RESOLVED ORIGIN: ${origin.label}` : 'RESOLVED ORIGIN: unknown',
+      `RESOLVED DESTINATION: ${destination.label} (OUT OF BOUNDS — outside Batangas City)`,
+      '',
+      `LOCATION WARNING: Destination "${destination.label}" is outside Batangas City. LACVAY only provides public transit guides within Batangas City. Please specify a destination inside Batangas City.`,
+    ].join('\n');
+    return {
+      briefing,
+      origin: origin && origin.lat != null && origin.lng != null ? { label: origin.label, lat: origin.lat, lng: origin.lng } : null,
+      destination: { label: destination.label, lat: destination.lat ?? 0, lng: destination.lng ?? 0, outOfBounds: true },
+      graphResult: null,
+      liveRoutes: live.routes,
+      liveFares: live.fares,
+      tripRoutes: [],
+      winningRoutes: [],
+    };
+  }
+
   if (!destination || destination.lat == null || destination.lng == null) {
-    return [
+    const briefing = [
       origin ? `RESOLVED ORIGIN: ${origin.label}${origin.lat != null ? ` (${origin.lat.toFixed(4)}, ${origin.lng?.toFixed(4)})` : ''}` : 'RESOLVED ORIGIN: unknown',
       destination ? `RESOLVED DESTINATION: ${destination.label} (no coordinates on file)` : 'RESOLVED DESTINATION: unknown — ask where they want to go.',
     ].join('\n');
+    return {
+      briefing,
+      origin: origin && origin.lat != null && origin.lng != null ? { label: origin.label, lat: origin.lat, lng: origin.lng } : null,
+      destination: null,
+      graphResult: null,
+      liveRoutes: live.routes,
+      liveFares: live.fares,
+      tripRoutes: [],
+      winningRoutes: [],
+    };
   }
 
   if (!origin || origin.lat == null || origin.lng == null) {
-    return [
+    const briefing = [
       'RESOLVED ORIGIN: unknown — ask where they are starting from.',
       `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
     ].join('\n');
+    return {
+      briefing,
+      origin: null,
+      destination: { label: destination.label, lat: destination.lat, lng: destination.lng },
+      graphResult: null,
+      liveRoutes: live.routes,
+      liveFares: live.fares,
+      tripRoutes: [],
+      winningRoutes: [],
+    };
   }
 
   const originPt = { label: origin.label, lat: origin.lat, lng: origin.lng };
@@ -1828,7 +2085,7 @@ export async function buildTransitBriefing(
           : tnvsPreference.app === 'idol'
             ? 'iDOL Taxi'
             : 'TNVS';
-    return [
+    const briefing = [
       `RESOLVED ORIGIN: ${origin.label} (${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)})`,
       `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
       '',
@@ -1838,91 +2095,236 @@ export async function buildTransitBriefing(
       `2. **TNVS** — Book ${app} door-to-door from ${origin.label} to ${destination.label}. Fare shown in app.`,
       `3. **Walk** — Walk to the entrance of ${destination.label}.`,
     ].join('\n');
+    return {
+      briefing,
+      origin: originPt,
+      destination: destPt,
+      graphResult: null,
+      liveRoutes: live.routes,
+      liveFares: live.fares,
+      tripRoutes: [],
+      winningRoutes: [],
+      tnvsRequested: true,
+    };
   }
 
   const tripRoutes = analyzeTripRoutes(live.routes, live.fares, live.landmarks, origin, destination);
-  const matchesInput: RouteMatchInput[] = tripRoutes.map((m) => ({
-    route: { id: m.route.id, route_name: m.route.route_name, vehicle_type: m.route.vehicle_type },
-    ends: m.ends,
-    path: m.path,
-    originKm: m.originKm,
-    destKm: m.destKm,
-    servesOrigin: m.servesOrigin,
-    servesDest: m.servesDest,
-    direct: m.direct,
-    fareNote: m.fareNote,
-    landmarkNames: m.landmarkNames,
-    fares: parseFareNoteNumbers(m.fareNote),
-  }));
 
-  const itinerary = buildOptimizedItinerary(originPt, destPt, matchesInput);
+  const graph = getOrBuildTransitGraph(live.routes);
+  let graphResult = routeTripGraph(graph, originPt, destPt);
+  if (!graphResult) {
+    // Relaxed search threshold if origin/destination is slightly farther
+    graphResult = routeTripGraph(graph, originPt, destPt, { maxAccessKm: 5.0 });
+  }
+  const compressedSteps = graphResult?.steps ?? null;
+
+  const corridor = originPt && destPt ? findKnownCorridor(originPt, destPt) : null;
+  // A known corridor is ONLY a fallback when the transit graph engine cannot find any route
+  const shouldUseCorridorSteps = Boolean(corridor && (!compressedSteps || compressedSteps.length === 0));
 
   const steps: string[] = [];
-  if (itinerary && itinerary.legs.length) {
-    const isTransfer = itinerary.planType === 'transfer';
-    itinerary.legs.forEach((leg, index) => {
+  const originStreet = streetHintForLabel(origin.label);
+  const destStreet = streetHintForLabel(destination.label);
+
+  let winningRoutes: string[] = [];
+
+  if (shouldUseCorridorSteps && corridor) {
+    const walkMin = corridor.walkMin > 0 ? `~${corridor.walkMin} min ` : '';
+    steps.push(`1. **Walk / Tricycle** — Walk ${walkMin}to ${corridor.walkTo}.`);
+    steps.push(
+      `2. **Jeepney** — Board **${corridor.jeepneySignboard}**. Alight at ${corridor.alight}. Fare: ₱${corridor.fareRegular}${corridor.fareDiscounted != null ? ` (discounted ₱${corridor.fareDiscounted})` : ''}.`,
+    );
+    steps.push(`3. **Walk** — ${corridor.lastMile}`);
+    const matchedRoute = live.routes.find((r) =>
+      corridor.jeepneySignboard.toLowerCase().includes(r.route_name.toLowerCase()),
+    );
+    winningRoutes = [matchedRoute ? matchedRoute.route_name : 'Dela Paz/Ilijan - Batangas'];
+  } else if (compressedSteps && compressedSteps.length > 0) {
+    winningRoutes = compressedSteps
+      .filter((s) => s.action === 'board' && s.route)
+      .map((s) => s.route!) as string[];
+
+    compressedSteps.forEach((step, index) => {
       const stepNum = index + 1;
-      if (leg.mode === 'walk') {
-        if (index === 0) {
-          steps.push(`${stepNum}. **Walk / Tricycle** — ${leg.summary}.`);
-        } else if (isTransfer && itinerary.legs.slice(index + 1).some((l) => l.mode === 'jeepney')) {
-          steps.push(`${stepNum}. **Transfer Walk** — ${leg.summary}.`);
-        } else {
-          steps.push(`${stepNum}. **Walk** — ${leg.summary}.`);
+      const m = Math.max(10, Math.round(step.distanceKm * 1000));
+
+      if (step.action === 'walk') {
+        const isFirst = index === 0;
+        const isLast = index === compressedSteps.length - 1;
+        const title = isFirst ? (step.distanceKm > 0.3 ? 'Walk / Tricycle' : 'Walk') : 'Walk';
+        let detail = isFirst
+          ? `Walk ~${m}m from origin to nearest jeepney boarding point.`
+          : isLast
+            ? `Walk ~${m}m from alight point to destination (${destination.label}).`
+            : `Walk ~${m}m.`;
+        if (isFirst && originStreet && !detail.includes(originStreet)) {
+          detail += ` Head toward **${originStreet}** where jeepneys pass.`;
         }
-      } else if (leg.mode === 'tnvs') {
-        steps.push(`${stepNum}. **Walk / Tricycle** — ${leg.summary}.`);
-      } else if (leg.mode === 'jeepney') {
+        if (isLast && destStreet && !detail.includes(destStreet)) {
+          detail += ` Continue on **${destStreet}** to reach ${destination.label}.`;
+        }
+        steps.push(`${stepNum}. **${title}** — ${detail.endsWith('.') ? detail : `${detail}.`}`);
+      } else if (step.action === 'transfer_walk') {
+        const prevBoard = compressedSteps.slice(0, index).reverse().find((s) => s.action === 'board');
+        const nextBoard = compressedSteps.slice(index + 1).find((s) => s.action === 'board');
+        const fromRoute = prevBoard?.route ?? 'previous route';
+        const toRoute = nextBoard?.route ?? 'connecting route';
+        const detail = `Walk ~${m}m to transfer from **${fromRoute}** to the **${toRoute}** line. Wait roadside and flag the signboard.`;
+        steps.push(`${stepNum}. **Transfer Walk** — ${detail}`);
+      } else if (step.action === 'board') {
+        const routeName = step.route ?? 'jeepney';
         const matched = tripRoutes.find(
-          (r) => r.route.route_name.toLowerCase() === leg.routeName?.toLowerCase(),
+          (r) => r.route.route_name.toLowerCase() === routeName.toLowerCase(),
         );
         const color = matched?.ends.color ? ` (${matched.ends.color})` : '';
-        const fare = leg.fareRegular != null ? ` Fare: ₱${leg.fareRegular}.` : '';
-        const subsequentJeepney = itinerary.legs.slice(index + 1).find((l) => l.mode === 'jeepney');
-        if (isTransfer && subsequentJeepney) {
-          steps.push(
-            `${stepNum}. **Jeepney** — Board ${leg.routeName ?? 'jeepney'}${color}. Alight at transfer hub/stop for ${subsequentJeepney.routeName ?? 'next jeepney'}.${fare}`,
-          );
-        } else {
-          steps.push(
-            `${stepNum}. **Jeepney** — Board ${leg.routeName ?? 'jeepney'}${color}. Alight near ${destination.label}.${fare}`,
-          );
-        }
+        const fare = matched?.fareNote ? ` Fare: ${matched.fareNote}.` : '';
+        const corridorStr = matched ? ` Corridor: ${matched.ends.from} ↔ ${matched.ends.to}.` : '';
+        const distStr = step.distanceKm
+          ? ` (~${step.distanceKm.toFixed(1)} km)`
+          : '';
+
+        const nextTransfer = compressedSteps.slice(index + 1).find((s) => s.action === 'transfer_walk');
+        const nextBoard = compressedSteps.slice(index + 1).find((s) => s.action === 'board');
+        const alightHint = nextTransfer
+          ? ` Alight at the transfer point to connect with **${nextBoard?.route ?? 'next route'}** (see **Transfer Walk** next).`
+          : destStreet
+            ? ` Alight on **${destStreet}** or the nearest stop to ${destination.label}, then finish on foot.`
+            : ` Alight at the nearest stop to ${destination.label}.`;
+
+        const boardHint =
+          index <= 1 && originStreet
+            ? ` From **${originStreet}**, wait roadside, flag signboard **${routeName}**.`
+            : ` Wait roadside and flag signboard **${routeName}**.`;
+
+        steps.push(
+          `${stepNum}. **Jeepney** — Board **${routeName}**${color}${distStr}.${boardHint}${corridorStr}${alightHint}${fare}`,
+        );
       }
     });
+  } else {
+    // If no transit graph route was found (e.g. remote area off transit corridors)
+    const directMatch = tripRoutes.find((m) => m.direct);
+    if (directMatch) {
+      const fare = directMatch.fareNote ? ` Fare: ${directMatch.fareNote}.` : '';
+      steps.push(`1. **Walk / Tricycle** — Head toward **${originStreet ?? directMatch.route.route_name}** corridor.`);
+      steps.push(`2. **Jeepney** — Board **${directMatch.route.route_name}**. Corridor: ${directMatch.ends.from} ↔ ${directMatch.ends.to}.${fare}`);
+      steps.push(`3. **Walk** — Walk to ${destination.label}.`);
+    } else {
+      steps.push(`1. **Walk / Tricycle** — Walk from ${origin.label} towards the nearest road.`);
+      steps.push(`2. **Tricycle / TNVS** — Book Angkas, Grab, or take a local tricycle directly to ${destination.label} as no jeepney stop is within walking distance.`);
+    }
   }
 
-  const winningJeepneys = itinerary?.legs.filter((l) => l.mode === 'jeepney') ?? [];
-  const winningDetails = winningJeepneys.map((j) => {
+  const uniqueWinningRoutes = [...new Set(winningRoutes)];
+
+  const winningDetails = uniqueWinningRoutes.map((routeName) => {
     const matched = tripRoutes.find(
-      (r) => r.route.route_name.toLowerCase() === j.routeName?.toLowerCase(),
+      (r) => r.route.route_name.toLowerCase() === routeName.toLowerCase(),
     );
     return matched
       ? `- Winning Route: ${matched.route.route_name}${matched.ends.color ? ` (${matched.ends.color})` : ''}\n  Board Corridor: ${matched.ends.from} ↔ ${matched.ends.to}\n  Fares: ${matched.fareNote}`
-      : `- Winning Route: ${j.routeName}`;
+      : `- Winning Route: ${routeName}`;
   });
 
   const otherDirect = tripRoutes
     .filter(
       (m) =>
         m.direct &&
-        !winningJeepneys.some((w) => w.routeName?.toLowerCase() === m.route.route_name.toLowerCase()),
+        !uniqueWinningRoutes.some((w) => w.toLowerCase() === m.route.route_name.toLowerCase()),
     )
     .map((m) => m.route.route_name);
+
+  const totalWalkKm = shouldUseCorridorSteps && corridor
+    ? corridor.walkMin * 0.08
+    : compressedSteps
+      ? compressedSteps
+          .filter((s) => s.action === 'walk' || s.action === 'transfer_walk')
+          .reduce((sum, s) => sum + s.distanceKm, 0)
+      : 0;
+
+  const transferCount = shouldUseCorridorSteps
+    ? 0
+    : compressedSteps
+      ? compressedSteps.filter((s) => s.action === 'transfer_walk').length
+      : 0;
+
+  const rawGraphItinerary = formatOptimizedGraphItinerary(
+    compressedSteps,
+    tripRoutes,
+    destination.label,
+    originStreet,
+    destStreet,
+    shouldUseCorridorSteps ? corridor : null,
+  );
+
+  SYSTEM_PROMPT = `You are LACVAY Transit Assistant for Batangas City jeepney commuters.
+
+Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. Output ONLY the exact sequence of steps from the itinerary. Do NOT invent, add, or alter any routes or steps.
+
+### OPTIMIZED GRAPH ITINERARY ###
+${rawGraphItinerary}`;
 
   const sections = [
     `RESOLVED ORIGIN: ${origin.label} (${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)})`,
     `RESOLVED DESTINATION: ${destination.label} (${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)})`,
     '',
+    '### OPTIMIZED GRAPH ITINERARY ###',
+    'Translate this mathematically perfect graph itinerary into a friendly, step-by-step guide for the traveler. Output ONLY the exact sequence of steps from the itinerary. Do NOT invent, add, or alter any routes or steps.',
+    '',
+    rawGraphItinerary,
+    '',
+    ...COMMUTER_DETAIL_RULES,
+    '',
+    formatStreetAtlas(),
+    '',
+    ...(corridor
+      ? [
+          'KNOWN LOCAL ITINERARY (prefer this over forcing an unmatched live route):',
+          `1. Walk ~${corridor.walkMin} min to ${corridor.walkTo}.`,
+          `2. Ride jeepney: ${corridor.jeepneySignboard}. Regular fare ₱${corridor.fareRegular}${corridor.fareDiscounted != null ? ` / discounted ₱${corridor.fareDiscounted}` : ''}. ETA ~${corridor.etaMin} min.`,
+          `3. Alight at ${corridor.alight}.`,
+          `4. Last mile: ${corridor.lastMile}`,
+          `5. Booking apps: ${corridor.apps}`,
+          '',
+        ]
+      : []),
+    'GRAPH ROUTER SUMMARY:',
+    `- Total Walk Distance: ~${Math.max(10, Math.round(totalWalkKm * 1000))} meters`,
+    `- Transit Lines: ${uniqueWinningRoutes.length ? uniqueWinningRoutes.join(' → ') : 'None'}`,
+    `- Transfer Points: ${transferCount}`,
+    '',
     'SELECTED ROUTE DETAILS:',
-    winningDetails.length ? winningDetails.join('\n') : `- Mode: ${itinerary?.planType ?? 'direct'}`,
+    winningDetails.length ? winningDetails.join('\n') : `- Mode: ${uniqueWinningRoutes.length ? 'direct' : 'walk'}`,
     otherDirect.length ? `- Alternative Direct Routes: ${otherDirect.join(', ')}` : '',
     '',
     'SELECTED COMMUTE PLAN:',
     ...steps,
+    '',
+    'COMMUTE STEPS:',
+    ...steps,
   ];
 
-  return sections.filter(Boolean).join('\n');
+  const briefing = sections.filter(Boolean).join('\n');
+
+  return {
+    briefing,
+    origin: { label: origin.label, lat: origin.lat, lng: origin.lng },
+    destination: { label: destination.label, lat: destination.lat, lng: destination.lng },
+    graphResult,
+    liveRoutes: live.routes,
+    liveFares: live.fares,
+    tripRoutes,
+    winningRoutes: uniqueWinningRoutes,
+    corridorFallback: shouldUseCorridorSteps ? corridor : null,
+  };
+}
+
+export async function buildTransitBriefing(
+  message: string,
+  location: ChatLocationContext = {},
+): Promise<string> {
+  const ctx = await getTransitRoutingContext(message, location);
+  return ctx.briefing;
 }
 
 export type OdPlanType = 'direct' | 'transfer' | 'corridor' | 'tnvs' | 'partial' | 'unknown';

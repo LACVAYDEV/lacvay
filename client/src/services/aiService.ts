@@ -1,29 +1,52 @@
 import type { AIMessage, CommuteGuidePlan } from '@/types';
 import { generateId } from '@/lib/utils';
 import { getStoredGeo, requestUserLocation, GEO_ORIGIN_MANUAL_KEY } from '@/lib/userLocation';
-
+import { supabase } from '@/lib/supabase';
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 export const AI_ORIGIN_STORAGE_KEY = 'lacvay-ai-origin';
 export const ACTIVE_COMMUTE_PLAN_KEY = 'lacvay-active-commute-plan';
+export const PINNED_ORIGIN_STORAGE_KEY = 'lacvay-pinned-origin';
 
-const MOCK_RESPONSES: Record<string, string> = {
-  'monte maria': 'Take the Dela Paz/Ilijan - Batangas jeepney. From San Isidro, wait at the road-side stop — the route passes the church and serves Monte Maria. Extended fare about ₱23, roughly 30–45 min. Alight at Monte Maria; a short walk to the shrine is usually enough. Do NOT board Libjo/San Isidro (goes to Batangas City). TNVS is optional.',
-  'sm batangas': 'From Batangas City Grand Terminal to SM City Batangas, the documented regular fare is ₱32 across two jeepney legs. From Batangas Pier to SM City Batangas, the regular fare is ₱14.',
-  'tourist': 'Top spots near Batangas City include Taal Volcano, Basilica of the Immaculate Conception, Anilao for diving, and Laiya Beach for a weekend getaway.',
-  'fare': "Jeepney fares use LACVAY's documented matrix. For places off the jeepney line, book Angkas, Grab, or iDOL Taxi and check the fare in the app. Tricycle TODA fares are not listed — look for the nearest TODA and ask locals.",
-  'habal': 'For solo trips off the jeepney line, book Angkas in the app so the fare is shown before you ride.',
-  'taxi': 'For door-to-door trips with luggage or at night, book Grab or iDOL Taxi. Check the fare in the app or on the meter.',
-  'tricycle': 'LACVAY does not currently list tricycle TODA terminals or fares. For remote spots, book Angkas, Grab, or iDOL Taxi. You can also look for the nearest tricycle TODA and ask locals for directions.',
-};
-
-function getMockResponse(message: string): string {
-  const lower = message.toLowerCase();
-  const match = Object.entries(MOCK_RESPONSES)
-    .filter(([key]) => lower.includes(key))
-    .sort((a, b) => b[0].length - a[0].length)[0];
-  return match?.[1]
-    ?? "I'm LACVAY AI, your Batangas City travel buddy! I can help with routes, fares, tourist spots, and restaurant recommendations. Try asking how to get to Monte Maria from SM Batangas.";
+export interface PinnedOrigin {
+  lat: number;
+  lng: number;
+  label: string;
 }
+
+export function getStoredPinnedOrigin(): PinnedOrigin | null {
+  try {
+    const raw = sessionStorage.getItem(PINNED_ORIGIN_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Number.isFinite(parsed?.lat) && Number.isFinite(parsed?.lng)) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredPinnedOrigin(pinned: PinnedOrigin | null): void {
+  try {
+    if (pinned && Number.isFinite(pinned.lat) && Number.isFinite(pinned.lng)) {
+      sessionStorage.setItem(PINNED_ORIGIN_STORAGE_KEY, JSON.stringify(pinned));
+    } else {
+      sessionStorage.removeItem(PINNED_ORIGIN_STORAGE_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearStoredPinnedOrigin(): void {
+  try {
+    sessionStorage.removeItem(PINNED_ORIGIN_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 
 export function getStoredAiOrigin(): string {
   try {
@@ -96,10 +119,21 @@ export function clearActiveCommutePlan(): void {
 export async function sendAIMessage(
   message: string,
   originOverride?: string,
+  explicitCoords?: { lat: number; lng: number },
 ): Promise<AIMessage> {
   const geo = (await requestUserLocation()) ?? getStoredGeo();
   const typed = (originOverride ?? getStoredAiOrigin()).trim();
   const manual = isManualAiOrigin() || Boolean(originOverride?.trim());
+  const storedPinned = getStoredPinnedOrigin();
+
+  const pinned = explicitCoords
+    ? { lat: explicitCoords.lat, lng: explicitCoords.lng, label: typed || 'Pinned starting point' }
+    : storedPinned;
+
+  const isUsingPinned = Boolean(
+    pinned &&
+    (!typed || !storedPinned || typed === storedPinned.label.trim() || !originOverride)
+  );
 
   // If From is a known landmark different from GPS (e.g. typed "CLB" while GPS is Sto. Niño), keep From
   const typedIsExplicitPlace =
@@ -117,46 +151,85 @@ export async function sendAIMessage(
     /current location|your location/i.test(typed);
 
   const usingGps =
+    !isUsingPinned &&
     Boolean(geo) && !typedIsExplicitPlace && (!manual || typedLooksLikeGps);
 
-  const origin = usingGps
-    ? geo!.label
-    : typed || (geo ? geo.label : 'SM Batangas');
+  const origin = isUsingPinned
+    ? pinned!.label
+    : usingGps
+      ? geo!.label
+      : typed || (geo ? geo.label : 'SM Batangas');
+
+  const originLat = isUsingPinned ? pinned!.lat : (usingGps ? geo!.lat : undefined);
+  const originLng = isUsingPinned ? pinned!.lng : (usingGps ? geo!.lng : undefined);
+
+  const trimmedMsg = message.trim();
+  const apiMessage =
+    /^(monte maria|montemaria|mnte maria)$/i.test(trimmedMsg) ||
+    (/monte maria|montemaria/i.test(trimmedMsg) && !/\b(from|to|→)\b/i.test(trimmedMsg))
+      ? `How do I get from ${origin} to Monte Maria?`
+      : trimmedMsg;
 
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+
     const res = await fetch(`${API_URL}/ai/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
-        message,
+        message: apiMessage,
         origin,
-        // Only attach GPS when From matches current location — otherwise named place (CLB) wins
-        originLat: usingGps ? geo!.lat : undefined,
-        originLng: usingGps ? geo!.lng : undefined,
+        // Send exact pinned coords or GPS coords to backend for accurate routing
+        originLat,
+        originLng,
       }),
     });
 
     if (res.ok) {
       const data = (await res.json()) as { reply?: string; plan?: CommuteGuidePlan | null };
+      if (!data.reply) {
+        throw new Error('Empty reply from AI');
+      }
       return {
         id: generateId(),
         role: 'assistant',
-        content: data.reply ?? getMockResponse(message),
+        content: data.reply,
         timestamp: new Date().toISOString(),
         plan: data.plan ?? null,
       };
     }
-  } catch {
-    // fall through to mock
-  }
 
-  return {
-    id: generateId(),
-    role: 'assistant',
-    content: getMockResponse(message),
-    timestamp: new Date().toISOString(),
-    plan: null,
-  };
+    if (res.status === 401) {
+      return {
+        id: generateId(),
+        role: 'assistant',
+        content: 'Please sign in to plan routes with the AI assistant.',
+        timestamp: new Date().toISOString(),
+        plan: null,
+      };
+    }
+
+    if (res.status === 429) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      return {
+        id: generateId(),
+        role: 'assistant',
+        content: body?.error ?? 'Weekly free prompt limit reached. Upgrade or try again next week.',
+        timestamp: new Date().toISOString(),
+        plan: null,
+      };
+    }
+
+    const errBody = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(errBody?.error ?? 'AI API Error');
+  } catch (error) {
+    console.error('AI API Error:', error);
+    throw new Error("My network is a bit jammed right now. Please give me a few seconds and try asking again.");
+  }
 }
 
 function normalizeLabel(value: string): string {

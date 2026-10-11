@@ -38,6 +38,24 @@ const dummyAds: Ad[] = [
   },
 ];
 
+export const AD_BANNER_DISMISSED_KEY = 'lacvay-ad-banner-dismissed';
+
+export function isAdBannerDismissed(): boolean {
+  try {
+    return localStorage.getItem(AD_BANNER_DISMISSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function dismissAdBanner(): void {
+  try {
+    localStorage.setItem(AD_BANNER_DISMISSED_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
 interface AdvertisementBannerProps {
   onClose?: () => void;
 }
@@ -55,6 +73,7 @@ export function AdvertisementBanner({ onClose }: AdvertisementBannerProps) {
   }, []);
 
   const handleClose = () => {
+    dismissAdBanner();
     setIsVisible(false);
     onClose?.();
   };

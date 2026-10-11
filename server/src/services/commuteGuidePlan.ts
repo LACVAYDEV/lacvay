@@ -3,6 +3,9 @@ import {
   type OptimizedItinerary,
   type RouteMatchInput,
 } from './itineraryPlanner.js';
+import type { TransitRoutingContext } from './transitContext.js';
+import type { GraphTripResult } from './graphEngine/index.js';
+import { extractPolylineCoords } from './graphEngine/builder.js';
 
 export type GuideLegMode = 'walk' | 'jeepney' | 'tnvs';
 
@@ -15,6 +18,7 @@ export interface GuideLeg {
   fareRegular?: number;
   fareDiscounted?: number;
   routeName?: string;
+  color?: string;
   /** [lat, lng] polyline for this leg */
   path: [number, number][];
 }
@@ -63,13 +67,17 @@ function modeTitle(mode: GuideLegMode): string {
 
 function findRoutePath(matches: RouteMatchInput[], routeName?: string): [number, number][] {
   if (!routeName) return [];
-  const n = routeName.toLowerCase();
-  const hit = matches.find(
-    (m) =>
-      m.route.route_name.toLowerCase() === n ||
-      m.route.route_name.toLowerCase().includes(n) ||
-      n.includes(m.route.route_name.toLowerCase()),
-  );
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[\u2010-\u2015\u2212]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const n = norm(routeName);
+  const hit = matches.find((m) => {
+    const mn = norm(m.route.route_name);
+    return mn === n || mn.includes(n) || n.includes(mn);
+  });
   const raw = hit?.path ?? [];
   // Keep only Batangas land corridor points (drop ferry / bay outliers)
   return raw.filter(
@@ -78,7 +86,7 @@ function findRoutePath(matches: RouteMatchInput[], routeName?: string): [number,
       Number.isFinite(lng) &&
       lat >= 13.58 &&
       lat <= 13.92 &&
-      lng >= 121.025 &&
+      lng >= 120.98 &&
       lng <= 121.22,
   );
 }
@@ -122,12 +130,16 @@ function enrichLegs(
               return dest;
             })()
           : dest;
-      const alightIdx = nearestIndex(routePath, target[0], target[1]);
-      if (boardIdx <= alightIdx) {
-        path = routePath.slice(boardIdx, alightIdx + 1);
-      } else {
-        path = routePath.slice(alightIdx, boardIdx + 1).reverse();
+      let alightIdx = boardIdx;
+      let bestD = Infinity;
+      for (let i = boardIdx; i < routePath.length; i++) {
+        const d = haversineKm(target[0], target[1], routePath[i][0], routePath[i][1]);
+        if (d < bestD) { 
+          bestD = d; 
+          alightIdx = i; 
+        }
       }
+      path = routePath.slice(boardIdx, alightIdx + 1);
       if (path.length < 2) {
         path = [board, routePath[alightIdx]];
       }
@@ -172,6 +184,7 @@ function enrichLegs(
       fareRegular: leg.fareRegular,
       fareDiscounted: leg.fareDiscounted,
       routeName: leg.routeName,
+      color: matches.find((m) => m.route.route_name === leg.routeName)?.ends.color,
       path,
     });
     cursor = next;
@@ -201,19 +214,21 @@ function nearestPoints(
   return { onA, onB };
 }
 
-function parseResolvedPoint(
+/** Parse RESOLVED ORIGIN/DESTINATION lines; coords are always the last (lat, lng) pair on the line. */
+export function parseResolvedPoint(
   briefing: string,
   kind: 'ORIGIN' | 'DESTINATION',
 ): { label: string; lat: number; lng: number } | null {
-  const re = new RegExp(
-    `RESOLVED ${kind}:\\s*([^\\n(]+?)\\s*\\((\\d+\\.\\d+)\\s*,\\s*(\\d+\\.\\d+)\\)`,
-  );
-  const m = briefing.match(re);
-  if (!m) return null;
-  const label = m[1].trim();
-  if (/^unknown/i.test(label)) return null;
-  let lat = Number(m[2]);
-  let lng = Number(m[3]);
+  const prefix = `RESOLVED ${kind}:`;
+  const line = briefing.split('\n').find((l) => l.startsWith(prefix));
+  if (!line) return null;
+  const rest = line.slice(prefix.length).trim();
+  const coordMatch = rest.match(/\((\d+\.\d+)\s*,\s*(\d+\.\d+)\)\s*$/);
+  if (!coordMatch || coordMatch.index == null) return null;
+  const label = rest.slice(0, coordMatch.index).trim();
+  if (!label || /^unknown/i.test(label)) return null;
+  let lat = Number(coordMatch[1]);
+  let lng = Number(coordMatch[2]);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   // Fix swapped GeoJSON-style pairs (lng, lat)
   if (lat > 50 && lng < 50) {
@@ -235,19 +250,45 @@ function parseReplyLegs(
   const steps: { mode: GuideLegMode; title: string; description: string }[] = [];
 
   for (const line of lines) {
-    const num = line.match(/^\d+[.)]\s+\*\*(Walk|Jeepney|TNVS|Transfer Walk)[^*]*\*\*\s*[—:-]?\s*(.*)/i);
-    const plain = line.match(/^\d+[.)]\s+(Walk|Jeepney|TNVS|Transfer Walk)\b[—:-]?\s*(.*)/i);
+    const num = line.match(/^\d+[.)]\s+\*\*([^*]+)\*\*\s*[—:-]?\s*(.*)/i);
+    const plain = line.match(/^\d+[.)]\s+([A-Za-z0-9/ ]+?)\s*[—:-]\s*(.*)/i);
     const hit = num ?? plain;
     if (!hit) continue;
-    const modeRaw = hit[1].toLowerCase();
-    const mode: GuideLegMode =
-      modeRaw.includes('walk') ? 'walk' : modeRaw.startsWith('jeep') ? 'jeepney' : 'tnvs';
-    const isTransfer = /transfer\s+walk/i.test(hit[1]);
+    const titleCandidate = hit[1].trim();
+    const titleLower = titleCandidate.toLowerCase();
+    const isTransfer = titleLower.includes('transfer');
+    const isJeep = titleLower.includes('jeep') || titleLower.includes('ride') || titleLower.includes('board');
+    const isWalk = titleLower.includes('walk') || titleLower.includes('foot');
+    const isTricycle = titleLower.includes('tricycle') || titleLower.includes('trike');
+    const isTnvs = titleLower.includes('tnvs') || titleLower.includes('grab') || titleLower.includes('angkas') || titleLower.includes('taxi');
+
+    let mode: GuideLegMode = 'walk';
+    let title = 'Walk';
+
+    if (isTransfer) {
+      mode = 'walk';
+      title = 'Transfer Walk';
+    } else if (isJeep) {
+      mode = 'jeepney';
+      title = 'Jeepney';
+    } else if (isTnvs) {
+      mode = 'tnvs';
+      title = 'TNVS';
+    } else if (isTricycle) {
+      mode = 'walk';
+      title = 'Walk / Tricycle';
+    } else if (isWalk) {
+      mode = 'walk';
+      title = 'Walk';
+    } else {
+      continue;
+    }
+
     const rest = (hit[2] || '').replace(/[*_]/g, '').trim();
     steps.push({
       mode,
-      title: isTransfer ? 'Transfer Walk' : modeTitle(mode),
-      description: rest || (isTransfer ? 'Transfer Walk' : modeTitle(mode)),
+      title,
+      description: rest || title,
     });
   }
 
@@ -274,18 +315,253 @@ function parseReplyLegs(
   });
 }
 
+export function buildPlanFromGraphResult(opts: {
+  origin: { label: string; lat: number; lng: number };
+  destination: { label: string; lat: number; lng: number };
+  graphResult: GraphTripResult;
+  routes: Array<{
+    id: string;
+    route_name: string;
+    color_code?: string | null;
+    geojson_path?: unknown;
+    regular_fare?: number | null;
+    discounted_fare?: number | null;
+    extended_fare?: number | null;
+    extended_discounted_fare?: number | null;
+  }>;
+  fares?: Array<{
+    route_id?: string | null;
+    base_fare?: number | null;
+    per_km_rate?: number | null;
+    student_discount_pct?: number | null;
+  }>;
+  sourceReply?: string;
+}): CommuteGuidePlan | null {
+  const steps = opts.graphResult.steps;
+  if (!steps || steps.length === 0) return null;
+
+  const legs: GuideLeg[] = [];
+  let totalMinutes = 0;
+  let totalFareRegular = 0;
+  let totalFareDiscounted = 0;
+  let hasFares = false;
+
+  for (let index = 0; index < steps.length; index++) {
+    const step = steps[index];
+    const isFirst = index === 0;
+    const isLast = index === steps.length - 1;
+    const order = index + 1;
+
+    if (step.action === 'walk') {
+      const mode: GuideLegMode = 'walk';
+      const title = isFirst ? (step.distanceKm > 0.3 ? 'Walk / Tricycle' : 'Walk') : 'Walk';
+      const m = Math.max(10, Math.round(step.distanceKm * 1000));
+      const description =
+        step.instruction ||
+        (isFirst
+          ? step.distanceKm > 0.3
+            ? `Walk or take a tricycle (~${m}m) from ${opts.origin.label} to the boarding point.`
+            : `Walk ~${m}m from ${opts.origin.label} to the nearest boarding stop.`
+          : isLast
+            ? `Walk ~${m}m to ${opts.destination.label}.`
+            : `Walk ~${m}m.`);
+      const minutes = step.estimatedMinutes ?? Math.max(1, Math.round(step.distanceKm * 15));
+      totalMinutes += minutes;
+
+      let path: [number, number][] = step.pathCoords && step.pathCoords.length >= 2 ? step.pathCoords : [];
+      if (path.length < 2) {
+        if (isFirst) {
+          path = [[opts.origin.lat, opts.origin.lng], [opts.origin.lat, opts.origin.lng]];
+        } else if (isLast) {
+          path = [[opts.destination.lat, opts.destination.lng], [opts.destination.lat, opts.destination.lng]];
+        }
+      }
+
+      legs.push({
+        order,
+        mode,
+        title,
+        description,
+        minutes,
+        path,
+      });
+    } else if (step.action === 'transfer_walk') {
+      const mode: GuideLegMode = 'walk';
+      const title = 'Transfer Walk';
+      const m = Math.max(10, Math.round(step.distanceKm * 1000));
+      const prevRoute =
+        steps.slice(0, index).reverse().find((s) => s.action === 'board')?.route ?? 'previous line';
+      const nextRoute =
+        steps.slice(index + 1).find((s) => s.action === 'board')?.route ?? 'connecting line';
+      const description =
+        step.instruction ||
+        `Walk ~${m}m to transfer from **${prevRoute}** to **${nextRoute}**. Wait roadside and flag the signboard.`;
+      const minutes = step.estimatedMinutes ?? Math.max(2, Math.round(step.distanceKm * 15) + 3);
+      totalMinutes += minutes;
+
+      let path: [number, number][] = step.pathCoords && step.pathCoords.length >= 2 ? step.pathCoords : [];
+      if (path.length < 2 && legs.length > 0) {
+        const lastPt = legs[legs.length - 1].path.slice(-1)[0];
+        const nextStepPt = steps[index + 1]?.pathCoords?.[0];
+        if (lastPt && nextStepPt) {
+          path = [lastPt, nextStepPt];
+        }
+      }
+
+      legs.push({
+        order,
+        mode,
+        title,
+        description,
+        minutes,
+        path,
+      });
+    } else if (step.action === 'board') {
+      const mode: GuideLegMode = 'jeepney';
+      const title = 'Jeepney';
+      const matched = opts.routes.find(
+        (r) => r.id === step.routeId || r.route_name.toLowerCase() === (step.route ?? '').toLowerCase(),
+      );
+      const routeName = matched?.route_name ?? step.route ?? 'Jeepney';
+      const color = matched?.color_code ?? undefined;
+
+      const baseFare = matched?.regular_fare ?? 13;
+      const extFare =
+        matched?.extended_fare ??
+        (matched?.regular_fare
+          ? matched.regular_fare + Math.max(0, Math.round((step.distanceKm - 4) * 1.8))
+          : 15);
+      const fareRegular = step.distanceKm > 4.0 ? extFare : baseFare;
+      const fareDiscounted =
+        matched?.discounted_fare != null
+          ? step.distanceKm > 4.0 && matched.extended_discounted_fare != null
+            ? matched.extended_discounted_fare
+            : matched.discounted_fare
+          : Math.round(fareRegular * 0.8);
+
+      hasFares = true;
+      totalFareRegular += fareRegular;
+      totalFareDiscounted += fareDiscounted;
+
+      const minutes = step.estimatedMinutes ?? Math.max(3, Math.round((step.distanceKm / 18) * 60) + 2);
+      totalMinutes += minutes;
+
+      let path: [number, number][] = step.pathCoords && step.pathCoords.length >= 2 ? step.pathCoords : [];
+      if (path.length < 2 && matched?.geojson_path) {
+        const fullCoords = extractPolylineCoords(matched.geojson_path);
+        if (fullCoords.length >= 2) {
+          path = fullCoords;
+        }
+      }
+
+      const distStr = step.distanceKm ? ` (~${step.distanceKm.toFixed(1)} km)` : '';
+      const description =
+        step.instruction ||
+        `Board **${routeName}**${color ? ` (${color})` : ''}${distStr}. Alight at nearest transfer/destination stop. Fare: ₱${fareRegular} (discounted ₱${fareDiscounted}).`;
+
+      legs.push({
+        order,
+        mode,
+        title,
+        description,
+        minutes,
+        fareRegular,
+        fareDiscounted,
+        routeName,
+        color,
+        path,
+      });
+    }
+  }
+
+  return {
+    title: `${opts.origin.label} → ${opts.destination.label}`,
+    origin: opts.origin,
+    destination: opts.destination,
+    planType: steps.some((s) => s.action === 'transfer_walk') ? 'transfer' : 'direct',
+    legs,
+    totalMinutes: Math.round(totalMinutes),
+    totalFareRegular: hasFares ? Math.round(totalFareRegular) : null,
+    totalFareDiscounted: hasFares ? Math.round(totalFareDiscounted) : null,
+    sourceReply: opts.sourceReply,
+  };
+}
+
 export function buildCommuteGuidePlan(opts: {
   briefing: string;
   reply: string;
-  matches: RouteMatchInput[];
+  matches?: RouteMatchInput[];
+  routingContext?: TransitRoutingContext;
 }): CommuteGuidePlan | null {
-  const origin = parseResolvedPoint(opts.briefing, 'ORIGIN');
-  const destination = parseResolvedPoint(opts.briefing, 'DESTINATION');
+  const origin = opts.routingContext?.origin ?? parseResolvedPoint(opts.briefing, 'ORIGIN');
+  const destination = opts.routingContext?.destination ?? parseResolvedPoint(opts.briefing, 'DESTINATION');
   if (!origin || !destination) return null;
 
-  const itinerary = buildOptimizedItinerary(origin, destination, opts.matches);
-  if (itinerary?.legs.length) {
-    const legs = enrichLegs(itinerary, origin, destination, opts.matches);
+  // 1. PRIMARY SOURCE OF TRUTH: If graph routing context is present with graph steps,
+  // build directly from the transit graph. This guarantees 100% database polyline fidelity.
+  if (opts.routingContext?.graphResult && opts.routingContext.graphResult.steps.length > 0) {
+    const plan = buildPlanFromGraphResult({
+      origin: { label: origin.label, lat: origin.lat, lng: origin.lng },
+      destination: { label: destination.label, lat: destination.lat, lng: destination.lng },
+      graphResult: opts.routingContext.graphResult,
+      routes: opts.routingContext.liveRoutes,
+      fares: opts.routingContext.liveFares,
+      sourceReply: opts.reply,
+    });
+    if (plan) return plan;
+  }
+
+  // 2. TNVS request handling
+  if (opts.routingContext?.tnvsRequested) {
+    return {
+      title: `${origin.label} → ${destination.label}`,
+      origin: { label: origin.label, lat: origin.lat, lng: origin.lng },
+      destination: { label: destination.label, lat: destination.lat, lng: destination.lng },
+      planType: 'direct',
+      legs: [
+        {
+          order: 1,
+          mode: 'walk',
+          title: 'Walk',
+          description: `Walk to pickup location at ${origin.label}.`,
+          minutes: 3,
+          path: [[origin.lat, origin.lng], [origin.lat, origin.lng]],
+        },
+        {
+          order: 2,
+          mode: 'tnvs',
+          title: 'TNVS',
+          description: `Book TNVS door-to-door from ${origin.label} to ${destination.label}.`,
+          minutes: 15,
+          path: [[origin.lat, origin.lng], [destination.lat, destination.lng]],
+        },
+        {
+          order: 3,
+          mode: 'walk',
+          title: 'Walk',
+          description: `Walk to entrance of ${destination.label}.`,
+          minutes: 2,
+          path: [[destination.lat, destination.lng], [destination.lat, destination.lng]],
+        },
+      ],
+      totalMinutes: 20,
+      totalFareRegular: null,
+      totalFareDiscounted: null,
+      sourceReply: opts.reply,
+    };
+  }
+
+  const matches = opts.matches ?? [];
+  const itinerary = matches.length ? buildOptimizedItinerary(origin, destination, matches) : null;
+  const replyLegs = parseReplyLegs(opts.reply, origin, destination);
+
+  const replyActionLegs = replyLegs.filter((l) => l.mode === 'jeepney' || l.title === 'Transfer Walk');
+  const itineraryActionLegs = itinerary?.legs.filter((l) => l.mode === 'jeepney') ?? [];
+
+  const preferReply = replyLegs.length > 0 && replyActionLegs.length > itineraryActionLegs.length;
+
+  if (itinerary?.legs.length && !preferReply) {
+    const legs = enrichLegs(itinerary, origin, destination, matches);
     return {
       title: `${origin.label} → ${destination.label}`,
       origin,
@@ -299,41 +575,57 @@ export function buildCommuteGuidePlan(opts: {
     };
   }
 
-  const replyLegs = parseReplyLegs(opts.reply, origin, destination);
-  if (!replyLegs.length) {
+  // Try enriching reply legs with real route polylines when available
+  if (replyLegs.length) {
+    const enrichedReplyLegs = replyLegs.map((leg) => {
+      if (leg.mode === 'jeepney' && !leg.routeName) return leg;
+      // Try to find the route path from matches to get a real polyline
+      const routeNameInDesc = leg.description.match(/(?:Board|Ride)\s+\*?\*?([^*,.(]+)/i)?.[1]?.trim();
+      if (routeNameInDesc) {
+        const routePath = findRoutePath(matches, routeNameInDesc);
+        if (routePath.length >= 2) {
+          const boardIdx = nearestIndex(routePath, leg.path[0][0], leg.path[0][1]);
+          const alightIdx = nearestIndex(routePath, leg.path[leg.path.length - 1][0], leg.path[leg.path.length - 1][1]);
+          const start = Math.min(boardIdx, alightIdx);
+          const end = Math.max(boardIdx, alightIdx);
+          const slice = routePath.slice(start, end + 1);
+          if (slice.length >= 2) {
+            return { ...leg, path: slice, routeName: routeNameInDesc };
+          }
+        }
+      }
+      return leg;
+    });
+
     return {
       title: `${origin.label} → ${destination.label}`,
       origin,
       destination,
       planType: 'from_reply',
-      legs: [
-        {
-          order: 1,
-          mode: 'walk',
-          title: 'Walk',
-          description: `Head from ${origin.label} toward ${destination.label}`,
-          path: [
-            [origin.lat, origin.lng],
-            [destination.lat, destination.lng],
-          ],
-        },
-      ],
-      totalMinutes: null,
-      totalFareRegular: null,
-      totalFareDiscounted: null,
+      legs: enrichedReplyLegs,
+      totalMinutes: itinerary?.totalMinutes ?? null,
+      totalFareRegular: itinerary?.totalFareRegular ?? null,
+      totalFareDiscounted: itinerary?.totalFareDiscounted ?? null,
       sourceReply: opts.reply,
     };
   }
 
-  return {
-    title: `${origin.label} → ${destination.label}`,
-    origin,
-    destination,
-    planType: 'from_reply',
-    legs: replyLegs,
-    totalMinutes: null,
-    totalFareRegular: null,
-    totalFareDiscounted: null,
-    sourceReply: opts.reply,
-  };
+  // Last resort: use itinerary planner even if few legs
+  if (itinerary?.legs.length) {
+    const legs = enrichLegs(itinerary, origin, destination, matches);
+    return {
+      title: `${origin.label} → ${destination.label}`,
+      origin,
+      destination,
+      planType: itinerary.planType,
+      legs,
+      totalMinutes: itinerary.totalMinutes,
+      totalFareRegular: itinerary.totalFareRegular,
+      totalFareDiscounted: itinerary.totalFareDiscounted,
+      sourceReply: opts.reply,
+    };
+  }
+
+  return null;
 }
+

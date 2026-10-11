@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { isVideoMediaUrl } from '@/lib/mediaUtils';
 
 interface PromotionAdMediaProps {
-  url?: string;
+  url?: string | null;
   title: string;
   className?: string;
   mediaClassName?: string;

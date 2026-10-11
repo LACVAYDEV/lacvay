@@ -12,10 +12,10 @@ import { HeaderToolbar } from './HeaderToolbar';
 const PAGE_TITLES: Array<{ match: (path: string) => boolean; title: string }> = [
   { match: (p) => p === '/ai-assistant' || p === '/assistant', title: 'LACVAY AI' },
   { match: (p) => p === '/commute' || p.startsWith('/commute-guide'), title: 'Commute Guide' },
+  { match: (p) => p === '/rides', title: 'Book a Ride' },
   { match: (p) => /^\/tourist-spots\/.+/.test(p), title: 'Tourist Spot' },
   { match: (p) => p === '/tourist-spots', title: 'Tourist Spots' },
   { match: (p) => p === '/restaurants', title: 'Restaurants & Eateries' },
-  { match: (p) => p === '/promotions', title: 'Promotions & Offers' },
   { match: (p) => p === '/saved' || p === '/saved-places', title: 'Saved Trips' },
   { match: (p) => p === '/settings', title: 'Settings' },
 ];

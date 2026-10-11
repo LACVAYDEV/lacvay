@@ -1,28 +1,41 @@
 import { supabase } from '@/lib/supabase';
-import type { SavedGuide } from '@/types';
+import type { SavedGuide, SavedGuideStep, CommuteGuidePlan } from '@/types';
 
-const LOCAL_STORAGE_KEY_PREFIX = 'lacvay-saved-guides-';
+const LOCAL_STORAGE_KEY = 'lacvay_saved_guides_cache';
 
-function getLocalGuides(userId: string): SavedGuide[] {
+function getLocalGuides(): SavedGuide[] {
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY_PREFIX + userId);
-    return raw ? JSON.parse(raw) : [];
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
 }
 
-function setLocalGuides(userId: string, guides: SavedGuide[]): void {
+function saveLocalGuides(guides: SavedGuide[]): void {
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY_PREFIX + userId, JSON.stringify(guides));
-  } catch (e) {
-    console.error('Failed to save guide to localStorage:', e);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(guides));
+  } catch (err) {
+    console.warn('Failed to write saved guides to localStorage:', err);
   }
 }
 
 export const savedGuidesService = {
-  async getUserSavedGuides(userId: string): Promise<SavedGuide[]> {
-    if (!userId) return [];
+  /**
+   * Retrieves saved guides for a user (or local guest items).
+   * Blends local storage cache with Supabase remote items.
+   */
+  async getUserSavedGuides(userId?: string): Promise<SavedGuide[]> {
+    const local = getLocalGuides();
+    const userFilteredLocal = userId
+      ? local.filter((g) => !g.user_id || g.user_id === 'guest' || g.user_id === userId)
+      : local;
+
+    if (!userId) {
+      return userFilteredLocal;
+    }
 
     try {
       const { data, error } = await supabase
@@ -31,87 +44,122 @@ export const savedGuidesService = {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.warn('Supabase saved_guides fetch warning, falling back to local storage:', error.message);
-        return getLocalGuides(userId);
-      }
+      if (!error && Array.isArray(data)) {
+        const remoteGuides: SavedGuide[] = data.map((row: any) => {
+          let stepsList: SavedGuideStep[] = [];
+          let plan: CommuteGuidePlan | null = null;
 
-      if (data && data.length > 0) {
-        return data as SavedGuide[];
-      }
+          if (Array.isArray(row.steps)) {
+            stepsList = row.steps;
+          } else if (row.steps && typeof row.steps === 'object') {
+            stepsList = Array.isArray(row.steps.list)
+              ? row.steps.list
+              : (Array.isArray(row.steps.steps) ? row.steps.steps : []);
+            plan = row.steps.plan || null;
+          }
 
-      // If empty in Supabase, also check local storage in case saved locally before migration
-      const local = getLocalGuides(userId);
-      return local.length > 0 ? local : [];
+          return {
+            id: row.id,
+            user_id: row.user_id,
+            title: row.title,
+            summary: row.summary,
+            steps: stepsList,
+            plan,
+            created_at: row.created_at,
+          };
+        });
+
+        // Merge: remote guides take precedence, merge with local unsynced guides
+        const map = new Map<string, SavedGuide>();
+        for (const g of userFilteredLocal) {
+          map.set(g.id, g);
+        }
+        for (const g of remoteGuides) {
+          map.set(g.id, g);
+        }
+        const merged = Array.from(map.values()).sort(
+          (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
+        );
+
+        saveLocalGuides(merged);
+        return merged;
+      }
     } catch (err) {
-      console.warn('Unexpected error in getUserSavedGuides, falling back to local:', err);
-      return getLocalGuides(userId);
+      console.warn('Could not fetch guides from Supabase, returning local guides:', err);
     }
+
+    return userFilteredLocal;
   },
 
+  /**
+   * Saves a guide. Persists to localStorage immediately so it never fails,
+   * then attempts to sync to Supabase if authenticated.
+   */
   async saveGuide(
-    userId: string,
+    userId: string | undefined,
     guide: Omit<SavedGuide, 'id' | 'user_id' | 'created_at'>,
   ): Promise<SavedGuide> {
     const newId = crypto.randomUUID();
     const now = new Date().toISOString();
 
-    const newGuide: SavedGuide = {
+    const savedItem: SavedGuide = {
       id: newId,
-      user_id: userId,
-      title: guide.title || 'Batangas City Trip Guide',
+      user_id: userId || 'guest',
+      title: guide.title || 'Batangas City Commute Guide',
       summary: guide.summary || null,
       steps: guide.steps || [],
+      plan: guide.plan || null,
       created_at: now,
     };
 
-    // Always update local cache for instant offline access
-    const existing = getLocalGuides(userId);
-    setLocalGuides(userId, [newGuide, ...existing.filter((g) => g.id !== newId)]);
+    // 1. Immediately store in local cache so save NEVER fails
+    const current = getLocalGuides();
+    const updated = [savedItem, ...current.filter((g) => g.id !== newId)];
+    saveLocalGuides(updated);
 
-    try {
-      const { data, error } = await supabase
-        .from('saved_guides')
-        .insert({
+    // 2. If authenticated, attempt to sync to Supabase saved_guides table
+    if (userId && userId !== 'guest') {
+      try {
+        const payload = {
           id: newId,
           user_id: userId,
-          title: newGuide.title,
-          summary: newGuide.summary,
-          steps: newGuide.steps,
+          title: savedItem.title,
+          summary: savedItem.summary,
+          // Store both step list and complete plan inside json steps column
+          steps: {
+            list: savedItem.steps,
+            plan: savedItem.plan,
+          },
           created_at: now,
-        })
-        .select()
-        .single();
+        };
 
-      if (error) {
-        console.warn('Supabase saved_guides insert error, stored locally:', error.message);
-        return newGuide;
+        const { error } = await supabase.from('saved_guides').insert(payload as any);
+        if (error) {
+          console.warn('Supabase saved_guides sync error (persisted locally):', error);
+        }
+      } catch (err) {
+        console.warn('Network error syncing saved guide to Supabase (persisted locally):', err);
       }
-
-      return (data as SavedGuide) || newGuide;
-    } catch (err) {
-      console.warn('Supabase insert failed, guide saved locally:', err);
-      return newGuide;
     }
+
+    return savedItem;
   },
 
+  /**
+   * Deletes a saved guide from local cache and Supabase
+   */
   async deleteSavedGuide(guideId: string, userId?: string): Promise<void> {
-    if (userId) {
-      const local = getLocalGuides(userId);
-      setLocalGuides(userId, local.filter((g) => g.id !== guideId));
-    }
+    // 1. Delete from local cache
+    const current = getLocalGuides();
+    saveLocalGuides(current.filter((g) => g.id !== guideId));
 
-    try {
-      const { error } = await supabase
-        .from('saved_guides')
-        .delete()
-        .eq('id', guideId);
-
-      if (error) {
-        console.warn('Supabase delete error:', error.message);
+    // 2. Attempt delete from Supabase if user logged in
+    if (userId && userId !== 'guest') {
+      try {
+        await supabase.from('saved_guides').delete().eq('id', guideId);
+      } catch (err) {
+        console.warn('Error deleting guide from Supabase:', err);
       }
-    } catch (err) {
-      console.warn('Failed to delete guide in Supabase:', err);
     }
   },
 };

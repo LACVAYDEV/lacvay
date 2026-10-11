@@ -164,15 +164,12 @@ export async function fetchRoadPathsForLegs(
     let path: LatLngTuple[] = [];
 
     if (mode === 'walk') {
-      path = await fetchRoadRoute(ends, 'foot');
-      if (path.length < 2) path = await fetchRoadRoute(ends, 'driving');
-      // Foot routes can wind far past the straight hop — upgrade to jeepney then
-      if (pathLengthKm(path) > MAX_WALK_KM || hopKm > MAX_WALK_KM) {
-        mode = 'jeepney';
-        path = await fetchRoadRoute(
-          leg.path.length <= 6 && leg.path.length >= 2 ? (leg.path as LatLngTuple[]) : ends,
-          'driving',
-        );
+      if (hopKm <= 0.8) {
+        // Bypass OSRM for short city walks to prevent it from drawing massive loops around blocks
+        path = ends;
+      } else {
+        path = await fetchRoadRoute(ends, 'foot');
+        if (path.length < 2) path = ends;
       }
     } else {
       path = await fetchRoadRoute(
@@ -185,11 +182,6 @@ export async function fetchRoadPathsForLegs(
     }
 
     if (path.length < 2) path = ends.length >= 2 ? ends : (leg.path as LatLngTuple[]);
-
-    // Final guard: anything longer than a short walk is never dashed
-    if (mode === 'walk' && pathLengthKm(path) > MAX_WALK_KM) {
-      mode = 'jeepney';
-    }
 
     results.push({ order: leg.order, mode, path });
   }

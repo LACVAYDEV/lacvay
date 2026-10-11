@@ -11,10 +11,15 @@ import {
   Sparkles,
   Loader2,
   ArrowRight,
+  Bookmark,
 } from 'lucide-react';
 import type { GlobalCommuteGuide, TransportSegment, CommuteGuidePlan, GuideLegMode } from '@/types';
 import { dataService } from '@/services/dataService';
 import { loadActiveCommutePlan, clearActiveCommutePlan } from '@/services/aiService';
+import { savedGuidesService } from '@/services/savedGuidesService';
+import { useAuth } from '@/context/AuthContext';
+import { useApp } from '@/context/AppContext';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -23,7 +28,7 @@ import { MotorcycleIcon } from '@/components/ui/TransportIcons';
 import { TransportBar } from '@/components/home/TransportBar';
 import { launchTransportApp, type TransportAppKey } from '@/lib/transportApps';
 import { CurrentLocationMarker } from '@/components/map/CurrentLocationMarker';
-import { rebuildPlanPaths, sanitizePath } from '@/lib/mapCoordinates';
+import { rebuildPlanPaths, sanitizePath, isInBatangas } from '@/lib/mapCoordinates';
 import {
   fetchRoadPathsForLegs,
   pathLengthKm,
@@ -113,11 +118,41 @@ function PlanGuideView({
   onClear: () => void;
 }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { showToast } = useApp();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [activeLeg, setActiveLeg] = useState<number | null>(null);
   const [roadLegs, setRoadLegs] = useState<RoadLegPath[] | null>(null);
   const [routing, setRouting] = useState(true);
 
   const plan = useMemo(() => rebuildPlanPaths(rawPlan), [rawPlan]);
+
+  const handleSavePlan = async () => {
+    setIsSaving(true);
+    try {
+      const steps = plan.legs.map((leg) => ({
+        order: leg.order,
+        title: leg.title,
+        description: leg.description,
+      }));
+
+      await savedGuidesService.saveGuide(user?.id, {
+        title: plan.title,
+        summary: `${plan.title} · ~${plan.totalMinutes ?? 25} min${plan.totalFareRegular != null ? ` · ₱${plan.totalFareRegular}` : ''}`,
+        steps,
+        plan,
+      });
+
+      setIsSaved(true);
+      showToast('Guide saved to your trips! View anytime in Saved Guides.');
+    } catch (err) {
+      console.error('Failed to save commute guide:', err);
+      showToast('Could not save guide. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -157,6 +192,7 @@ function PlanGuideView({
         minutes: leg.minutes,
         fareRegular: leg.fareRegular,
         routeName: leg.routeName,
+        color: leg.color,
       };
     });
   }, [roadLegs, plan.legs]);
@@ -187,6 +223,15 @@ function PlanGuideView({
 
   return (
     <div className="space-y-5">
+      {(plan.origin?.outOfBounds || plan.destination?.outOfBounds) && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <p className="font-semibold">Location Outside Batangas City</p>
+          <p className="mt-1 text-xs text-red-700">
+            LACVAY transit navigation only supports destinations and origins located within Batangas City.
+            Routes cannot be plotted on the map.
+          </p>
+        </div>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           {PLAN_TYPE_LABELS[plan.planType] && (
@@ -210,8 +255,26 @@ function PlanGuideView({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            onClick={handleSavePlan}
+            disabled={isSaving || isSaved}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition',
+              isSaved
+                ? 'bg-lacvay-blush text-lacvay-green border border-lacvay-green/30'
+                : 'border border-gray-200 bg-white text-gray-700 hover:border-lacvay-green hover:text-lacvay-green',
+            )}
+          >
+            {isSaving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Bookmark className={cn('h-3.5 w-3.5', isSaved && 'fill-lacvay-green text-lacvay-green')} />
+            )}
+            {isSaved ? 'Saved to Trips' : 'Save Guide'}
+          </button>
+          <button
+            type="button"
             onClick={() => navigate('/ai-assistant')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:border-lacvay-green hover:text-lacvay-green"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:border-lacvay-green hover:text-lacvay-green"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to chat
@@ -219,22 +282,22 @@ function PlanGuideView({
           <button
             type="button"
             onClick={onClear}
-            className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 shadow-sm hover:bg-gray-50"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 shadow-sm hover:bg-gray-50"
           >
             Clear plan
           </button>
         </div>
       </div>
 
-      <Card className="p-4 sm:p-5">
+      <Card className="p-3 sm:p-4">
         <h3 className="mb-3 text-sm font-bold text-gray-900">Quick Book a Ride</h3>
         <TransportBar variant="horizontal" />
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <Card className="space-y-3 p-4 sm:p-5">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <Card className="space-y-3 p-3 sm:p-4">
           <h3 className="text-sm font-bold text-gray-900">Step-by-step actions</h3>
-          <ol className="space-y-3">
+          <ol className="space-y-2.5">
             {displayLegs.map((leg) => {
               const isActive = activeLeg === leg.order;
               return (
@@ -242,7 +305,7 @@ function PlanGuideView({
                   <button
                     type="button"
                     onClick={() => setActiveLeg(isActive ? null : leg.order)}
-                    className={`w-full rounded-2xl border p-3.5 text-left transition ${
+                    className={`w-full rounded-lg border p-3 text-left transition ${
                       isActive
                         ? 'border-lacvay-green bg-lacvay-blush/60 ring-1 ring-lacvay-green/30'
                         : 'border-gray-100 bg-gray-50 hover:border-gray-200'
@@ -251,7 +314,7 @@ function PlanGuideView({
                     <div className="flex gap-3">
                       <span
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white"
-                        style={{ backgroundColor: MODE_COLORS[leg.mode] }}
+                        style={{ backgroundColor: (leg.mode === 'jeepney' && leg.color) ? leg.color : MODE_COLORS[leg.mode] }}
                       >
                         <ModeIcon mode={leg.mode} />
                       </span>
@@ -359,26 +422,30 @@ function PlanGuideView({
               />
               <CurrentLocationMarker />
 
-              <Marker
-                position={[plan.origin.lat, plan.origin.lng]}
-                icon={originIcon}
-              >
-                <Popup>
-                  <strong>Origin (A)</strong>
-                  <br />
-                  {plan.origin.label}
-                </Popup>
-              </Marker>
-              <Marker
-                position={[plan.destination.lat, plan.destination.lng]}
-                icon={destIcon}
-              >
-                <Popup>
-                  <strong>Destination (B)</strong>
-                  <br />
-                  {plan.destination.label}
-                </Popup>
-              </Marker>
+              {!plan.origin?.outOfBounds && isInBatangas(plan.origin.lat, plan.origin.lng) && (
+                <Marker
+                  position={[plan.origin.lat, plan.origin.lng]}
+                  icon={originIcon}
+                >
+                  <Popup>
+                    <strong>Origin (A)</strong>
+                    <br />
+                    {plan.origin.label}
+                  </Popup>
+                </Marker>
+              )}
+              {!plan.destination?.outOfBounds && isInBatangas(plan.destination.lat, plan.destination.lng) && (
+                <Marker
+                  position={[plan.destination.lat, plan.destination.lng]}
+                  icon={destIcon}
+                >
+                  <Popup>
+                    <strong>Destination (B)</strong>
+                    <br />
+                    {plan.destination.label}
+                  </Popup>
+                </Marker>
+              )}
 
               {displayLegs.map((leg) => {
                 const positions = sanitizePath(leg.path);
@@ -412,7 +479,7 @@ function PlanGuideView({
                     <Polyline
                       positions={positions}
                       pathOptions={{
-                        color: MODE_COLORS[styleMode] ?? MODE_COLORS.jeepney,
+                        color: (styleMode === 'jeepney' && leg.color) ? leg.color : (MODE_COLORS[styleMode] ?? MODE_COLORS.jeepney),
                         weight: dimmed ? 3 : isWalk ? 4 : 5,
                         opacity: dimmed ? 0.35 : 1,
                         dashArray: isWalk ? '8 10' : isTnvs ? '2 12' : undefined,
@@ -466,23 +533,27 @@ export default function CommutePage() {
   } | null;
   const passedGuide = stateObj?.guide || stateObj?.commuteGuide;
 
+  const incomingPlanInitial = stateObj?.plan || passedGuide?.plan;
+
   const [selected, setSelected] = useState<GlobalCommuteGuide | null>(() => {
-    return passedGuide ? parsePassedGuide(passedGuide) : null;
+    return passedGuide && !passedGuide.plan ? parsePassedGuide(passedGuide) : null;
   });
 
   const [guides, setGuides] = useState<GlobalCommuteGuide[]>(() => {
-    return passedGuide ? [parsePassedGuide(passedGuide)] : [];
+    return passedGuide && !passedGuide.plan ? [parsePassedGuide(passedGuide)] : [];
   });
 
   const [loading, setLoading] = useState(true);
 
   const [activePlan, setActivePlan] = useState<CommuteGuidePlan | null>(() => {
-    // If a saved guide was passed explicitly, prioritize showing it rather than any stale activePlan from localStorage
+    if (incomingPlanInitial) {
+      return rebuildPlanPaths(incomingPlanInitial);
+    }
+    // If a saved guide was passed explicitly without a plan, prioritize showing it rather than any stale activePlan from localStorage
     if (passedGuide) {
       return null;
     }
-    const fromState = stateObj?.plan;
-    const loaded = fromState ?? loadActiveCommutePlan();
+    const loaded = loadActiveCommutePlan();
     return loaded ? rebuildPlanPaths(loaded) : null;
   });
   const navigate = useNavigate();
@@ -494,9 +565,11 @@ export default function CommutePage() {
       commuteGuide?: any;
     } | null;
     const currentPassed = currentState?.guide || currentState?.commuteGuide;
+    const incomingPlan = currentState?.plan || currentPassed?.plan;
 
-    if (currentState?.plan) {
-      setActivePlan(rebuildPlanPaths(currentState.plan));
+    if (incomingPlan) {
+      setActivePlan(rebuildPlanPaths(incomingPlan));
+      setSelected(null);
     } else if (currentPassed) {
       setActivePlan(null);
       const parsed = parsePassedGuide(currentPassed);
@@ -514,7 +587,7 @@ export default function CommutePage() {
       } | null;
       const currentPassed = currentState?.guide || currentState?.commuteGuide;
 
-      if (currentPassed) {
+      if (currentPassed && !currentPassed.plan) {
         const parsed = parsePassedGuide(currentPassed);
         setGuides([parsed, ...g.filter((item) => item.id !== parsed.id)]);
         setSelected(parsed);
@@ -560,7 +633,7 @@ export default function CommutePage() {
           <button
             type="button"
             onClick={() => navigate('/ai-assistant')}
-            className="inline-flex items-center gap-2 rounded-full bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-lacvay-green-dark"
+            className="inline-flex items-center gap-2 rounded-lg bg-lacvay-green px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-lacvay-green-dark"
           >
             <Sparkles className="h-4 w-4" />
             Ask LACVAY AI
@@ -571,9 +644,9 @@ export default function CommutePage() {
   }
 
   return (
-    <div className="w-full space-y-5">
-      <div className="grid gap-5 lg:grid-cols-[340px_1fr] lg:gap-6">
-        <div className="space-y-3">
+    <div className="w-full space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
+        <div className="space-y-2.5">
           {guides.map((g) => {
             const segments: TransportSegment[] = Array.isArray(g.transport_segments)
               ? g.transport_segments
@@ -584,8 +657,8 @@ export default function CommutePage() {
                 key={g.id}
                 className={`cursor-pointer border transition duration-200 ${
                   selected?.id === g.id
-                    ? 'border-lacvay-green/40 ring-2 ring-lacvay-green/30'
-                    : 'border-lacvay-green/5 hover:-translate-y-0.5 hover:shadow-lg'
+                    ? 'border-lacvay-green/40 ring-1 ring-lacvay-green/30'
+                    : 'border-gray-100 hover:border-gray-200'
                 }`}
                 onClick={() => setSelected(g)}
               >
@@ -653,7 +726,7 @@ export default function CommutePage() {
             </div>
 
             {selected.summary && (
-              <p className="text-sm text-gray-600 leading-relaxed bg-lacvay-blush/50 border border-lacvay-green/10 p-3 rounded-xl">
+              <p className="text-sm text-gray-600 leading-relaxed bg-lacvay-blush/50 border border-lacvay-green/10 p-3 rounded-lg">
                 {selected.summary}
               </p>
             )}
@@ -667,7 +740,7 @@ export default function CommutePage() {
                   {(selected.transport_segments as TransportSegment[]).map((seg, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between rounded-xl bg-gray-50 p-3 border border-gray-100"
+                      className="flex items-center justify-between rounded-lg bg-gray-50 p-2.5 border border-gray-100"
                     >
                       <div className="flex items-center gap-2.5">
                         {seg.color && (
@@ -693,14 +766,14 @@ export default function CommutePage() {
             )}
 
             {Array.isArray(selected.steps) && selected.steps.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Step-by-Step Directions
                 </h4>
-                <ol className="space-y-3">
+                <ol className="space-y-2.5">
                   {selected.steps.map((step) => (
-                    <li key={step.order} className="flex gap-3 rounded-2xl bg-gray-50 p-4">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lacvay-green text-sm font-bold text-white">
+                    <li key={step.order} className="flex gap-3 rounded-lg bg-gray-50 p-3 sm:p-3.5 border border-gray-100">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lacvay-green text-xs font-bold text-white">
                         {step.order}
                       </span>
                       <div>
@@ -718,7 +791,7 @@ export default function CommutePage() {
               </div>
             )}
 
-            <Button onClick={() => handleViewRoute(selected)} className="w-full gap-2">
+            <Button onClick={() => handleViewRoute(selected)} className="w-full h-10 gap-2">
               <ArrowRight className="h-4 w-4" />
               View on Map & Routes
             </Button>

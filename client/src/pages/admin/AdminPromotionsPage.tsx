@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Megaphone, Plus, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState, LoadingState } from '@/components/ui/States';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { AdminCatalogSearch } from '@/components/admin/AdminCatalogSearch';
 import { PromotionAdMedia } from '@/components/promotions/PromotionAdMedia';
 import { adminService } from '@/services/adminService';
 import { useApp } from '@/context/AppContext';
@@ -154,6 +154,27 @@ export default function AdminPromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredPromotions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return promotions;
+    return promotions.filter((promotion) => {
+      const haystack = [
+        promotion.title,
+        promotion.description,
+        promotion.promoCode,
+        promotion.discount,
+        promotion.validUntil,
+        promotion.isActive === false ? 'draft' : 'live',
+        promotion.validUntil && isPromotionExpired(promotion.validUntil) ? 'expired' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [promotions, searchQuery]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -208,29 +229,36 @@ export default function AdminPromotionsPage() {
   if (loading) return <LoadingState />;
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Promotions"
-        description="Manage ad creatives shown to travelers. Each promotion can include image or video media."
-        actions={
-          <div className="flex items-center gap-2">
-            {promotions.length > 0 && (
+    <div className="space-y-3">
+      {promotions.length > 0 && (
+        <AdminCatalogSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search ads by title, code, or discount…"
+          aria-label="Search promotions"
+          trailing={
+            <div className="flex shrink-0 items-center gap-1.5">
               <Button
                 variant="outline"
-                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
+                size="sm"
+                className="hidden gap-1 border-red-200 px-2.5 text-red-600 hover:border-red-300 hover:bg-red-50 sm:inline-flex"
                 onClick={() => void handleWipeAll()}
               >
                 <Trash2 className="h-4 w-4" />
-                Wipe all ({promotions.length})
+                Wipe all
               </Button>
-            )}
-            <Button onClick={() => navigate('/admin/promotions/new')}>
-              <Plus className="h-4 w-4" />
-              Create ad
-            </Button>
-          </div>
-        }
-      />
+              <Button
+                size="sm"
+                className="gap-1 whitespace-nowrap px-3"
+                onClick={() => navigate('/admin/promotions/new')}
+              >
+                <Plus className="h-4 w-4" />
+                Create ad
+              </Button>
+            </div>
+          }
+        />
+      )}
 
       {promotions.length === 0 ? (
         <div className="space-y-4">
@@ -245,6 +273,8 @@ export default function AdminPromotionsPage() {
             </Button>
           </div>
         </div>
+      ) : filteredPromotions.length === 0 ? (
+        <EmptyState title="No matching ads" description="Try a different title, promo code, or discount." />
       ) : (
         <div
           className={cn(
@@ -252,7 +282,7 @@ export default function AdminPromotionsPage() {
             'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
           )}
         >
-          {promotions.map((promotion) => (
+          {filteredPromotions.map((promotion) => (
             <PromoGridCard
               key={promotion.id}
               promotion={promotion}

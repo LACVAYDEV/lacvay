@@ -96,6 +96,7 @@ export interface SavedGuide {
   title: string;
   summary?: string | null;
   steps: SavedGuideStep[] | any;
+  plan?: CommuteGuidePlan | null;
   created_at?: string | null;
 }
 
@@ -212,11 +213,11 @@ export interface Promotion {
   id: string;
   title: string;
   description: string;
-  promoCode?: string;
-  discount?: string;
+  promoCode?: string | null;
+  discount?: string | null;
   /** Ad creative — image or video URL shown to travelers. */
-  imageUrl?: string;
-  validUntil?: string;
+  imageUrl?: string | null;
+  validUntil?: string | null;
   /** When false, hidden from traveler-facing pages. */
   isActive?: boolean;
 }
@@ -309,14 +310,15 @@ export interface CommuteGuideLeg {
   fareRegular?: number;
   fareDiscounted?: number;
   routeName?: string;
+  color?: string;
   /** [lat, lng] polyline for this leg */
   path: [number, number][];
 }
 
 export interface CommuteGuidePlan {
   title: string;
-  origin: { label: string; lat: number; lng: number };
-  destination: { label: string; lat: number; lng: number };
+  origin: { label: string; lat: number; lng: number; outOfBounds?: boolean };
+  destination: { label: string; lat: number; lng: number; outOfBounds?: boolean };
   planType: string;
   legs: CommuteGuideLeg[];
   totalMinutes: number | null;

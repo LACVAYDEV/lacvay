@@ -144,10 +144,10 @@ export function promotionToRow(
     ...(isUuid(promo.id) ? { id: promo.id } : {}),
     title: promo.title,
     description: promo.description,
-    promo_code: promo.promoCode ?? null,
-    discount: promo.discount ?? null,
-    image_url: promo.imageUrl ?? null,
-    valid_until: promo.validUntil ?? null,
+    promo_code: promo.promoCode && promo.promoCode.trim() ? promo.promoCode.trim() : null,
+    discount: promo.discount && promo.discount.trim() ? promo.discount.trim() : null,
+    image_url: promo.imageUrl && promo.imageUrl.trim() ? promo.imageUrl.trim() : null,
+    valid_until: promo.validUntil && promo.validUntil.trim() ? promo.validUntil.trim() : null,
     is_active: promo.isActive ?? true,
   };
 }

@@ -47,15 +47,24 @@ export default function AdminPromotionFormPage() {
     }
     setSaving(true);
     try {
+      const payload = {
+        ...form,
+        validUntil: form.validUntil && form.validUntil.trim() ? form.validUntil.trim() : null,
+        promoCode: form.promoCode && form.promoCode.trim() ? form.promoCode.trim() : null,
+        discount: form.discount && form.discount.trim() ? form.discount.trim() : null,
+        imageUrl: form.imageUrl && form.imageUrl.trim() ? form.imageUrl.trim() : null,
+      };
+
       if (isEditing && id) {
-        await adminService.updatePromotion({ ...form, id } as Promotion);
+        await adminService.updatePromotion({ ...payload, id } as Promotion);
         showToast('Ad updated');
       } else {
-        await adminService.createPromotion(form);
+        await adminService.createPromotion(payload);
         showToast('Ad created');
       }
       navigate('/admin/promotions');
     } catch (err) {
+      console.error('Error saving promotion:', err);
       showToast(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setSaving(false);
@@ -75,9 +84,7 @@ export default function AdminPromotionFormPage() {
       </Link>
 
       <div>
-        <h1 className="text-[22px] font-extrabold leading-tight tracking-tight text-lacvay-green-dark sm:text-[26px]">
-          {isEditing ? 'Edit ad' : 'Create ad'}
-        </h1>
+        <h1 className="sr-only">{isEditing ? 'Edit ad' : 'Create ad'}</h1>
         <p className="mt-1.5 text-[13px] text-gray-500">
           Promotions are ads shown to travelers on the home page and promotions screen. Add an image or video creative.
         </p>

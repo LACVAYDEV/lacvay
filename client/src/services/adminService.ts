@@ -27,12 +27,29 @@ export const adminService = {
   clearAllPlaces: () => contentRepository.clearAllPlaces(),
   clearAllPromotions: () => contentRepository.clearAllPromotions(),
   getStats: () => contentRepository.getStats(),
-  isUsingSupabase: () => contentRepository.isUsingSupabase(),
 
   async listUsers(): Promise<UserProfile[]> {
     const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return (data ?? []) as UserProfile[];
+  },
+
+  async fetchActivitySourceRows() {
+    const [places, promotions, transitRoutes] = await Promise.all([
+      supabase.from('places').select('id, name, created_at, metadata'),
+      supabase.from('promotions').select('id, title, created_at, updated_at, is_active'),
+      supabase.from('transit_routes').select('id, route_name, created_at'),
+    ]);
+
+    if (places.error) throw places.error;
+    if (promotions.error) throw promotions.error;
+    if (transitRoutes.error) throw transitRoutes.error;
+
+    return {
+      places: places.data ?? [],
+      promotions: promotions.data ?? [],
+      transitRoutes: transitRoutes.data ?? [],
+    };
   },
 
   async updateUserProfile(

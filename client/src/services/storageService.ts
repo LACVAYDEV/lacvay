@@ -18,11 +18,26 @@ function assertMediaFile(file: File, allowVideo: boolean): void {
   }
 }
 
+function generateSafeFileName(file: File, fallbackExt = 'jpg'): string {
+  const rawExt = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const fileExt = rawExt && rawExt.length > 0 && rawExt.length <= 10 ? rawExt : fallbackExt;
+  const uuid =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  return `${uuid}.${fileExt}`;
+}
+
+function sanitizeFolder(folder: string): string {
+  return folder.replace(/[^a-zA-Z0-9_-]/g, '').trim() || 'uploads';
+}
+
 export async function uploadImage(file: File, folder: string): Promise<string> {
   assertMediaFile(file, false);
 
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
+  const safeFileName = generateSafeFileName(file, 'jpg');
+  const safeFolder = sanitizeFolder(folder);
+  const path = `${safeFolder}/${safeFileName}`;
 
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     cacheControl: '3600',
@@ -38,8 +53,10 @@ export async function uploadImage(file: File, folder: string): Promise<string> {
 export async function uploadMedia(file: File, folder: string): Promise<string> {
   assertMediaFile(file, true);
 
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
+  const isVideo = file.type.startsWith('video/');
+  const safeFileName = generateSafeFileName(file, isVideo ? 'mp4' : 'jpg');
+  const safeFolder = sanitizeFolder(folder);
+  const path = `${safeFolder}/${safeFileName}`;
 
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     cacheControl: '3600',

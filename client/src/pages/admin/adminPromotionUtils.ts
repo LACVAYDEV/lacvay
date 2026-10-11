@@ -10,7 +10,7 @@ export const emptyPromotion = (): Omit<Promotion, 'id'> => ({
   isActive: true,
 });
 
-export function isPromotionExpired(validUntil?: string): boolean {
+export function isPromotionExpired(validUntil?: string | null): boolean {
   if (!validUntil) return false;
   return validUntil < new Date().toISOString().slice(0, 10);
 }

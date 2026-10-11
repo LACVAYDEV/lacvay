@@ -1,3 +1,5 @@
+import { groqMaxCompletionTokens } from './aiTokenLimits.js';
+
 const DEFAULT_GROQ_MODELS = [
   'openai/gpt-oss-120b',
   'openai/gpt-oss-20b',
@@ -71,7 +73,7 @@ export async function completeWithGroq(system: string, user: string): Promise<st
 
   const payload = {
     temperature: 0.3,
-    max_completion_tokens: 1200,
+    max_completion_tokens: groqMaxCompletionTokens(),
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user },

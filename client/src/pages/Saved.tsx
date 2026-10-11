@@ -19,7 +19,9 @@ import { LoadingState, EmptyState } from '@/components/ui/States';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
-import type { UserFavorite, SavedGuide, SavedGuideStep } from '@/types';
+import { storeActiveCommutePlan } from '@/services/aiService';
+import { buildFallbackCommutePlan } from '@/lib/commutePlanFromReply';
+import type { UserFavorite, SavedGuide, SavedGuideStep, CommuteGuidePlan } from '@/types';
 
 interface SavedPageProps {
   defaultTab?: 'places' | 'guides';
@@ -50,18 +52,15 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
   };
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
     let isMounted = true;
     setLoading(true);
 
-    Promise.all([
-      favoritesService.getUserFavorites(user.id).catch(() => []),
-      savedGuidesService.getUserSavedGuides(user.id).catch(() => []),
-    ]).then(([favs, guides]) => {
+    const guidesPromise = savedGuidesService.getUserSavedGuides(user?.id);
+    const favsPromise = user
+      ? favoritesService.getUserFavorites(user.id).catch(() => [])
+      : Promise.resolve([]);
+
+    Promise.all([favsPromise, guidesPromise]).then(([favs, guides]) => {
       if (isMounted) {
         setFavorites(favs);
         setSavedGuides(guides);
@@ -97,13 +96,40 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
   };
 
   const handleViewOnMap = (guide: SavedGuide) => {
+    const fallbackPlan: CommuteGuidePlan = {
+      planType: 'direct',
+      title: guide.title,
+      totalMinutes: 20,
+      totalFareRegular: 15,
+      totalFareDiscounted: 12,
+      origin: { label: 'Starting Point', lat: 13.7565, lng: 121.0583 },
+      destination: { label: guide.title, lat: 13.7594, lng: 121.0722 },
+      legs: [],
+    };
+
+    const plan: CommuteGuidePlan =
+      guide.plan ??
+      buildFallbackCommutePlan(
+        `${guide.title}\n${guide.summary || ''}\n${
+          Array.isArray(guide.steps)
+            ? guide.steps.map((s: any) => `${s.order || ''}. ${s.title}: ${s.description || ''}`).join('\n')
+            : ''
+        }`,
+        guide.title,
+      ) ??
+      fallbackPlan;
+
+    storeActiveCommutePlan(plan);
+
     navigate('/commute', {
       state: {
+        plan,
         guide: {
           id: guide.id,
           title: guide.title,
           summary: guide.summary,
           steps: Array.isArray(guide.steps) ? guide.steps : [],
+          plan,
         },
       },
     });
@@ -113,7 +139,7 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
     return <LoadingState />;
   }
 
-  if (!user) {
+  if (!user && favorites.length === 0 && savedGuides.length === 0) {
     return (
       <EmptyState
         icon={<Bookmark className="h-6 w-6" />}
@@ -135,6 +161,15 @@ export default function Saved({ defaultTab = 'places' }: SavedPageProps) {
 
   return (
     <div className="w-full space-y-5">
+      {!user && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-2.5 text-xs text-amber-900 shadow-xs">
+          <span>You are viewing items saved on this device. Sign in to sync your trips across all devices.</span>
+          <Button size="sm" variant="outline" onClick={() => navigate('/login')} className="h-7 text-xs shrink-0 self-start sm:self-auto">
+            Sign In
+          </Button>
+        </div>
+      )}
+
       {/* Tab Filter Chips */}
       <div className="flex w-full items-center gap-1.5 rounded-2xl bg-white p-1.5 shadow-soft sm:w-fit">
         {tabs.map(({ id, label, icon: Icon, count }) => {

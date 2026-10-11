@@ -30,13 +30,13 @@ export function RestaurantsSection() {
         action={<SectionLink label="View all" onClick={() => navigate('/restaurants')} />}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
         {restaurants.map((r) => (
           <div
             key={r.id}
-            className="group flex flex-col rounded-2xl border border-gray-100 bg-white p-2.5 transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            className="group flex flex-col rounded-lg border border-gray-100 bg-white p-2.5 transition duration-200 hover:border-gray-200"
           >
-            <div className="relative aspect-[16/11] overflow-hidden rounded-xl bg-gray-100">
+            <div className="relative aspect-[16/11] overflow-hidden rounded-md bg-gray-100">
               <img
                 src={r.imageUrl}
                 alt={r.name}
@@ -45,7 +45,7 @@ export function RestaurantsSection() {
               />
               <div className="absolute left-2 top-2 flex flex-col gap-1 items-start">
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur ${
+                  className={`rounded-md px-2 py-0.5 text-[10px] font-bold backdrop-blur ${
                     r.isOpen
                       ? 'bg-emerald-500/90 text-white'
                       : 'bg-rose-500/90 text-white'
@@ -54,13 +54,13 @@ export function RestaurantsSection() {
                   {r.isOpen ? 'Open' : 'Closed'}
                 </span>
                 {r.isFeatured && (
-                  <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-gray-900 shadow-sm">
+                  <span className="rounded-md bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-gray-900 shadow-sm">
                     ★ Promoted
                   </span>
                 )}
               </div>
               {r.priceRange && (
-                <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-lacvay-green shadow-sm">
+                <span className="absolute right-2 top-2 rounded-md bg-white/95 px-2 py-0.5 text-[10px] font-bold text-lacvay-green shadow-sm">
                   {r.priceRange}
                 </span>
               )}
@@ -80,7 +80,7 @@ export function RestaurantsSection() {
               <button
                 type="button"
                 onClick={() => navigate(`/assistant?prompt=How+do+I+get+to+${encodeURIComponent(r.name)}`)}
-                className="mt-3 flex items-center justify-center gap-1 rounded-xl bg-lacvay-blush py-1.5 text-[11px] font-semibold text-lacvay-green-dark transition hover:bg-lacvay-green hover:text-white"
+                className="mt-3 flex h-9 w-full items-center justify-center gap-1 rounded-lg bg-lacvay-blush py-2 text-[11px] font-semibold text-lacvay-green-dark transition hover:bg-lacvay-green hover:text-white"
               >
                 <Navigation className="h-3 w-3" />
                 Directions
