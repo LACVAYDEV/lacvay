@@ -240,11 +240,11 @@ export default function SettingsPage() {
             Feature your Batangas business, transport service, or tourist spot on LACVAY — reach our team directly.
           </p>
           <a
-            href="mailto:partners@lacvay.ph?subject=LACVAY%20Partner%20%26%20Advertising%20Inquiry"
+            href="mailto:lacvayph@gmail.com?subject=LACVAY%20Partner%20%26%20Advertising%20Inquiry"
             className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-lacvay-green px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-lacvay-green-dark sm:w-auto sm:justify-start"
           >
             <Mail className="h-4 w-4" />
-            partners@lacvay.ph
+            lacvayph@gmail.com
           </a>
         </Card>
       </div>
